@@ -1,0 +1,29 @@
+[package]
+name = "lomak-c"
+version = "0.1.0"
+authors = ["Aurelien Naldi <aurelien.naldi@gmail.com>"]
+build = "build.rs"
+edition = "2018"
+
+[lib]
+name = "lomak"
+crate-type = ["cdylib"]
+
+[dependencies]
+lomak = { path = "../.." }
+libc = "0.2"
+
+[build-dependencies]
+cbindgen = "0.6"
+
+
+# Release profile:
+#  * more optimisations and smaller binary
+#  * less debug tools and longer build time
+[profile.release]
+debug = false
+panic = "abort"
+lto = true
+codegen-units = 1
+incremental = false 
+opt-level = 3
