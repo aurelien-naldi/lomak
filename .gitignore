@@ -1,0 +1,8 @@
+target
+build
+.eggs
+.buildconfig
+.idea
+**/*.rs.bk
+Cargo.lock
+*.so
