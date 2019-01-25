@@ -10,6 +10,8 @@ pest = "2.1"
 pest_derive = "2.1"
 bit-set = "0.5.0"
 log = "0.4"
+regex = "1"
+lazy_static = "1.2"
 #clingo = "0.4"
 #clingo = { git = "https://github.com/sthiele/clingo-rs.git", rev="b3d5fb9aedd3d097a6e55b689eefa60dd77ad793"}
 

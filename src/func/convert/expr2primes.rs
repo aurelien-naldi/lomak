@@ -21,8 +21,8 @@ impl Expr {
         match self {
             Expr::TRUE => (),
             Expr::FALSE => paths.clear(),
-            Expr::ATOM(v) => paths.extend(v.uid, false),
-            Expr::NATOM(v) => paths.extend(v.uid, true),
+            Expr::ATOM(u) => paths.extend(*u, false),
+            Expr::NATOM(u) => paths.extend(*u, true),
             Expr::OPER(Operator::OR, c) => {
                 let n = c.len();
                 if n < 1 {

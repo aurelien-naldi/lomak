@@ -1,8 +1,9 @@
+use bit_set::BitSet;
 use std::fmt;
 use std::vec::Vec;
 
+use crate::func::repr::expr::Expr;
 use crate::func::variables::Group;
-use bit_set::BitSet;
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct LiteralSet {
@@ -195,6 +196,15 @@ impl Paths {
         }
         print!("]");
     }
+
+    /// Generate a function based on the prime implicants
+    pub fn to_expr(&self) -> Expr {
+        let mut expr = Expr::FALSE;
+        for p in self.paths.iter() {
+            expr = expr.and(&p.to_expr());
+        }
+        expr
+    }
 }
 
 impl LiteralSet {
@@ -357,6 +367,17 @@ impl LiteralSet {
             print!("\"{}\":0", grp.get_name(uid));
         }
         print!("}}");
+    }
+
+    pub fn to_expr(&self) -> Expr {
+        let mut expr = Expr::TRUE;
+        for uid in self.positive.iter() {
+            expr = expr.and(&Expr::ATOM(uid))
+        }
+        for uid in self.positive.iter() {
+            expr = expr.and(&Expr::NATOM(uid))
+        }
+        expr
     }
 }
 

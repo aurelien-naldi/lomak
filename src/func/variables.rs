@@ -1,12 +1,16 @@
+//! Associate names to their variables
+
 use crate::func::repr::expr::Expr;
+use regex::Regex;
 use std::collections::HashMap;
 use std::fmt;
 
-#[derive(Clone)]
-pub struct Var {
-    pub uid: usize,
-}
-
+/// Define a group of variables.
+///
+/// Each variable is identified by a numeric uid. This struct associated
+/// human-readable names for the variables.
+/// It allows to retrieve and change the name of an existing variable or
+/// to retrieve the uid corresponding to a name.
 #[derive(Clone)]
 pub struct Group {
     name2uid: HashMap<String, usize>,
@@ -14,7 +18,12 @@ pub struct Group {
     cur_uid: usize,
 }
 
+lazy_static! {
+    static ref RE_UID: Regex = Regex::new(r"[a-zA-Z][a-zA-Z01-9_]*").unwrap();
+}
+
 impl Group {
+    /// Create a new, empty group
     pub fn new() -> Self {
         Group {
             name2uid: HashMap::new(),
@@ -23,68 +32,76 @@ impl Group {
         }
     }
 
-    pub fn get_node_id(&mut self, name: &str) -> usize {
+    /// Retrieve the uid corresponding to a variable name.
+    /// Returns None if the variable name is not defined.
+    pub fn node_id(&self, name: &str) -> Option<usize> {
         match self.name2uid.get(name) {
-            Some(uid) => return *uid,
-            None => (),
+            Some(uid) => Some(*uid),
+            None => None,
         }
+    }
+
+    /// Retrieve or assign the uid for a variable name.
+    /// If the name is not defined, it will associate it to
+    /// a new uid.
+    /// Returns None if the name is invalid.
+    pub fn get_node_id(&mut self, name: &str) -> Option<usize> {
+        match self.name2uid.get(name) {
+            Some(uid) => return Some(*uid),
+            None => (),
+        };
+
+        if (!RE_UID.is_match(&name)) {
+            return None;
+        }
+
         let name = String::from(name);
         let uid = self.cur_uid;
         self.cur_uid += 1;
         let ret = uid;
         self.name2uid.insert(name.clone(), uid);
         self.uid2name.insert(uid, name);
-        ret
-    }
-
-    pub fn get_var(&self, uid: usize) -> Var {
-        Var { uid: uid }
-    }
-
-    pub fn get_var_from_name(&mut self, name: &str) -> Var {
-        let uid = self.get_node_id(name);
-        self.get_var(uid)
+        Some(ret)
     }
 
     pub fn get_name(&self, uid: usize) -> String {
         match self.uid2name.get(&uid) {
-            Some(name) => return name.clone(),
+            Some(name) => name.clone(),
             None => format!("_{}", uid),
         }
     }
 
-    pub fn rename(&mut self, source: &str, name: String) -> bool {
-        let uid = match self.name2uid.get(source) {
-            None => return false,
-            Some(v) => *v,
-        };
+    /// Assign a name to an existing variable
+    /// Returns false if the name is invalid or already assigned
+    /// to another variable
+    pub fn set_name(&mut self, uid: usize, name: String) -> bool {
+        // Reject invalid new names
+        if !RE_UID.is_match(&name) {
+            return false;
+        }
 
-        self.name2uid.remove(source);
+        // Reject existing names
+        match self.name2uid.get(&name) {
+            Some(u) => return *u == uid,
+            None => (),
+        }
+
+        self.name2uid.remove(&self.get_name(uid));
         self.name2uid.insert(name.clone(), uid);
         self.uid2name.insert(uid, name);
+
         true
     }
-}
 
-impl Var {
-    pub fn as_expr(self) -> Expr {
-        Expr::ATOM(self)
-    }
-
-    fn fmt_in_group(&self, f: &mut fmt::Formatter, grp: Group) -> fmt::Result {
-        write!(f, "{}", grp.get_name(self.uid))
-    }
-}
-
-impl fmt::Display for Var {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "v{}", self.uid)
-    }
-}
-
-impl PartialEq for Var {
-    fn eq(&self, other: &Var) -> bool {
-        self.uid == other.uid
+    /// Rename a variable.
+    /// Returns false if the new name is invalid or already assigned
+    /// to another variable
+    pub fn rename(&mut self, source: &str, name: String) -> bool {
+        // Find the old uid
+        match self.name2uid.get(source) {
+            None => false,
+            Some(u) => self.set_name(*u, name),
+        }
     }
 }
 

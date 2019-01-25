@@ -18,8 +18,8 @@ use crate::func::variables::*;
 pub enum Expr {
     TRUE,
     FALSE,
-    ATOM(Var),
-    NATOM(Var),
+    ATOM(usize),
+    NATOM(usize),
     OPER(Operator, Children),
 }
 
@@ -45,16 +45,12 @@ impl Expr {
         }
     }
 
-    pub fn from_var(v: &Var) -> Self {
-        Expr::ATOM(v.clone())
-    }
-
     pub fn not(&self) -> Self {
         match self {
             Expr::TRUE => Expr::FALSE,
             Expr::FALSE => Expr::TRUE,
-            Expr::ATOM(u) => Expr::NATOM(u.clone()),
-            Expr::NATOM(u) => Expr::ATOM(u.clone()),
+            Expr::ATOM(u) => Expr::NATOM(*u),
+            Expr::NATOM(u) => Expr::ATOM(*u),
             Expr::OPER(o, c) => Expr::OPER(o.not(), c.clone()),
         }
     }
@@ -265,12 +261,12 @@ impl Children {
 
 impl Expr {
     #[allow(dead_code)]
-    pub fn replace_literal(&self, f: &Fn(&Var, bool) -> Option<Expr>) -> Option<Expr> {
+    pub fn replace_literal(&self, f: &Fn(usize, bool) -> Option<Expr>) -> Option<Expr> {
         match self {
             Expr::TRUE => None,
             Expr::FALSE => None,
-            Expr::ATOM(v) => f(v, false),
-            Expr::NATOM(v) => f(v, true),
+            Expr::ATOM(u) => f(*u, false),
+            Expr::NATOM(u) => f(*u, true),
             Expr::OPER(o, c) => c.replace_literal(f, *o),
         }
     }
@@ -280,8 +276,8 @@ impl Expr {
         match self {
             Expr::TRUE => false,
             Expr::FALSE => false,
-            Expr::ATOM(v) => !neg && uid == v.uid,
-            Expr::NATOM(v) => neg && uid == v.uid,
+            Expr::ATOM(u) => !neg && uid == *u,
+            Expr::NATOM(u) => neg && uid == *u,
             Expr::OPER(o, c) => c.contains_literal(uid, o.is_neg() == neg),
         }
     }
@@ -294,15 +290,15 @@ impl Expr {
         match self {
             Expr::TRUE => LiteralSet::new(),
             Expr::FALSE => LiteralSet::new(),
-            Expr::ATOM(v) => LiteralSet::with(v.uid, neg),
-            Expr::NATOM(v) => LiteralSet::with(v.uid, !neg),
+            Expr::ATOM(u) => LiteralSet::with(*u, neg),
+            Expr::NATOM(u) => LiteralSet::with(*u, !neg),
             Expr::OPER(o, c) => c.get_literals(o.is_neg() != neg),
         }
     }
 }
 
 impl Children {
-    fn replace_literal(&self, f: &Fn(&Var, bool) -> Option<Expr>, op: Operator) -> Option<Expr> {
+    fn replace_literal(&self, f: &Fn(usize, bool) -> Option<Expr>, op: Operator) -> Option<Expr> {
         let children: Vec<Option<Expr>> = self.data.iter().map(|c| c.replace_literal(f)).collect();
         let count = children.iter().filter(|c| c.is_some()).count();
         if count > 1 {
@@ -373,10 +369,10 @@ impl<'a> FormatContext<'a> {
         self.parent_priority > old
     }
 
-    fn write_var(&self, f: &mut fmt::Formatter, var: &Var) -> fmt::Result {
+    fn write_var(&self, f: &mut fmt::Formatter, uid: usize) -> fmt::Result {
         match &self.group {
-            None => write!(f, "{}", var),
-            Some(g) => write!(f, "{}", g.get_name(var.uid)),
+            None => write!(f, "{}", uid),
+            Some(g) => write!(f, "{}", g.get_name(uid)),
         }
     }
 }
@@ -417,10 +413,10 @@ impl Expr {
         match self {
             Expr::TRUE => write!(f, "True"),
             Expr::FALSE => write!(f, "False"),
-            Expr::ATOM(v) => context.write_var(f, v),
+            Expr::ATOM(v) => context.write_var(f, *v),
             Expr::NATOM(v) => {
                 write!(f, "!")?;
-                context.write_var(f, v)
+                context.write_var(f, *v)
             }
             Expr::OPER(o, c) => c.format(f, *o, context),
         }

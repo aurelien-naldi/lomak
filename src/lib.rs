@@ -1,8 +1,7 @@
-extern crate pest;
 #[macro_use]
 extern crate pest_derive;
-extern crate bit_set;
-extern crate core;
+#[macro_use]
+extern crate lazy_static;
 
 pub mod func;
 pub mod model;

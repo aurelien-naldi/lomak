@@ -1,3 +1,5 @@
+//! Logical model: collections of functions
+
 use std::collections::HashMap;
 
 use std::fmt;
@@ -6,7 +8,6 @@ use crate::func;
 use crate::func::repr::expr::Expr;
 use crate::func::repr::paths::PathsMerger;
 use crate::func::variables;
-use crate::func::variables::Var;
 use crate::func::Grouped;
 
 pub mod actions;
@@ -31,7 +32,7 @@ impl LQModel {
             f.set_expr(rule);
             return;
         }
-        self.rules.insert(target, func::from_expr(rule));
+        self.rules.insert(target, func::Formula::from_expr(rule));
     }
 
     #[allow(dead_code)]
@@ -79,7 +80,7 @@ impl LQModel {
 
     pub fn stable(&self) {
         for (u, f) in &self.rules {
-            let cur = self.get_var(*u).as_expr();
+            let cur = Expr::ATOM(*u);
             let e = &f.as_expr();
             let condition = cur.and(e).or(&cur.not().and(&e.not()));
             let primes = condition.prime_implicants();
@@ -90,7 +91,7 @@ impl LQModel {
     pub fn stable_full(&self, _go: bool) {
         let mut merger = PathsMerger::new();
         for (u, f) in &self.rules {
-            let cur = self.get_var(*u).as_expr();
+            let cur = Expr::ATOM(*u);
             let e = &f.as_expr();
             let condition = cur.and(e).or(&cur.not().and(&e.not()));
             if !merger.add(&condition.prime_implicants()) {
@@ -126,16 +127,8 @@ impl LQModel {
         }
     }
 
-    pub fn get_node_id(&mut self, name: &str) -> usize {
+    pub fn get_node_id(&mut self, name: &str) -> Option<usize> {
         self.grp.get_node_id(name)
-    }
-
-    pub fn get_var_from_name(&mut self, name: &str) -> Var {
-        self.grp.get_var_from_name(name)
-    }
-
-    pub fn get_var(&self, uid: usize) -> Var {
-        Var { uid: uid }
     }
 
     #[allow(dead_code)]

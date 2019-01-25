@@ -26,7 +26,6 @@ uid   = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
 WHITESPACE = _{ " " | "\t" }
 
 "####]
-
 pub struct MNETParser;
 
 pub struct MNETFormat;
@@ -41,7 +40,7 @@ impl MNETFormat {
         match rule {
             Rule::bt => Expr::TRUE,
             Rule::bf => Expr::FALSE,
-            Rule::lit => model.get_var_from_name(expr.as_str()).as_expr(),
+            Rule::lit => Expr::ATOM(model.get_node_id(expr.as_str()).unwrap()),
             _ => {
                 let mut content = expr.into_inner().map(|e| self.load_expr(model, e));
                 match rule {
@@ -72,7 +71,7 @@ impl io::Format for MNETFormat {
                 Rule::rule => {
                     let mut inner = record.into_inner();
                     let target = inner.next().unwrap().as_str();
-                    let target = model.get_node_id(target);
+                    let target = model.get_node_id(target).unwrap();
                     let expr = inner.next().unwrap();
                     let expr = self.load_expr(model, expr);
                     model.set_rule(target, expr);
