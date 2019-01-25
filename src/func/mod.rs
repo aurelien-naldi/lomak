@@ -24,6 +24,22 @@ pub struct Formula {
     cached: Vec<Repr>,
 }
 
+impl Repr {
+
+    pub fn is_expr(&self) -> bool {
+        match self {
+            Repr::EXPR(_) => true,
+            _ => false,
+        }
+    }
+    pub fn as_expr(&self) -> Expr {
+        match &self {
+            Repr::EXPR(e) => e.clone(),
+            Repr::PRIMES(p) => p.to_expr(),
+        }
+    }
+}
+
 impl Formula {
     pub fn from_repr(repr: Repr) -> Formula {
         Formula {
@@ -53,10 +69,15 @@ impl Formula {
     }
 
     pub fn as_expr(&self) -> Expr {
-        match &self.repr {
-            Repr::EXPR(e) => e.clone(),
-            Repr::PRIMES(p) => p.to_expr(),
+        if self.repr.is_expr() {
+            return self.repr.as_expr();
         }
+        for c in self.cached.iter() {
+            if c.is_expr() {
+                return c.as_expr();
+            }
+        }
+        return self.repr.as_expr();
     }
 
     pub fn as_primes(&self) -> Paths {
