@@ -1,10 +1,12 @@
 //! Represent, and convert Boolean functions
 
 pub mod convert;
-pub mod repr;
 pub mod variables;
-use self::repr::expr::Expr;
-use self::repr::paths::Paths;
+pub mod expr;
+pub mod paths;
+
+use self::expr::Expr;
+use self::paths::Paths;
 
 use std::fmt;
 

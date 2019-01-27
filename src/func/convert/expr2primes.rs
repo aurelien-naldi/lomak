@@ -1,5 +1,5 @@
-use crate::func::repr::expr::*;
-use crate::func::repr::paths::Paths;
+use crate::func::expr::*;
+use crate::func::paths::Paths;
 
 impl Expr {
     /// Compute the prime implicants of a Boolean expression.

@@ -1,4 +1,4 @@
-use crate::func::repr::expr::Expr;
+use crate::func::expr::Expr;
 use crate::model::LQModel;
 use std::ffi::OsStr;
 use std::fs::File;

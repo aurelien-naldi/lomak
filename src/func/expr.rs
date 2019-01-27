@@ -7,7 +7,7 @@ use core::ops::BitOr;
 use core::ops::Not;
 
 use crate::func;
-use crate::func::repr::paths::LiteralSet;
+use crate::func::paths::LiteralSet;
 use crate::func::variables::*;
 
 /* ************************************************************************************* */

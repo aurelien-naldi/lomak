@@ -1,4 +1,4 @@
-use crate::func::repr::expr;
+use crate::func::expr;
 use crate::model::modifier::ModelModifier;
 use crate::model::LQModel;
 

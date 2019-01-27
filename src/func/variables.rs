@@ -1,6 +1,5 @@
 //! Associate names to their variables
 
-use crate::func::repr::expr::Expr;
 use regex::Regex;
 use std::collections::HashMap;
 use std::fmt;

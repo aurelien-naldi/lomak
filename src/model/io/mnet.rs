@@ -3,7 +3,7 @@ use crate::model::io;
 use pest::iterators::*;
 use pest::Parser;
 
-use crate::func::repr::expr::{Expr, Operator};
+use crate::func::expr::{Expr, Operator};
 use crate::model::LQModel;
 
 #[derive(Parser)]

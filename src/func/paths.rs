@@ -2,7 +2,7 @@ use bit_set::BitSet;
 use std::fmt;
 use std::vec::Vec;
 
-use crate::func::repr::expr::Expr;
+use crate::func::expr::Expr;
 use crate::func::variables::Group;
 
 #[derive(Clone, PartialEq, Eq)]

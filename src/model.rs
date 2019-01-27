@@ -5,8 +5,8 @@ use std::collections::HashMap;
 use std::fmt;
 
 use crate::func;
-use crate::func::repr::expr::Expr;
-use crate::func::repr::paths::PathsMerger;
+use crate::func::expr::Expr;
+use crate::func::paths::PathsMerger;
 use crate::func::variables;
 use crate::func::Grouped;
 
