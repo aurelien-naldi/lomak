@@ -18,6 +18,11 @@ pub trait Format {
         Ok(model)
     }
 
+    fn save_file(&self, model: &LQModel, filename: &str) -> Result<(), io::Error> {
+        // TODO: actually export the model!
+        Ok(())
+    }
+
     fn parse_rules(&self, model: &mut LQModel, expression: &String);
 
     fn parse_formula(&self, model: &mut LQModel, formula: &str) -> Result<Expr, String>;
@@ -41,6 +46,16 @@ fn guess_format(filename: &str) -> Result<Box<Format>, io::Error> {
 
 pub fn load_model(filename: &str, fmt: Option<&str>) -> Result<LQModel, io::Error> {
     let parser = |f: Box<Format>| f.parse_file(filename);
+    match fmt {
+        None => guess_format(filename),
+        Some(s) => get_format(s),
+    }
+    .and_then(parser)
+}
+
+
+pub fn save_model(model: &LQModel, filename: &str, fmt: Option<&str>) -> Result<(), io::Error> {
+    let parser = |f: Box<Format>| f.save_file(model, filename);
     match fmt {
         None => guess_format(filename),
         Some(s) => get_format(s),

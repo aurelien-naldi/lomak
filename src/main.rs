@@ -53,17 +53,17 @@ fn main() {
             .takes_value(true),
     );
 
-    // Add available subcommands
-    let actions = actions::load_actions();
-    for action in actions.data.values() {
-        let info = action.info();
-        let mut cmd = SubCommand::with_name(info.name.as_str()).about(info.descr.as_str());
-        for alias in &info.aliases {
+    for srv in actions::ACTIONS.services.values() {
+        let mut cmd = SubCommand::with_name(srv.name())
+            .about(srv.descr());
+        // Add command aliases
+        for alias in srv.aliases() {
             cmd = cmd.alias(alias.as_str());
         }
 
+
         // Add command arguments
-        for arg in &info.arguments {
+        for arg in srv.arguments() {
             cmd = cmd.arg(
                 clap::Arg::with_name(&arg.name)
                     .takes_value(arg.value)
@@ -109,7 +109,7 @@ fn main() {
 
     let (s_cmd, _cmd) = matches.subcommand();
 
-    let cur_cmd = actions.get(s_cmd);
+    let cur_cmd = actions::ACTIONS.services.get(s_cmd);
     match cur_cmd {
         None => {
             println!("No valid command");
@@ -119,4 +119,5 @@ fn main() {
             a.run(&model);
         }
     }
+
 }

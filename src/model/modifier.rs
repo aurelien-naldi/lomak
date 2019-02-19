@@ -12,7 +12,7 @@ struct ModifierDescriptor<T: ModelModifier> {
 }
 
 impl<T: ModelModifier> ModifierDescriptor<T> {
-    fn getModifier(&self, _model: &LQModel) {
+    fn get_modifier(&self, _model: &LQModel) {
         //        Box::new(self.builder(model) )
     }
 }

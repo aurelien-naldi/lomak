@@ -1,48 +1,49 @@
+use std::collections::HashMap;
+use crate::model;
 use crate::services::*;
 
-use crate::model;
+
+pub mod show;
+pub mod export;
 
 pub trait Action: Service {
     fn run(&self, model: &model::LQModel);
 }
 
-pub struct ActionService {
-    _info: ServiceInfo,
-    _callback: Box<Fn(&model::LQModel)>,
+lazy_static! {
+    pub static ref ACTIONS: ActionManager = ActionManager::new();
 }
 
-impl Service for ActionService {
-    fn info(&self) -> &ServiceInfo {
-        &self._info
+pub struct ActionManager {
+    pub services: HashMap<String, Box<dyn Action>>,
+}
+
+impl ActionManager {
+
+    /// Init function to load all available actions
+    fn new() -> ActionManager {
+
+        ActionManager {
+            services: HashMap::new()
+        }
+            .register(Box::new(show::ShowService{} ))
+            .register(Box::new(export::ExportService{} ))
+//        .register(primes_action())
+//        .register(fixpoints_action())
     }
-}
-impl Action for ActionService {
-    fn run(&self, model: &model::LQModel) {
-        self._callback.as_ref()(model)
+
+    fn register(mut self, srv: Box<dyn Action>) -> Self {
+        self.services.insert(String::from(srv.name()), srv);
+        self
     }
-}
 
-/// Init function to load all available actions
-pub fn load_actions() -> ServiceManager<ActionService> {
-    ServiceManager::new()
-        .register(show_action())
-        .register(primes_action())
-        .register(export_action())
-        .register(fixpoints_action())
-}
-
-/// Private function to create the "show" action
-fn show_action() -> ActionService {
-    ActionService {
-        _info: ServiceInfo::new("show").descr("Show the current model"),
-        _callback: Box::from(run_show_action),
+    pub fn actions(&self) { // -> std::collections::hash_map::Values {
+        let v = self.services.values();
     }
+
 }
 
-fn run_show_action(model: &model::LQModel) {
-    print!("{}", model);
-}
-
+/*
 fn run_primes_action(model: &model::LQModel) {
     model.primes();
 }
@@ -91,3 +92,6 @@ fn export_action() -> ActionService {
         _callback: Box::from(run_export_action),
     }
 }
+
+*/
+
