@@ -50,7 +50,7 @@ impl Group {
             None => (),
         };
 
-        if (!RE_UID.is_match(&name)) {
+        if !RE_UID.is_match(&name) {
             return None;
         }
 
@@ -107,7 +107,7 @@ impl Group {
 impl fmt::Display for Group {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for (u, n) in self.uid2name.iter() {
-            write!(f, "{}:{}   ", u, n);
+            write!(f, "{}:{}   ", u, n)?;
         }
         write!(f, "\n")
     }

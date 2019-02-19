@@ -405,50 +405,41 @@ impl PathsMerger {
 
 impl fmt::Display for LiteralSet {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "(");
+        write!(f, "(")?;
         let mut next = false;
         for v in &self.positive {
             if next {
-                write!(f, ",");
+                write!(f, ",")?;
             } else {
                 next = true;
             }
-            write!(f, "{}", v);
+            write!(f, "{}", v)?;
         }
         for v in &self.negative {
             if next {
-                write!(f, ",");
+                write!(f, ",")?;
             } else {
                 next = true;
             }
-            write!(f, "~{}", v);
+            write!(f, "~{}", v)?;
         }
         write!(f, ")")
     }
-    /*
-        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            write!(f, "P:");
-            fmt_bitset(&self.positive,f);
-            write!(f, "    N:");
-            fmt_bitset(&self.negative,f)
-
-        }
-    */
 }
 
 fn fmt_bitset(bs: &BitSet, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "<");
+    write!(f, "<")?;
     for u in bs {
-        write!(f, "{} ", u);
+        write!(f, "{} ", u)?;
     }
     write!(f, ">")
 }
 
 impl fmt::Display for Paths {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "[");
+        write!(f, "[")?;
         for i in &self.paths {
-            write!(f, "{} ", i);
+            write!(f, "{} ", i)?;
         }
         write!(f, "]")
     }

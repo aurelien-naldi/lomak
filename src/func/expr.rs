@@ -454,7 +454,7 @@ impl Children {
             if r.is_err() {
                 return r;
             }
-            write!(f, " {} ", op);
+            write!(f, " {} ", op)?;
         }
         self.data[n]._fmt(f, context)?;
         write!(f, "{}", postfix)
