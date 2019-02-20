@@ -1,11 +1,14 @@
-use crate::model;
-use crate::model::actions::Action;
-use crate::services::*;
-use crate::model::io;
 
-lazy_static! {
-    static ref SRV_EXPORT: ExportService = ExportService{};
-    static ref ARGUMENTS: Vec<Argument> = vec!(
+use crate::model;
+use crate::services::*;
+use crate::model::actions::ActionBuilder;
+
+use clap::SubCommand;
+use clap::App;
+use crate::model::LQModel;
+use crate::model::actions::CLIAction;
+
+/*
         Argument::new("output")
             .long("output")
             .descr("Set the output file")
@@ -14,29 +17,40 @@ lazy_static! {
             .long("format")
             .descr("Set the output format")
             .value(true)
-    );
+*/
+
+pub fn cli_action() -> Box<dyn CLIAction> {
+    Box::new(CLIExport{})
 }
 
-pub struct ExportService;
+struct CLIExport;
+impl CLIAction for CLIExport {
+    fn name(&self) -> &'static str { "export" }
 
-impl Action for ExportService {
-    fn run(&self, model: &model::LQModel) {
-        // FIXME: retrieve parameters
-        io::save_model(model, "", None);
-    }
-}
-
-impl Service for ExportService {
-    fn name(&self) -> &str {
-        "export"
+    fn register_command(&self, mut app: App<'static, 'static>) -> App<'static, 'static> {
+        app.subcommand(SubCommand::with_name("export")
+            .about("Save the current model")
+            .aliases(&["save", "convert"])
+        )
     }
 
-    fn descr(&self) -> &str {
-        "Save the current model"
-    }
-
-    fn arguments(&self) -> &Vec<Argument> {
-        &ARGUMENTS
+    fn builder(&self, model: LQModel) -> Box<dyn ActionBuilder> {
+        Box::new(ExportBuilder::new(model))
     }
 }
 
+pub struct ExportBuilder;
+
+
+impl ExportBuilder {
+    pub fn new(model: LQModel) -> ExportBuilder {
+        ExportBuilder{}
+    }
+}
+
+impl ActionBuilder for ExportBuilder {
+
+    fn call(&self) {
+        // TODO: export the model!!
+    }
+}

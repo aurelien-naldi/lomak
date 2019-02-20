@@ -1,31 +1,48 @@
 use crate::model;
-use crate::model::actions::Action;
 use crate::services::*;
+use crate::model::actions::ActionBuilder;
+
+use clap::SubCommand;
+use clap::App;
+use crate::model::LQModel;
+use crate::model::actions::CLIAction;
 
 
-lazy_static! {
-    static ref SRV_SHOW: ShowService = ShowService{};
-    static ref ALIASES: Vec<String> = vec!(String::from("display"), String::from("print"));
+struct CLIShow;
+
+pub fn cli_action() -> Box<dyn CLIAction> {
+    Box::new(CLIShow{})
+}
+
+impl CLIAction for CLIShow {
+    fn name(&self) -> &'static str { "show" }
+
+    fn register_command<'a,'b>(&self, mut app: App<'a,'b>) -> App<'a,'b> {
+        app.subcommand(SubCommand::with_name(self.name())
+            .about("Show the current model")
+            .aliases(&["display", "print"])
+        )
+    }
+
+    fn builder(&self, model: LQModel) -> Box<ActionBuilder> {
+        Box::new(ShowBuilder::new(model) )
+    }
 }
 
 
-pub struct ShowService;
+pub struct ShowBuilder {
+    model: LQModel,
+}
 
-impl Action for ShowService {
-    fn run(&self, model: &model::LQModel) {
-        print!("{}", model);
+impl ShowBuilder {
+    pub fn new(model: LQModel) -> ShowBuilder {
+        ShowBuilder{model: model}
     }
 }
 
-impl Service for ShowService {
-    fn name(&self) -> &str {
-        "show"
-    }
-    fn descr(&self) -> &str {
-        "Show the current model"
-    }
-    fn aliases(&self) -> &Vec<String> {
-        &ALIASES
+impl ActionBuilder for ShowBuilder {
+
+    fn call(&self) {
+        println!("{}", self.model);
     }
 }
-

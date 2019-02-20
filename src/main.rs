@@ -3,7 +3,6 @@ extern crate clap;
 
 use lomak::*;
 use model::actions;
-use model::actions::Action;
 use model::io;
 use services::Service;
 
@@ -53,28 +52,8 @@ fn main() {
             .takes_value(true),
     );
 
-    for srv in actions::ACTIONS.services.values() {
-        let mut cmd = SubCommand::with_name(srv.name())
-            .about(srv.descr());
-        // Add command aliases
-        for alias in srv.aliases() {
-            cmd = cmd.alias(alias.as_str());
-        }
-
-
-        // Add command arguments
-        for arg in srv.arguments() {
-            cmd = cmd.arg(
-                clap::Arg::with_name(&arg.name)
-                    .takes_value(arg.value)
-                    .multiple(arg.multiple)
-                    .short(&arg.short)
-                    .long(&arg.long),
-            );
-        }
-
-        app = app.subcommand(cmd);
-    }
+    // register available commands
+    app = actions::register_commands(app);
 
     let matches = app.get_matches();
 
@@ -109,15 +88,6 @@ fn main() {
 
     let (s_cmd, _cmd) = matches.subcommand();
 
-    let cur_cmd = actions::ACTIONS.services.get(s_cmd);
-    match cur_cmd {
-        None => {
-            println!("No valid command");
-            return;
-        }
-        Some(a) => {
-            a.run(&model);
-        }
-    }
+    actions::run_command(s_cmd, model);
 
 }
