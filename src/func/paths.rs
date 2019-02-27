@@ -32,6 +32,10 @@ impl Paths {
         self.paths.len()
     }
 
+    pub fn items(&self) -> &Vec<LiteralSet> {
+        &self.paths
+    }
+
     pub fn clear(&mut self) {
         self.paths.clear();
     }
@@ -378,6 +382,14 @@ impl LiteralSet {
             expr = expr.and(&Expr::NATOM(uid))
         }
         expr
+    }
+
+    pub fn positive(&self) -> &BitSet {
+        &self.positive
+    }
+
+    pub fn negative(&self) -> &BitSet {
+        &self.negative
     }
 }
 

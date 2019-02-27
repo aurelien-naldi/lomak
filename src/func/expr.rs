@@ -371,7 +371,7 @@ impl<'a> FormatContext<'a> {
 
     fn write_var(&self, f: &mut fmt::Formatter, uid: usize) -> fmt::Result {
         match &self.group {
-            None => write!(f, "{}", uid),
+            None => write!(f, "v{}", uid),
             Some(g) => write!(f, "{}", g.get_name(uid)),
         }
     }

@@ -4,11 +4,15 @@ use std::collections::HashMap;
 
 use std::fmt;
 
+use itertools::Itertools;
+
 use crate::func;
 use crate::func::expr::Expr;
 use crate::func::paths::PathsMerger;
 use crate::func::variables;
 use crate::func::Grouped;
+use crate::solver::Solver;
+use crate::solver;
 
 pub mod actions;
 pub mod io;
@@ -89,16 +93,31 @@ impl LQModel {
     }
 
     pub fn stable_full(&self, _go: bool) {
-        let mut merger = PathsMerger::new();
+        let mut solver = solver::get_solver();
+        let s = self.rules.keys()
+            .map(|u|format!("v{}", u))
+            .join("; ");
+        let s = format!("{{{}}}.", s);
+        solver.add( &s);
+
         for (u, f) in &self.rules {
             let cur = Expr::ATOM(*u);
             let e = &f.as_expr();
-            let condition = cur.and(e).or(&cur.not().and(&e.not()));
-            if !merger.add(&condition.prime_implicants()) {
-                println!("No solution!");
-                return;
+            let restriction = cur.and(e).or(&cur.not().and(&e.not())).not().prime_implicants();
+            for p in restriction.items() {
+                solver.restrict(p);
             }
+
+//            solver.add_constraint(&condition);
+//            let s = format!("{} :- {}.\n", cur, e);
+//            print!("{}", s);
+//            solver.add(&s);
+//            let s = format!("!{} :- {}.\n", cur, e.not());
+//            print!("{}", s);
+//            solver.add(&s);
         }
+
+        solver.solve();
 
         println!("Needs further merging...");
         //        primes.sort_by(|p1,p2| p1.len().cmp(&p2.len()));

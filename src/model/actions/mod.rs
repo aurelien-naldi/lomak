@@ -8,6 +8,7 @@ use crate::model::LQModel;
 pub mod show;
 pub mod export;
 pub mod primes;
+pub mod stable;
 
 lazy_static! {
     pub static ref ACTIONS: ActionManager = ActionManager::new();
@@ -26,6 +27,7 @@ impl ActionManager {
             .register(show::cli_action())
             .register(export::cli_action())
             .register(primes::cli_action())
+            .register(stable::cli_action())
     }
 
     fn register(mut self, action: Box<dyn CLIAction>) -> Self {
