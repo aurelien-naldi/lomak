@@ -5,6 +5,8 @@ use pest::Parser;
 
 use crate::func::expr::{Expr, Operator};
 use crate::model::LQModel;
+use crate::func::variables::VariableNamer;
+
 
 #[derive(Parser)]
 #[grammar_inline = r####"

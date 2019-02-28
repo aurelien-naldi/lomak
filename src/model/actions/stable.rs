@@ -5,6 +5,12 @@ use clap::SubCommand;
 use crate::model::LQModel;
 use crate::model::actions::ActionBuilder;
 use crate::model::actions::CLIAction;
+use crate::func::expr::Expr;
+
+use crate::solver::Solver;
+use crate::solver;
+
+use itertools::Itertools;
 
 
 pub fn cli_action() -> Box<dyn CLIAction> {
@@ -42,6 +48,24 @@ impl FixedBuilder {
 impl ActionBuilder for FixedBuilder {
 
     fn call(&self) {
-        self.model.stable_full(true);
+        let mut solver = solver::get_solver();
+        let rules = self.model.rules();
+
+        let s = rules.keys()
+            .map(|u|format!("v{}", u))
+            .join("; ");
+        let s = format!("{{{}}}.", s);
+        solver.add( &s);
+
+        for (u, f) in rules {
+            let cur = Expr::ATOM(*u);
+            let e = &f.as_expr();
+            for p in cur.and(e).or(&cur.not().and(&e.not())).not().prime_implicants().items() {
+                solver.restrict(p);
+            }
+        }
+
+        solver.solve();
     }
+
 }

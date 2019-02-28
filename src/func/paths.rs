@@ -3,7 +3,7 @@ use std::fmt;
 use std::vec::Vec;
 
 use crate::func::expr::Expr;
-use crate::func::variables::Group;
+use crate::func::variables::VariableNamer;
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct LiteralSet {
@@ -187,7 +187,7 @@ impl Paths {
         self.paths = selected
     }
 
-    pub fn to_json(&self, grp: &Group) {
+    pub fn to_json(&self, namer: &dyn VariableNamer) {
         print!("    [");
         let mut first = true;
         for p in self.paths.iter() {
@@ -196,7 +196,7 @@ impl Paths {
             } else {
                 print!(",");
             }
-            p.to_json(grp);
+            p.to_json(namer);
         }
         print!("]");
     }
@@ -351,7 +351,7 @@ impl LiteralSet {
         self.positive.is_superset(&other.positive) && self.negative.is_superset(&other.negative)
     }
 
-    pub fn to_json(&self, grp: &Group) {
+    pub fn to_json(&self, namer: &dyn VariableNamer) {
         print!("{{");
         let mut first = true;
         for uid in self.positive.iter() {
@@ -360,7 +360,7 @@ impl LiteralSet {
             } else {
                 print!(",");
             }
-            print!("\"{}\":1", grp.get_name(uid));
+            print!("\"{}\":1", namer.get_name(uid));
         }
         for uid in self.negative.iter() {
             if first {
@@ -368,7 +368,7 @@ impl LiteralSet {
             } else {
                 print!(",");
             }
-            print!("\"{}\":0", grp.get_name(uid));
+            print!("\"{}\":0", namer.get_name(uid));
         }
         print!("}}");
     }

@@ -17,6 +17,37 @@ pub struct Group {
     cur_uid: usize,
 }
 
+pub trait VariableNamer {
+    /// Retrieve the uid corresponding to a variable name.
+    /// Returns None if the variable name is not defined.
+    fn node_id(&self, name: &str) -> Option<usize>;
+
+    /// Retrieve or assign the uid for a variable name.
+    /// If the name is not defined, it will associate it to
+    /// a new uid.
+    /// Returns None if the name is invalid.
+    fn get_node_id(&mut self, name: &str) -> Option<usize>;
+
+
+    fn get_name(&self, uid: usize) -> String;
+
+    /// Assign a name to an existing variable
+    /// Returns false if the name is invalid or already assigned
+    /// to another variable
+    fn set_name(&mut self, uid: usize, name: String) -> bool;
+
+
+    /// Rename a variable.
+    /// Returns false if the new name is invalid or already assigned
+    /// to another variable
+    fn rename(&mut self, source: &str, name: String) -> bool {
+        match self.node_id(source) {
+            None => false,
+            Some(u) => self.set_name(u, name),
+        }
+    }
+}
+
 lazy_static! {
     static ref RE_UID: Regex = Regex::new(r"[a-zA-Z][a-zA-Z01-9_]*").unwrap();
 }
@@ -30,21 +61,18 @@ impl Group {
             cur_uid: 0,
         }
     }
+}
 
-    /// Retrieve the uid corresponding to a variable name.
-    /// Returns None if the variable name is not defined.
-    pub fn node_id(&self, name: &str) -> Option<usize> {
+impl VariableNamer for Group {
+
+    fn node_id(&self, name: &str) -> Option<usize> {
         match self.name2uid.get(name) {
             Some(uid) => Some(*uid),
             None => None,
         }
     }
 
-    /// Retrieve or assign the uid for a variable name.
-    /// If the name is not defined, it will associate it to
-    /// a new uid.
-    /// Returns None if the name is invalid.
-    pub fn get_node_id(&mut self, name: &str) -> Option<usize> {
+    fn get_node_id(&mut self, name: &str) -> Option<usize> {
         match self.name2uid.get(name) {
             Some(uid) => return Some(*uid),
             None => (),
@@ -63,17 +91,14 @@ impl Group {
         Some(ret)
     }
 
-    pub fn get_name(&self, uid: usize) -> String {
+    fn get_name(&self, uid: usize) -> String {
         match self.uid2name.get(&uid) {
             Some(name) => name.clone(),
             None => format!("_{}", uid),
         }
     }
 
-    /// Assign a name to an existing variable
-    /// Returns false if the name is invalid or already assigned
-    /// to another variable
-    pub fn set_name(&mut self, uid: usize, name: String) -> bool {
+    fn set_name(&mut self, uid: usize, name: String) -> bool {
         // Reject invalid new names
         if !RE_UID.is_match(&name) {
             return false;
@@ -90,17 +115,6 @@ impl Group {
         self.uid2name.insert(uid, name);
 
         true
-    }
-
-    /// Rename a variable.
-    /// Returns false if the new name is invalid or already assigned
-    /// to another variable
-    pub fn rename(&mut self, source: &str, name: String) -> bool {
-        // Find the old uid
-        match self.name2uid.get(source) {
-            None => false,
-            Some(u) => self.set_name(*u, name),
-        }
     }
 }
 

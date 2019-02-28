@@ -4,15 +4,12 @@ use std::collections::HashMap;
 
 use std::fmt;
 
-use itertools::Itertools;
-
 use crate::func;
 use crate::func::expr::Expr;
 use crate::func::paths::PathsMerger;
 use crate::func::variables;
+use crate::func::variables::VariableNamer;
 use crate::func::Grouped;
-use crate::solver::Solver;
-use crate::solver;
 
 pub mod actions;
 pub mod io;
@@ -47,81 +44,10 @@ impl LQModel {
         }
     }
 
-    pub fn nnf(&self) {
-        for (u, f) in &self.rules {
-            let e = f.as_expr();
-            println!("{}: {}", u, e.nnf().unwrap_or(Expr::clone(&e)));
-        }
+    pub fn rules(&self) -> &HashMap<usize, func::Formula> {
+        &self.rules
     }
 
-    pub fn primes(&self) {
-        for (u, f) in &self.rules {
-            let primes = f.as_expr().prime_implicants();
-            println!("PI {}: {}", u, primes);
-        }
-    }
-
-    pub fn json_primes(&self) {
-        println!("{{");
-        let mut first = true;
-        for (u, f) in &self.rules {
-            if first {
-                first = false;
-            } else {
-                println!(",");
-            }
-            let name = self.grp.get_name(*u);
-            let pos_primes = f.as_expr().prime_implicants();
-            let neg_primes = f.as_expr().not().prime_implicants();
-            println!("\"{}\":[", name);
-            neg_primes.to_json(&self.grp);
-            println!(",");
-            pos_primes.to_json(&self.grp);
-            print!("]");
-        }
-        println!("\n}}");
-    }
-
-    pub fn stable(&self) {
-        for (u, f) in &self.rules {
-            let cur = Expr::ATOM(*u);
-            let e = &f.as_expr();
-            let condition = cur.and(e).or(&cur.not().and(&e.not()));
-            let primes = condition.prime_implicants();
-            println!("S PI {}: {}", u, primes);
-        }
-    }
-
-    pub fn stable_full(&self, _go: bool) {
-        let mut solver = solver::get_solver();
-        let s = self.rules.keys()
-            .map(|u|format!("v{}", u))
-            .join("; ");
-        let s = format!("{{{}}}.", s);
-        solver.add( &s);
-
-        for (u, f) in &self.rules {
-            let cur = Expr::ATOM(*u);
-            let e = &f.as_expr();
-            let restriction = cur.and(e).or(&cur.not().and(&e.not())).not().prime_implicants();
-            for p in restriction.items() {
-                solver.restrict(p);
-            }
-
-//            solver.add_constraint(&condition);
-//            let s = format!("{} :- {}.\n", cur, e);
-//            print!("{}", s);
-//            solver.add(&s);
-//            let s = format!("!{} :- {}.\n", cur, e.not());
-//            print!("{}", s);
-//            solver.add(&s);
-        }
-
-        solver.solve();
-
-        println!("Needs further merging...");
-        //        primes.sort_by(|p1,p2| p1.len().cmp(&p2.len()));
-    }
 
     pub fn dbg(&self) {
         println!("{}", self.grp);
@@ -145,16 +71,31 @@ impl LQModel {
             println!();
         }
     }
+}
 
-    pub fn get_node_id(&mut self, name: &str) -> Option<usize> {
+/// Delegate the VariableNamer trait to the internal Group
+impl VariableNamer for LQModel {
+    fn node_id(&self, name: &str) -> Option<usize> {
+        self.grp.node_id(name)
+    }
+
+    fn get_node_id(&mut self, name: &str) -> Option<usize> {
         self.grp.get_node_id(name)
     }
 
-    #[allow(dead_code)]
-    pub fn rename(&mut self, source: &str, name: String) -> bool {
+    fn get_name(&self, uid: usize) -> String {
+        self.grp.get_name(uid)
+    }
+
+    fn set_name(&mut self, uid: usize, name: String) -> bool {
+        self.grp.set_name(uid, name)
+    }
+
+    fn rename(&mut self, source: &str, name: String) -> bool {
         self.grp.rename(source, name)
     }
 }
+
 
 impl fmt::Display for LQModel {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
