@@ -1,6 +1,4 @@
-use std::collections::HashMap;
 use std::error::Error;
-use std::rc::Rc;
 
 lazy_static! {
     static ref NO_ALIASES: Vec<String> = vec!();

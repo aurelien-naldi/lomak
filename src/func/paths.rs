@@ -16,11 +16,6 @@ pub struct Paths {
     paths: Vec<LiteralSet>,
 }
 
-pub struct PathsMerger {
-    req: LiteralSet,
-    extra: Vec<Paths>,
-}
-
 impl Paths {
     pub fn new() -> Paths {
         Paths {
@@ -390,28 +385,6 @@ impl LiteralSet {
 
     pub fn negative(&self) -> &BitSet {
         &self.negative
-    }
-}
-
-impl PathsMerger {
-    pub fn new() -> PathsMerger {
-        PathsMerger {
-            req: LiteralSet::new(),
-            extra: vec![],
-        }
-    }
-
-    pub fn add(&mut self, p: &Paths) -> bool {
-        // TODO: merge it
-        match p.len() {
-            0 => false,
-            1 => {
-                // Integrate it in the required literal
-                self.req.intersect_with(&p.paths[0]);
-                true
-            }
-            _ => true,
-        }
     }
 }
 

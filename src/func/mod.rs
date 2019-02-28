@@ -12,7 +12,7 @@ use std::fmt;
 use std::cell::RefCell;
 
 pub trait Grouped {
-    fn gfmt(&self, group: &variables::Group, f: &mut fmt::Formatter) -> fmt::Result;
+    fn gfmt(&self, group: &dyn variables::VariableNamer, f: &mut fmt::Formatter) -> fmt::Result;
 }
 
 /// Supported function representation formats
@@ -135,9 +135,9 @@ impl fmt::Display for Formula {
 }
 
 impl Grouped for Formula {
-    fn gfmt(&self, group: &variables::Group, f: &mut fmt::Formatter) -> fmt::Result {
+    fn gfmt(&self, namer: &dyn variables::VariableNamer, f: &mut fmt::Formatter) -> fmt::Result {
         match &self.repr {
-            Repr::EXPR(e) => e.gfmt(group, f),
+            Repr::EXPR(e) => e.gfmt(namer, f),
             Repr::PRIMES(p) => write!(f, "{}", p),
         }
     }
@@ -151,4 +151,3 @@ impl fmt::Display for Repr {
         }
     }
 }
-

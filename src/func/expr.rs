@@ -7,6 +7,7 @@ use core::ops::BitOr;
 use core::ops::Not;
 
 use crate::func;
+use crate::func::Grouped;
 use crate::func::paths::LiteralSet;
 use crate::func::variables::*;
 
@@ -345,7 +346,7 @@ impl Children {
 
 struct FormatContext<'a> {
     parent_priority: u8,
-    group: Option<&'a Group>,
+    group: Option<&'a VariableNamer>,
 }
 
 impl<'a> FormatContext<'a> {
@@ -356,7 +357,7 @@ impl<'a> FormatContext<'a> {
         }
     }
 
-    fn from_group(grp: &Group) -> FormatContext {
+    fn from_group(grp: &dyn VariableNamer) -> FormatContext {
         FormatContext {
             parent_priority: 0,
             group: Some(grp),
@@ -377,9 +378,20 @@ impl<'a> FormatContext<'a> {
     }
 }
 
+pub struct NamedExpr<'a> {
+    pub expr: &'a Expr,
+    pub namer: &'a dyn VariableNamer
+}
+
+impl <'a> fmt::Display for NamedExpr<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.expr.gfmt(self.namer, f)
+    }
+}
+
 impl func::Grouped for Expr {
-    fn gfmt(&self, group: &Group, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut context = FormatContext::from_group(group);
+    fn gfmt(&self, namer: &dyn VariableNamer, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut context = FormatContext::from_group(namer);
         self._fmt(f, &mut context)
     }
 }

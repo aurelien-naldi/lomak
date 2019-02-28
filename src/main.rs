@@ -4,10 +4,8 @@ extern crate clap;
 use lomak::*;
 use model::actions;
 use model::io;
-use services::Service;
 
 use clap::AppSettings;
-use clap::SubCommand;
 
 use log::debug;
 

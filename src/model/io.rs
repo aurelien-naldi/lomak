@@ -3,8 +3,9 @@ use crate::model::LQModel;
 use std::ffi::OsStr;
 use std::fs::File;
 use std::io;
-use std::io::Read;
+use std::io::{Read, Write, BufWriter};
 use std::path::Path;
+use std::io::ErrorKind;
 
 mod mnet;
 
@@ -19,9 +20,12 @@ pub trait Format {
     }
 
     fn save_file(&self, model: &LQModel, filename: &str) -> Result<(), io::Error> {
-        // TODO: actually export the model!
-        Ok(())
+        let f = File::create(filename).expect("Could not create the output file");
+        let mut out = BufWriter::new(f);
+        self.write_rules(model, &mut out)
     }
+
+    fn write_rules(&self, model: &LQModel, out: &mut Write) -> Result<(), io::Error>;
 
     fn parse_rules(&self, model: &mut LQModel, expression: &String);
 
@@ -30,7 +34,10 @@ pub trait Format {
 
 pub fn get_format(fmt: &str) -> Result<Box<Format>, io::Error> {
     // TODO: select the right format
-    Result::Ok(Box::new(mnet::MNETFormat::new()))
+    match fmt.to_lowercase().trim() {
+        "mnet" => Result::Ok(Box::new(mnet::MNETFormat::new())),
+        _ => Err(io::Error::new(ErrorKind::NotFound, "No matching format")),
+    }
 }
 
 fn guess_format(filename: &str) -> Result<Box<Format>, io::Error> {

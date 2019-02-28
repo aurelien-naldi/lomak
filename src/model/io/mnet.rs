@@ -1,9 +1,10 @@
 use crate::model::io;
 
+use std::io::{Error,Write};
 use pest::iterators::*;
 use pest::Parser;
 
-use crate::func::expr::{Expr, Operator};
+use crate::func::expr::{Expr, Operator, NamedExpr};
 use crate::model::LQModel;
 use crate::func::variables::VariableNamer;
 
@@ -94,5 +95,14 @@ impl io::Format for MNETFormat {
                 return Ok(expr);
             }
         }
+    }
+
+    fn write_rules(&self, model: &LQModel, out: &mut Write) -> Result<(), Error> {
+
+        for (uid, r) in model.rules().iter() {
+            write!(out, "{} <- {}\n", model.get_name(*uid), NamedExpr{expr: &r.as_expr(), namer: model})?;
+        }
+
+        Ok(())
     }
 }

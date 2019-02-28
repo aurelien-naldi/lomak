@@ -1,9 +1,7 @@
 use clingo::*;
 use itertools::Itertools;
-use failure::Error;
 use regex::Regex;
 
-use std::process::{Command, Stdio};
 use crate::func::paths::LiteralSet;
 use std::num::ParseIntError;
 
@@ -71,7 +69,7 @@ impl ClingoProblem {
                 // get model type
                 let model_type = model.model_type().unwrap();
 
-                let mut type_string = match model_type {
+                let type_string = match model_type {
                     ModelType::StableModel => "Stable model",
                     ModelType::BraveConsequences => "Brave consequences",
                     ModelType::CautiousConsequences => "Cautious consequences",
@@ -102,6 +100,7 @@ impl ClingoProblem {
         handle.close().expect("Failed to close solve handle.");
     }
 
+/*
     fn solve_external(self) {
         let mut cmd = Command::new("clingo");
         cmd.args(&["-n", &self.n.to_string()]);
@@ -124,6 +123,7 @@ impl ClingoProblem {
 
         //        println!( "{}", String::from_utf8_lossy(&process.stdout) );
     }
+*/
 }
 
 fn model_as_pattern(model: &Model) -> LiteralSet {
@@ -148,10 +148,10 @@ fn model_as_pattern(model: &Model) -> LiteralSet {
         .expect("Failed to retrieve symbols in the model.");
 
     for atom in atoms {
-//        match atom_to_uid(&atom) {
-//            Ok(u) => result.set(u, true),
-//            Err(_) => (),
-//        }
+        match atom_to_uid(&atom) {
+            Ok(u) => result.set(u, true),
+            Err(_) => (),
+        }
     }
 
     result

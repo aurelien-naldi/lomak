@@ -1,5 +1,3 @@
-use crate::model;
-use crate::model::io;
 use clap::App;
 use clap::SubCommand;
 use crate::model::LQModel;
@@ -7,7 +5,6 @@ use crate::model::actions::ActionBuilder;
 use crate::model::actions::CLIAction;
 use crate::func::expr::Expr;
 
-use crate::solver::Solver;
 use crate::solver;
 
 use itertools::Itertools;
@@ -21,7 +18,7 @@ struct CLIFixed;
 impl CLIAction for CLIFixed {
     fn name(&self) -> &'static str { "fixpoints" }
 
-    fn register_command(&self, mut app: App<'static, 'static>) -> App<'static, 'static> {
+    fn register_command(&self, app: App<'static, 'static>) -> App<'static, 'static> {
         app.subcommand(SubCommand::with_name(self.name())
             .about("Compute the fixed points of the model")
             .aliases(&["fixed", "stable"])

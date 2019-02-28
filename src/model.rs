@@ -6,7 +6,6 @@ use std::fmt;
 
 use crate::func;
 use crate::func::expr::Expr;
-use crate::func::paths::PathsMerger;
 use crate::func::variables;
 use crate::func::variables::VariableNamer;
 use crate::func::Grouped;
@@ -47,30 +46,6 @@ impl LQModel {
     pub fn rules(&self) -> &HashMap<usize, func::Formula> {
         &self.rules
     }
-
-
-    pub fn dbg(&self) {
-        println!("{}", self.grp);
-        for (u, f) in &self.rules {
-            let e: &Expr = &f.as_expr();
-
-            println!("E{}  : {}", u, e);
-
-            let nnf = e.nnf().unwrap_or(e.clone());
-            println!("   N: {}", nnf);
-
-            //            let fd = e.dissolve(true).unwrap_or(e.clone());
-            //            println!("   D: {}", fd);
-
-            //            let fdn = nnf.dissolve(true).unwrap_or(nnf.clone());
-            //            println!("   D: {}", fdn);
-
-            let primes = e.prime_implicants();
-            println!("   P: {}", primes);
-
-            println!();
-        }
-    }
 }
 
 /// Delegate the VariableNamer trait to the internal Group
@@ -105,5 +80,23 @@ impl fmt::Display for LQModel {
             writeln!(f)?;
         }
         write!(f, "")
+    }
+}
+
+impl fmt::Debug for LQModel {
+
+    fn fmt(&self, ft: &mut fmt::Formatter) -> fmt::Result {
+        write!(ft, "{}", self.grp)?;
+        for (u, f) in &self.rules {
+            let e: &Expr = &f.as_expr();
+
+            writeln!(ft, "E{}  : {}", u, e)?;
+
+            let nnf = e.nnf().unwrap_or(e.clone());
+            writeln!(ft, "   N: {}", nnf)?;
+            let primes = e.prime_implicants();
+            writeln!(ft, "   P: {}", primes)?;
+        }
+        write!(ft, "")
     }
 }

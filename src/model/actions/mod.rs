@@ -1,6 +1,4 @@
 use std::collections::HashMap;
-use crate::model;
-use crate::services::*;
 use clap::App;
 use crate::model::LQModel;
 
@@ -38,15 +36,15 @@ impl ActionManager {
 
 
 pub trait ActionBuilder {
-    fn set_flag(&self, flag: &str) {}
-    fn set_value(&self, key: &str, value: &str) {}
+    fn set_flag(&self, _flag: &str) {}
+    fn set_value(&self, _key: &str, _value: &str) {}
 
     fn call(&self);
 }
 
 pub trait CLIAction: Sync {
     fn name(&self) -> &'static str;
-    fn register_command(&self, mut app: App<'static,'static>) -> App<'static,'static>;
+    fn register_command(&self, app: App<'static,'static>) -> App<'static,'static>;
     fn builder(&self, model: LQModel) -> Box<dyn ActionBuilder>;
 }
 

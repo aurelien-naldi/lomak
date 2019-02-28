@@ -1,5 +1,3 @@
-use crate::model;
-use crate::services::*;
 use crate::model::actions::ActionBuilder;
 
 use clap::SubCommand;
@@ -17,7 +15,7 @@ pub fn cli_action() -> Box<dyn CLIAction> {
 impl CLIAction for CLIShow {
     fn name(&self) -> &'static str { "show" }
 
-    fn register_command<'a,'b>(&self, mut app: App<'a,'b>) -> App<'a,'b> {
+    fn register_command<'a,'b>(&self, app: App<'a,'b>) -> App<'a,'b> {
         app.subcommand(SubCommand::with_name(self.name())
             .about("Show the current model")
             .aliases(&["display", "print"])
