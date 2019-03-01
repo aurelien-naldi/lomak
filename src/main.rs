@@ -84,8 +84,11 @@ fn main() {
         println!();
     }
 
-    let (s_cmd, _cmd) = matches.subcommand();
+    let (s_cmd, subcmd) = matches.subcommand();
+    if subcmd.is_some() {
+        // TODO: extract the right context and call the command
 
-    actions::run_command(s_cmd, model);
+        actions::run_command(s_cmd, subcmd.unwrap(), model);
+    }
 
 }

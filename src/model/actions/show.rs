@@ -1,7 +1,5 @@
 use crate::model::actions::ActionBuilder;
 
-use clap::SubCommand;
-use clap::App;
 use crate::model::LQModel;
 use crate::model::actions::CLIAction;
 
@@ -14,12 +12,10 @@ pub fn cli_action() -> Box<dyn CLIAction> {
 
 impl CLIAction for CLIShow {
     fn name(&self) -> &'static str { "show" }
+    fn about(&self) -> &'static str { "Show the current model" }
 
-    fn register_command<'a,'b>(&self, app: App<'a,'b>) -> App<'a,'b> {
-        app.subcommand(SubCommand::with_name(self.name())
-            .about("Show the current model")
-            .aliases(&["display", "print"])
-        )
+    fn aliases(&self) -> &'static[&'static str] {
+        &["display", "print"]
     }
 
     fn builder(&self, model: LQModel) -> Box<ActionBuilder> {

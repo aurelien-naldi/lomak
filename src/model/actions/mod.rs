@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use clap::App;
+use clap::{App, Arg, SubCommand};
 use crate::model::LQModel;
 
 
@@ -36,17 +36,100 @@ impl ActionManager {
 
 
 pub trait ActionBuilder {
-    fn set_flag(&self, _flag: &str) {}
-    fn set_value(&self, _key: &str, _value: &str) {}
+    fn set_flag(&mut self, _flag: &str) {}
+    fn set_value(&mut self, _key: &str, _value: &str) {}
+
+    fn set_args(&mut self, args: &clap::ArgMatches) {
+
+    }
 
     fn call(&self);
 }
 
 pub trait CLIAction: Sync {
     fn name(&self) -> &'static str;
-    fn register_command(&self, app: App<'static,'static>) -> App<'static,'static>;
+    fn about(&self) -> &'static str;
+
+    fn arguments(&self) -> &'static[ArgumentDescr] {
+        &[]
+    }
+
+    fn aliases(&self) -> &'static[&'static str] {
+        &[]
+    }
+
+    fn register_command(&self, app: App<'static, 'static>) -> App<'static, 'static> {
+
+        let mut cmd = SubCommand::with_name(self.name())
+            .about(self.about());
+        for alias in self.aliases() {
+            cmd = cmd.alias(*alias);
+        }
+        for param in self.arguments() {
+            let mut arg = Arg::with_name(&param.name)
+                .help(&param.help)
+                .required(param.required)
+                .takes_value(param.has_value);
+
+            if param.long.is_some() {
+                arg = arg.long(&param.long.as_ref().unwrap());
+            }
+            if param.short.is_some() {
+                arg = arg.short(&param.short.as_ref().unwrap());
+            }
+            cmd = cmd.arg(arg);
+        }
+
+        app.subcommand(cmd)
+    }
+
     fn builder(&self, model: LQModel) -> Box<dyn ActionBuilder>;
 }
+
+pub struct ArgumentDescr {
+    pub name: String,
+    pub help: String,
+    pub long: Option<String>,
+    pub short: Option<String>,
+    pub has_value: bool,
+    pub required: bool,
+}
+
+impl ArgumentDescr {
+    pub fn new(name: &str) -> ArgumentDescr {
+        ArgumentDescr{
+            name: name.to_string(),
+            help: String::from(""),
+            long: None,
+            short: None,
+            has_value: false,
+            required: false,
+
+        }
+    }
+
+    pub fn help(mut self, help:&str) -> Self {
+        self.help = help.to_string();
+        self
+    }
+    pub fn long(mut self, long:&str) -> Self {
+        self.long = Some(long.to_string());
+        self
+    }
+    pub fn short(mut self, short:&str) -> Self {
+        self.short = Some(short.to_string());
+        self
+    }
+    pub fn has_value(mut self, b:bool) -> Self {
+        self.has_value = b;
+        self
+    }
+    pub fn required(mut self, b:bool) -> Self {
+        self.required = b;
+        self
+    }
+}
+
 
 
 pub fn register_commands(mut app: App<'static,'static>) -> App<'static,'static> {
@@ -57,10 +140,12 @@ pub fn register_commands(mut app: App<'static,'static>) -> App<'static,'static> 
 }
 
 
-pub fn run_command(cmd: &str, model: LQModel) {
+pub fn run_command(cmd: &str, args: &clap::ArgMatches, model: LQModel) {
 
     if let Some(cli) = ACTIONS.services.get(cmd) {
-        cli.builder(model).call();
+        let mut b = cli.builder(model);
+        b.set_args(args);
+        b.call();
     } else {
 
     }

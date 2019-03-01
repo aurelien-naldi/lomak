@@ -1,5 +1,3 @@
-use clap::App;
-use clap::SubCommand;
 use crate::model::LQModel;
 use crate::model::actions::ActionBuilder;
 use crate::model::actions::CLIAction;
@@ -17,12 +15,10 @@ pub fn cli_action() -> Box<dyn CLIAction> {
 struct CLIFixed;
 impl CLIAction for CLIFixed {
     fn name(&self) -> &'static str { "fixpoints" }
+    fn about(&self) -> &'static str { "Compute the fixed points of the model" }
 
-    fn register_command(&self, app: App<'static, 'static>) -> App<'static, 'static> {
-        app.subcommand(SubCommand::with_name(self.name())
-            .about("Compute the fixed points of the model")
-            .aliases(&["fixed", "stable"])
-        )
+    fn aliases(&self) -> &'static[&'static str] {
+        &["fixed", "stable"]
     }
 
     fn builder(&self, model: LQModel) -> Box<dyn ActionBuilder> {
