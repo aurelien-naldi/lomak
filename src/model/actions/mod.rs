@@ -20,7 +20,7 @@ impl ActionManager {
     /// Init function to load all available actions
     fn new() -> ActionManager {
         ActionManager {
-            services: HashMap::new()
+            services: HashMap::new(),
         }
             .register(show::cli_action())
             .register(export::cli_action())
@@ -66,18 +66,7 @@ pub trait CLIAction: Sync {
             cmd = cmd.alias(*alias);
         }
         for param in self.arguments() {
-            let mut arg = Arg::with_name(&param.name)
-                .help(&param.help)
-                .required(param.required)
-                .takes_value(param.has_value);
-
-            if param.long.is_some() {
-                arg = arg.long(&param.long.as_ref().unwrap());
-            }
-            if param.short.is_some() {
-                arg = arg.short(&param.short.as_ref().unwrap());
-            }
-            cmd = cmd.arg(arg);
+            cmd = cmd.arg(arg_from_descr(param));
         }
 
         app.subcommand(cmd)
@@ -86,12 +75,29 @@ pub trait CLIAction: Sync {
     fn builder(&self, model: LQModel) -> Box<dyn ActionBuilder>;
 }
 
+pub fn arg_from_descr(param: &ArgumentDescr) -> Arg {
+    let mut arg = Arg::with_name(&param.name)
+        .help(&param.help)
+        .required(param.required)
+        .multiple(param.multiple)
+        .takes_value(param.has_value);
+
+    if param.long.is_some() {
+        arg = arg.long(&param.long.as_ref().unwrap());
+    }
+    if param.short.is_some() {
+        arg = arg.short(&param.short.as_ref().unwrap());
+    }
+    arg
+}
+
 pub struct ArgumentDescr {
     pub name: String,
     pub help: String,
     pub long: Option<String>,
     pub short: Option<String>,
     pub has_value: bool,
+    pub multiple: bool,
     pub required: bool,
 }
 
@@ -103,6 +109,7 @@ impl ArgumentDescr {
             long: None,
             short: None,
             has_value: false,
+            multiple: false,
             required: false,
 
         }
@@ -124,12 +131,15 @@ impl ArgumentDescr {
         self.has_value = b;
         self
     }
+    pub fn multiple(mut self, b:bool) -> Self {
+        self.multiple = b;
+        self
+    }
     pub fn required(mut self, b:bool) -> Self {
         self.required = b;
         self
     }
 }
-
 
 
 pub fn register_commands(mut app: App<'static,'static>) -> App<'static,'static> {

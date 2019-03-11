@@ -4,6 +4,7 @@ extern crate clap;
 use lomak::*;
 use model::actions;
 use model::io;
+use model::modifier;
 
 use clap::AppSettings;
 
@@ -32,25 +33,8 @@ fn main() {
                 .help("Silent: close multiple arguments before the command"),
         );
 
-    // TODO: add modifiers
-    app = app.arg(
-        clap::Arg::with_name("prt")
-            .short("p")
-            .long("perturb")
-            .multiple(true)
-            .help("[TODO] Apply a perturbation to one or several components")
-            .takes_value(true),
-    );
-
-    app = app.arg(
-        clap::Arg::with_name("mv")
-            .long("rename")
-            .help("[TODO] Rename a component")
-            .multiple(true)
-            .takes_value(true),
-    );
-
-    // register available commands
+    // register available modifiers and commands
+    app = modifier::register_modifiers(app);
     app = actions::register_commands(app);
 
     let matches = app.get_matches();
@@ -67,27 +51,12 @@ fn main() {
         Ok(m) => m,
     };
 
-    // TODO: apply selected modifiers in the right order
-    let modifiers = vec!["prt", "mv"];
-    let mut called_modifiers = vec![];
-    for name in modifiers {
-        if let Some(ids) = matches.indices_of(name) {
-            called_modifiers.push((name, ids));
-        }
-    }
+    // Apply the selected modifiers
+    let model = modifier::modify(model, &matches);
 
-    for (name, ids) in called_modifiers {
-        print!("{}:", name);
-        for i in ids {
-            print!(" {}", i);
-        }
-        println!();
-    }
-
+    // Call the selected command with its parameters
     let (s_cmd, subcmd) = matches.subcommand();
     if subcmd.is_some() {
-        // TODO: extract the right context and call the command
-
         actions::run_command(s_cmd, subcmd.unwrap(), model);
     }
 

@@ -1,7 +1,7 @@
 //! Logical model: collections of functions
 
 use std::collections::HashMap;
-
+use regex::Regex;
 use std::fmt;
 
 use crate::func;
@@ -13,6 +13,10 @@ use crate::func::Grouped;
 pub mod actions;
 pub mod io;
 pub mod modifier;
+
+lazy_static! {
+    static ref RE_PRT: Regex = Regex::new(r"([a-zA-Z][a-zA-Z01-9_]*)%([01])").unwrap();
+}
 
 pub struct LQModel {
     grp: variables::Group,
@@ -33,6 +37,35 @@ impl LQModel {
             return;
         }
         self.rules.insert(target, func::Formula::from_expr(rule));
+    }
+
+    pub fn knockout(mut self, uid: usize) -> Self {
+        self.set_rule(uid, Expr::FALSE);
+        self
+    }
+
+    pub fn knockin(mut self, uid: usize) -> Self {
+        self.set_rule(uid, Expr::TRUE);
+        self
+    }
+
+    pub fn perturbation(self, cmd: &str) -> Self {
+        match RE_PRT.captures(cmd) {
+            None => println!("Invalid perturbation parameter: {}", cmd),
+            Some(cap) => {
+                if let Some(uid) = self.node_id(&cap[1]) {
+                    match &cap[2] {
+                        "0" => return self.knockout(uid),
+                        "1" => return self.knockin(uid),
+                        _ => {
+                            println!("Invalid target value: {}", &cap[2]);
+                            ()
+                        },
+                    }
+                }
+            }
+        }
+        self
     }
 
     #[allow(dead_code)]
@@ -75,7 +108,7 @@ impl VariableNamer for LQModel {
 impl fmt::Display for LQModel {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for (u, x) in &self.rules {
-            write!(f, "{}: ", u)?;
+            write!(f, "{}: ", self.get_name(*u))?;
             x.gfmt(&self.grp, f)?;
             writeln!(f)?;
         }

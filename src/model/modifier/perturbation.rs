@@ -1,28 +1,31 @@
-use crate::func::expr;
-use crate::model::modifier::ModelModifier;
+use crate::model::modifier::CLIModifier;
 use crate::model::LQModel;
+use crate::model::actions::ArgumentDescr;
 
-pub struct Perturbation {
-    model: LQModel,
+lazy_static! {
+    pub static ref ARGUMENT: ArgumentDescr = ArgumentDescr::new("prt")
+        .long("perturbation")
+        .short("p")
+        .has_value(true)
+        .multiple(true)
+        .help("Apply a perturbation to one or several components");
 }
 
-impl Perturbation {
-    pub fn new(model: LQModel) -> Self {
-        Perturbation { model: model }
-    }
+pub struct CLIPerturbation;
 
-    pub fn knockout(mut self, uid: usize) -> Self {
-        return self.fix(uid, false);
-    }
-
-    pub fn fix(mut self, uid: usize, b: bool) -> Self {
-        self.model.set_rule(uid, expr::Expr::from_bool(b));
-        return self;
-    }
+pub fn cli_modifier() -> Box<dyn CLIModifier> {
+    Box::new(CLIPerturbation{})
 }
 
-impl ModelModifier for Perturbation {
-    fn get_model(self) -> LQModel {
-        self.model
+impl CLIModifier for CLIPerturbation {
+    fn argument(&self) -> &'static ArgumentDescr {
+        &ARGUMENT
+    }
+
+    fn modify(&self, mut model: LQModel, parameters: &[&str]) -> LQModel {
+        for arg in parameters {
+            model = model.perturbation(arg);
+        }
+        model
     }
 }
