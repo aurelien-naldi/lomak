@@ -26,27 +26,16 @@ pub fn cli_action() -> Box<dyn CLIAction> {
 struct CLIExport;
 impl CLIAction for CLIExport {
     fn name(&self) -> &'static str { "export" }
-    fn about(&self) -> &'static str { "Save the current model" }
 
-    fn aliases(&self) -> &'static[&'static str] {
-        &["save", "convert"]
-    }
+    fn about(&self) -> &'static str { "Save the current model" }
 
     fn arguments(&self) -> &'static[ArgumentDescr] {
         &PARAMETERS
     }
 
-    /*
-            cmd = cmd.arg(Arg::with_name("output")
-                    .help("Set the output file")
-                    .required(true)
-                );
-            cmd = cmd.arg(Arg::with_name("format")
-                    .help("Enforce the export format")
-                    .short("F")
-                    .long("format")
-                );
-    */
+    fn aliases(&self) -> &'static[&'static str] {
+        &["save", "convert"]
+    }
 
     fn builder(&self, model: LQModel) -> Box<dyn ActionBuilder> {
         Box::new(ExportBuilder::new(model))

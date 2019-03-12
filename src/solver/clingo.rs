@@ -81,9 +81,6 @@ impl ClingoProblem {
                 println!("{}: {}", type_string, number);
                 println!("    {}", model_as_pattern(model));
 
-//                print_model(model, "  atoms", &ShowType::ATOMS);
-//                print_model(model, " ~atoms", &(ShowType::COMPLEMENT | ShowType::ATOMS));
-
                 if self.n > 0 && number >= self.n {
                     println!("Reached the max model");
                     break;
@@ -99,31 +96,6 @@ impl ClingoProblem {
         handle.get().expect("Failed to get result from solve handle.");
         handle.close().expect("Failed to close solve handle.");
     }
-
-/*
-    fn solve_external(self) {
-        let mut cmd = Command::new("clingo");
-        cmd.args(&["-n", &self.n.to_string()]);
-
-        if self.minsolutions {
-            cmd.args(&["--enum-mode=domRec", "--heuristic=Domain", "--dom-mod=3,16"]);
-        }
-
-        // Setup stdin/stdout and launch the command
-        let mut process = cmd
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .spawn()
-            .expect("clingo command failed to start");
-
-        {
-            let mut stdin = process.stdin.as_mut().expect("Failed to open stdin");
-            //            stdin.write_all(":= a b;".as_bytes()).expect("Failed to write to stdin");
-        }
-
-        //        println!( "{}", String::from_utf8_lossy(&process.stdout) );
-    }
-*/
 }
 
 fn model_as_pattern(model: &Model) -> LiteralSet {
