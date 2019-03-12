@@ -7,6 +7,7 @@ pub mod show;
 pub mod export;
 pub mod primes;
 pub mod stable;
+pub mod trapspaces;
 
 lazy_static! {
     pub static ref ACTIONS: ActionManager = ActionManager::new();
@@ -26,6 +27,7 @@ impl ActionManager {
             .register(export::cli_action())
             .register(primes::cli_action())
             .register(stable::cli_action())
+            .register(trapspaces::cli_action())
     }
 
     fn register(mut self, action: Box<dyn CLIAction>) -> Self {
