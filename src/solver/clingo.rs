@@ -4,6 +4,8 @@ use regex::Regex;
 
 use crate::func::paths::LiteralSet;
 use std::num::ParseIntError;
+use crate::solver::SolverMode;
+use crate::solver::SolverMode::MAX;
 
 
 lazy_static! {
@@ -17,11 +19,22 @@ pub struct ClingoProblem {
 }
 
 impl ClingoProblem {
-    pub fn new() -> Self {
+    pub fn new(mode: SolverMode) -> Self {
+        let mut args = vec!["-n", "0"];
+
+        // Set the adapted clingo flags:
+        //   To find terminal trapspaces: --enum-mode=domRec --heuristic=Domain --dom-mod=3,16
+        //   To find minimal trapspaces:
+        match mode {
+            SolverMode::MAX => args.append(&mut vec!["--enum-mode=domRec", "--heuristic=Domain", "--dom-mod=3,16"]),
+            SolverMode::MIN => args.append(&mut vec!["--enum-mode=domRec", "--heuristic=Domain", "--dom-mod=5,16"]),
+            SolverMode::ALL => (),
+        }
+
         ClingoProblem {
             minsolutions: false,
             n: 100,
-            ctl: Control::new(vec![String::from("-n"), String::from("0")]).expect("Failed creating Control."),
+            ctl: Control::new(args.into_iter().map(|s|String::from(s)).collect()).expect("Failed creating Control."),
         }
     }
 

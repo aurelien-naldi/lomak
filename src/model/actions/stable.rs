@@ -6,6 +6,7 @@ use crate::func::expr::Expr;
 use crate::solver;
 
 use itertools::Itertools;
+use crate::solver::SolverMode;
 
 
 pub fn cli_action() -> Box<dyn CLIAction> {
@@ -41,7 +42,7 @@ impl FixedBuilder {
 impl ActionBuilder for FixedBuilder {
 
     fn call(&self) {
-        let mut solver = solver::get_solver();
+        let mut solver = solver::get_solver(SolverMode::ALL);
         let rules = self.model.rules();
 
         let s = rules.keys()

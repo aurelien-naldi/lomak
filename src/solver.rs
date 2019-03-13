@@ -2,8 +2,12 @@ use crate::func::expr::Expr;
 
 pub mod clingo;
 
-pub fn get_solver() -> clingo::ClingoProblem {
-    clingo::ClingoProblem::new()
+pub enum SolverMode {
+    MAX,MIN,ALL
+}
+
+pub fn get_solver(mode: SolverMode) -> clingo::ClingoProblem {
+    clingo::ClingoProblem::new(mode)
 }
 
 pub trait Solver {

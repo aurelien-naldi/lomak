@@ -2,12 +2,33 @@ use crate::model::LQModel;
 use crate::model::actions::ActionBuilder;
 use crate::model::actions::CLIAction;
 use crate::func::expr::Expr;
+use crate::model::actions::ArgumentDescr;
 
 use crate::solver;
 
 use itertools::Itertools;
 use crate::solver::clingo::ClingoProblem;
+use std::collections::HashMap;
+use crate::solver::SolverMode;
 
+lazy_static! {
+    pub static ref PARAMETERS: Vec<ArgumentDescr> = vec!{
+        ArgumentDescr::new("filter")
+            .help("Filter the results")
+            .long("filter")
+            .short("f")
+            .multiple(true)
+            .has_value(true),
+        ArgumentDescr::new("percolate")
+            .help("Percolate (propagate) fixed components")
+            .long("percolate")
+            .short("p"),
+        ArgumentDescr::new("terminal")
+            .help("Only terminal trapspaces (lower bound for attractors)")
+            .long("terminal")
+            .short("t"),
+    };
+}
 
 pub fn cli_action() -> Box<dyn CLIAction> {
     Box::new(CLIFixed{})
@@ -18,6 +39,10 @@ impl CLIAction for CLIFixed {
     fn name(&self) -> &'static str { "trapspaces" }
     fn about(&self) -> &'static str { "Compute the trapspaces (stable patterns) of the model" }
 
+    fn arguments(&self) -> &'static[ArgumentDescr] {
+        &PARAMETERS
+    }
+
     fn builder(&self, model: LQModel) -> Box<dyn ActionBuilder> {
         Box::new(TrapspacesBuilder::new(model))
     }
@@ -26,19 +51,45 @@ impl CLIAction for CLIFixed {
 
 pub struct TrapspacesBuilder{
     model: LQModel,
+    filters: HashMap<usize,bool>,
+    percolate: bool,
+    terminal: bool,
 }
 
 
 impl TrapspacesBuilder {
     pub fn new(model: LQModel) -> Self {
-        TrapspacesBuilder{model: model}
+        TrapspacesBuilder{
+            model: model,
+            filters: HashMap::new(),
+            percolate: false,
+            terminal: false,
+        }
+    }
+
+    pub fn filter(&mut self, uid: usize, b: bool) {
+        self.filters.insert(uid, b);
     }
 }
 
 impl ActionBuilder for TrapspacesBuilder {
 
+    fn set_args(&mut self, args: &clap::ArgMatches) {
+        if let Some(filters) = args.values_of("filter") {
+            for f in filters {
+
+            }
+        }
+        self.percolate = args.is_present("percolate");
+        self.terminal = args.is_present("terminal");
+    }
+
     fn call(&self) {
-        let mut solver = solver::get_solver();
+        let mode = match self.terminal {
+            true => SolverMode::MAX,
+            false => SolverMode::ALL,
+        };
+        let mut solver = solver::get_solver(mode);
         let rules = self.model.rules();
 
         // Add all variables
@@ -55,8 +106,14 @@ impl ActionBuilder for TrapspacesBuilder {
 
         for (u, f) in rules {
             let e = &f.as_expr();
+            let ne = e.not();
             restrict(&mut solver, e, 2*u+1);
-            restrict(&mut solver, &e.not(), 2*u);
+            restrict(&mut solver, &ne, 2*u);
+
+            if self.percolate {
+                enforce(&mut solver, e, 2*u);
+                enforce(&mut solver, &ne, 2*u+1);
+            }
         }
 
         solver.solve();
@@ -74,6 +131,20 @@ fn restrict(solver: &mut ClingoProblem, e: &Expr, u: usize) {
             solver.add(&format!(":- v{}, {}.\n", u, s));
         } else {
             solver.add(&format!(":- v{}.\n", u));
+        }
+    }
+}
+
+fn enforce(solver: &mut ClingoProblem, e: &Expr, u: usize) {
+    for p in e.prime_implicants().items() {
+        let s = p.positive().iter().map(|r|format!("v{}", 2*r))
+            .chain(p.negative().iter().map(|r|format!("v{}", 2*r+1)))
+            .join(",");
+
+        if s.len() > 0 {
+            solver.add(&format!("v{} :- {}.\n", u, s));
+        } else {
+            solver.add(&format!("v{}.\n", u));
         }
     }
 }
