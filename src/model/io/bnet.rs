@@ -11,9 +11,9 @@ use crate::func::variables::VariableNamer;
 
 #[derive(Parser)]
 #[grammar_inline = r####"
-file  =  { SOI ~ NEWLINE* ~ rule* ~ EOI }
+file  =  { SOI ~ NEWLINE* ~ ("targets" ~ "," ~ "factors" ~ NEWLINE*)? ~ rule* ~ EOI }
 sxpr  =  { SOI ~ expr ~ EOI }
-rule  =  { lit ~ "<-" ~ expr  ~ NEWLINE* }
+rule  =  { lit ~ "," ~ expr  ~ NEWLINE* }
 expr  = _{ disj }
 disj  =  { conj ~ ( "|"  ~ conj )* }
 conj  =  { term ~ ( "&" ~ term )* }
@@ -22,21 +22,21 @@ neg   =  { ("!" | "~") ~ grp }
 grp   = _{ neg | bt | bf | lit | "(" ~ expr ~ ")" }
 bt    =  { ^"true" | "1" }
 bf    =  { ^"false" | "0" }
-lit   = @{ uid ~ (":" ~ value)?  }
+lit   = @{ uid }
 value =  { ASCII_DIGIT }
 uid   = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
 
 WHITESPACE = _{ " " | "\t" }
-COMMENT = _{ "#" ~ (!NEWLINE ~ ANY)* ~ NEWLINE* }
+COMMENT = _{ "#" ~ (!NEWLINE ~ ANY)* ~ NEWLINE? }
 
 "####]
-pub struct MNETParser;
+pub struct BNETParser;
 
-pub struct MNETFormat;
+pub struct BNETFormat;
 
-impl MNETFormat {
-    pub fn new() -> MNETFormat {
-        return MNETFormat {};
+impl BNETFormat {
+    pub fn new() -> BNETFormat {
+        return BNETFormat {};
     }
 
     fn load_expr(&self, model: &mut LQModel, expr: Pair<Rule>) -> Expr {
@@ -60,9 +60,9 @@ impl MNETFormat {
     }
 }
 
-impl io::Format for MNETFormat {
+impl io::Format for BNETFormat {
     fn parse_rules(&self, model: &mut LQModel, expression: &String) {
-        let ptree = MNETParser::parse(Rule::file, expression);
+        let ptree = BNETParser::parse(Rule::file, expression);
 
         if ptree.is_err() {
             println!("Parsing error: {}", ptree.unwrap_err());
@@ -87,7 +87,7 @@ impl io::Format for MNETFormat {
     }
 
     fn parse_formula(&self, model: &mut LQModel, formula: &str) -> Result<Expr, String> {
-        let ptree = MNETParser::parse(Rule::sxpr, formula);
+        let ptree = BNETParser::parse(Rule::sxpr, formula);
         match ptree {
             Err(s) => return Err(format!("Parsing error: {}", s)),
             Ok(mut ptree) => {
@@ -101,7 +101,7 @@ impl io::Format for MNETFormat {
     fn write_rules(&self, model: &LQModel, out: &mut Write) -> Result<(), Error> {
 
         for (uid, r) in model.rules().iter() {
-            write!(out, "{} <- {}\n", model.get_name(*uid), NamedExpr{expr: &r.as_expr(), namer: model})?;
+            write!(out, "{}, {}\n", model.get_name(*uid), NamedExpr{expr: &r.as_expr(), namer: model})?;
         }
 
         Ok(())

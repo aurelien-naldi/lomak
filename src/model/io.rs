@@ -8,6 +8,7 @@ use std::path::Path;
 use std::io::ErrorKind;
 
 mod mnet;
+mod bnet;
 
 pub trait Format {
     fn parse_file(&self, filename: &str) -> Result<LQModel, io::Error> {
@@ -36,6 +37,7 @@ pub fn get_format(fmt: &str) -> Result<Box<Format>, io::Error> {
     // TODO: select the right format
     match fmt.to_lowercase().trim() {
         "mnet" => Result::Ok(Box::new(mnet::MNETFormat::new())),
+        "bnet" => Result::Ok(Box::new(bnet::BNETFormat::new())),
         _ => Err(io::Error::new(ErrorKind::NotFound, "No matching format")),
     }
 }
