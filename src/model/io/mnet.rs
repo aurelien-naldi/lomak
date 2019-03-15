@@ -61,6 +61,16 @@ impl MNETFormat {
 }
 
 impl io::Format for MNETFormat {
+    fn as_parser(&self) -> Option<&dyn io::ParsingFormat> {
+        Some(self)
+    }
+
+    fn as_saver(&self) -> Option<&dyn io::SavingFormat> {
+        Some(self)
+    }
+}
+
+impl io::ParsingFormat for MNETFormat {
     fn parse_rules(&self, model: &mut LQModel, expression: &String) {
         let ptree = MNETParser::parse(Rule::file, expression);
 
@@ -98,6 +108,9 @@ impl io::Format for MNETFormat {
         }
     }
 
+}
+
+impl io::SavingFormat for MNETFormat {
     fn write_rules(&self, model: &LQModel, out: &mut Write) -> Result<(), Error> {
 
         for (uid, r) in model.rules().iter() {
