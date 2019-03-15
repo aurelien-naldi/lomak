@@ -14,7 +14,8 @@ itertools = "0.8"
 failure = "0.1"
 regex = "1"
 lazy_static = "1.2"
-clingo = "0.4"
+#clingo = "0.4"
+clingo = { git = "https://github.com/potassco/clingo-rs.git", rev="b3d5fb9aedd3d097a6e55b689eefa60dd77ad793" }
 
 [dependencies.clap]
 version = "2"

@@ -72,7 +72,7 @@ impl ClingoProblem {
         // get a solve handle
         let mut handle = self
             .ctl
-            .solve(SolveMode::YIELD, &[])
+            .solve(&SolveMode::YIELD, &[])
             .expect("Failed retrieving solve handle.");
 
         // loop over all models
@@ -116,7 +116,7 @@ fn model_as_pattern(model: &Model) -> LiteralSet {
 
     // retrieve the selected atoms in the model
     let atoms = model
-        .symbols(ShowType::ATOMS)
+        .symbols(&ShowType::ATOMS)
         .expect("Failed to retrieve symbols in the model.");
 
     for atom in atoms {
@@ -129,7 +129,7 @@ fn model_as_pattern(model: &Model) -> LiteralSet {
 
     // retrieve the negated atoms in the model
     let atoms = model
-        .symbols(ShowType::COMPLEMENT | ShowType::ATOMS)
+        .symbols(&(ShowType::COMPLEMENT | ShowType::ATOMS))
         .expect("Failed to retrieve symbols in the model.");
 
     for atom in atoms {

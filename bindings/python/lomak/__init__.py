@@ -32,12 +32,6 @@ class Expr:
             return Expr( ret )
         return self
 
-    def dissolve(self, dlink=True):
-        ret = lib.expr_dissolve(self.__ref, dlink);
-        if ret.ptr:
-            return Expr( ret )
-        return self
-
     def __and__(self, other):
         return Expr(lib.expr_and(self.__ref, other.__ref))
 
@@ -55,14 +49,14 @@ class Model:
         else:
             self.__ref = lib.new__model()
 
+    def __str__(self):
+        return _str_from_lib(lib.str__model(self.__ref))
+
     def __del__(self):
         lib.drop__model(self.__ref)
 
     def rename(self, source,target):
         lib.model_rename(self.__ref, source.encode('utf-8'), target.encode('utf-8'))
-
-    def show(self):
-        lib.model_show(self.__ref)
 
     def primes(self):
         lib.model_primes(self.__ref)

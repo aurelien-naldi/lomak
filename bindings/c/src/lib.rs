@@ -3,7 +3,8 @@ use std::ffi::{CString, CStr};
 use std::os::raw::c_char;
 
 use lomak::{
-    func::repr::expr::Expr,
+    func::expr::Expr,
+    func::variables::VariableNamer,
     model::LQModel,
     model::io,
 };
@@ -76,10 +77,15 @@ pub type ModelPtr = CPtr<LQModel>;
     ModelPtr::new( LQModel::new() )
 }
 
-#[no_mangle] pub extern fn drop__model(e: ModelPtr) {
-    ModelPtr::drop(e)
+#[no_mangle] pub extern fn str__model(m: ModelPtr) -> *const c_char {
+    share_rust_string( format!("{}", m.borrow()) )
 }
 
+#[no_mangle] pub extern fn drop__model(m: ModelPtr) {
+    ModelPtr::drop(m)
+}
+
+/*
 #[no_mangle] pub extern fn model_get_expr(mut model:ModelPtr, name: *const c_char) -> ExprPtr {
     ExprPtr::new( model.borrow_mut().get_var_from_name(import_string!(name)).as_expr() )
 }
@@ -91,6 +97,7 @@ pub type ModelPtr = CPtr<LQModel>;
 #[no_mangle] pub extern fn model_fixpoints(model:ModelPtr) {
     model.borrow().stable();
 }
+*/
 
 #[no_mangle] pub extern fn model_rename(model:ModelPtr, source: *const c_char, target: *const c_char) {
     model.borrow_mut().rename( import_string!(source), String::from(import_string!(target)));
