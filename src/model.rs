@@ -20,7 +20,7 @@ lazy_static! {
 
 pub struct LQModel {
     grp: variables::Group,
-    rules: HashMap<usize, func::Formula>,
+    rules: HashMap<usize, func::Rule>,
 }
 
 impl LQModel {
@@ -36,7 +36,7 @@ impl LQModel {
             f.set_expr(rule);
             return;
         }
-        self.rules.insert(target, func::Formula::from_expr(rule));
+        self.rules.insert(target, func::Rule::from_expr(rule));
     }
 
     pub fn knockout(mut self, uid: usize) -> Self {
@@ -72,11 +72,11 @@ impl LQModel {
     pub fn extend_rule(&mut self, target: usize, rule: Expr) {
         match self.rules.remove(&target) {
             None => self.set_rule(target, rule),
-            Some(r) => self.set_rule(target, r.as_expr().or(&rule)),
+            Some(mut r) => r.extend(rule),
         }
     }
 
-    pub fn rules(&self) -> &HashMap<usize, func::Formula> {
+    pub fn rules(&self) -> &HashMap<usize, func::Rule> {
         &self.rules
     }
 }

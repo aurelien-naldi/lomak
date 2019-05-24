@@ -1,4 +1,4 @@
-//! Represent, and convert Boolean functions
+//! Represent and convert Boolean functions
 
 pub mod convert;
 pub mod variables;
@@ -25,6 +25,17 @@ pub enum Repr {
 pub struct Formula {
     repr: Repr,
     cached: RefCell<Vec<Repr>>,
+}
+
+/// A formula associated with a target value
+pub struct Assign {
+    pub target: u8,
+    pub formula: Formula
+}
+
+/// List of formulae forming a full assignment
+pub struct Rule {
+    assignments: Vec<Assign>
 }
 
 impl Repr {
@@ -128,6 +139,46 @@ impl Formula {
     }
 }
 
+
+impl Rule {
+    pub fn from_formula(f: Formula) -> Rule {
+        Rule {
+            assignments: vec![Assign { target: 1, formula: f }]
+        }
+    }
+
+    pub fn extend(&mut self, expr: Expr) {
+        self.assignments.insert(self.assignments.len(), Assign { target: 1, formula: Formula::from_expr(expr) })
+    }
+
+    pub fn set_expr(&mut self, expr: Expr) {
+        self.assignments.clear();
+        let f = Formula::from_expr(expr);
+        self.assignments.insert(0, Assign { target: 1, formula: f });
+    }
+
+
+    pub fn from_expr(expr: Expr) -> Rule {
+        Self::from_formula(Formula::from_expr(expr))
+    }
+
+    pub fn as_expr(&self) -> Expr {
+        if self.assignments.len() < 1 {
+            return Expr::FALSE;
+        }
+
+        // FIXME: build the expr for target value 1
+        self.assignments.get(0).unwrap().as_expr()
+    }
+}
+
+impl Assign {
+
+    pub fn as_expr(&self) -> Expr {
+        self.formula.as_expr()
+    }
+}
+
 impl fmt::Display for Formula {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.repr)
@@ -143,11 +194,42 @@ impl Grouped for Formula {
     }
 }
 
+impl Grouped for Rule {
+    fn gfmt(&self, namer: &dyn variables::VariableNamer, f: &mut fmt::Formatter) -> fmt::Result {
+        for a in &self.assignments {
+            a.gfmt(namer, f);
+        }
+        write!(f, "")
+    }
+}
+
+impl Grouped for Assign {
+    fn gfmt(&self, namer: &dyn variables::VariableNamer, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{} <- ", self.target);
+        self.formula.gfmt(namer, f)
+    }
+}
+
 impl fmt::Display for Repr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self {
             Repr::EXPR(e) => write!(f, "{}", e),
             Repr::PRIMES(p) => write!(f, "{}", p),
         }
+    }
+}
+
+impl fmt::Display for Assign {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{} <- {}", self.target, self.formula)
+    }
+}
+
+impl fmt::Display for Rule {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for a in &self.assignments {
+            writeln!(f, "{}", a);
+        }
+        write!(f, "")
     }
 }
