@@ -3,9 +3,11 @@
 pub mod convert;
 pub mod variables;
 pub mod expr;
+pub mod gen;
 pub mod paths;
 
 use self::expr::Expr;
+use self::gen::Generator;
 use self::paths::Paths;
 
 use std::fmt;
@@ -18,6 +20,7 @@ pub trait Grouped {
 /// Supported function representation formats
 pub enum Repr {
     EXPR(Expr),
+    GEN(Generator),
     PRIMES(Paths),
 }
 
@@ -52,6 +55,7 @@ impl Repr {
     pub fn as_expr(&self) -> Expr {
         match &self {
             Repr::EXPR(e) => e.clone(),
+            Repr::GEN(g) => g.to_expr(),
             Repr::PRIMES(p) => p.to_expr(),
         }
     }
@@ -68,6 +72,7 @@ impl Repr {
     pub fn as_primes(&self) -> Paths {
         match &self {
             Repr::PRIMES(p) => p.clone(),
+            Repr::GEN(g) => g.to_expr().prime_implicants(),
             Repr::EXPR(e) => e.prime_implicants(),
         }
     }
@@ -189,6 +194,7 @@ impl Grouped for Formula {
     fn gfmt(&self, namer: &dyn variables::VariableNamer, f: &mut fmt::Formatter) -> fmt::Result {
         match &self.repr {
             Repr::EXPR(e) => e.gfmt(namer, f),
+            Repr::GEN(g) => g.gfmt(namer, f),
             Repr::PRIMES(p) => write!(f, "{}", p),
         }
     }
@@ -214,6 +220,7 @@ impl fmt::Display for Repr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self {
             Repr::EXPR(e) => write!(f, "{}", e),
+            Repr::GEN(g) => write!(f, "{}", g),
             Repr::PRIMES(p) => write!(f, "{}", p),
         }
     }
