@@ -2,6 +2,7 @@ use bit_set::BitSet;
 use std::fmt;
 use std::vec::Vec;
 
+use crate::func::*;
 use crate::func::expr::Expr;
 use crate::func::variables::VariableNamer;
 
@@ -427,5 +428,30 @@ impl fmt::Display for Paths {
             write!(f, "{} ", i)?;
         }
         write!(f, "]")
+    }
+}
+
+
+impl BoolRepr for Paths {
+    fn into_repr(self) -> Repr {
+        Repr::PRIMES(self)
+    }
+}
+
+impl FromBoolRepr for Paths {
+
+    fn convert(repr: &Repr) -> Self {
+        match repr {
+            Repr::PRIMES(p) => p.clone(),
+            Repr::GEN(g) => g.to_expr().prime_implicants(),
+            Repr::EXPR(e) => e.prime_implicants(),
+        }
+    }
+
+    fn is_converted(repr: &Repr) -> bool {
+        match repr {
+            Repr::PRIMES(_) => true,
+            _ => false,
+        }
     }
 }

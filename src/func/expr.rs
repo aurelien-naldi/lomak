@@ -7,7 +7,7 @@ use core::ops::BitOr;
 use core::ops::Not;
 
 use crate::func;
-use crate::func::Grouped;
+use crate::func::*;
 use crate::func::paths::LiteralSet;
 use crate::func::variables::*;
 
@@ -62,6 +62,37 @@ impl Expr {
 
     pub fn or(&self, e: &Expr) -> Self {
         Operator::OR.binary(self, e)
+    }
+
+    fn from_repr(repr: &Repr) -> Option<Expr> {
+        match repr {
+            Repr::EXPR(e) => Some(e.clone()),
+            _ => None,
+        }
+    }
+}
+
+impl BoolRepr for Expr {
+    fn into_repr(self) -> Repr {
+        Repr::EXPR(self)
+    }
+}
+
+impl FromBoolRepr for Expr {
+
+    fn convert(repr: &Repr) -> Self {
+        match repr {
+            Repr::EXPR(e) => e.clone(),
+            Repr::GEN(g) => g.to_expr(),
+            Repr::PRIMES(p) => p.to_expr(),
+        }
+    }
+
+    fn is_converted(repr: &Repr) -> bool {
+        match repr {
+            Repr::EXPR(e) => true,
+            _ => false,
+        }
     }
 }
 

@@ -3,14 +3,17 @@
 use std::fmt;
 use std::collections::HashMap;
 
-use crate::func::expr::Expr;
 use crate::func;
+use crate::func::expr::Expr;
+use crate::func::{Repr,BoolRepr};
 
+#[derive(Clone)]
 pub enum Sign {
     POSITIVE,
     NEGATIVE
 }
 
+#[derive(Clone)]
 pub struct Generator {
     map: HashMap<usize, Sign>
 }
@@ -31,6 +34,19 @@ impl Generator {
         }
         expr.and(&nexpr)
     }
+
+    fn from_repr(repr: &Repr) -> Option<Self> {
+        match repr {
+            Repr::GEN(g) => Some(g.clone()),
+            _ => None,
+        }
+    }
+}
+
+impl BoolRepr for Generator {
+    fn into_repr(self) -> Repr {
+        Repr::GEN(self)
+    }
 }
 
 
@@ -46,8 +62,8 @@ impl fmt::Display for Generator {
 impl fmt::Display for Sign {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            POSITIVE => write!(f, ""),
-            NEGATIVE => write!(f, ""),
+            Sign::POSITIVE => write!(f, ""),
+            Sign::NEGATIVE => write!(f, ""),
         }
     }
 }

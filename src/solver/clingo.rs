@@ -5,7 +5,6 @@ use regex::Regex;
 use crate::func::paths::LiteralSet;
 use std::num::ParseIntError;
 use crate::solver::SolverMode;
-use crate::solver::SolverMode::MAX;
 
 
 lazy_static! {

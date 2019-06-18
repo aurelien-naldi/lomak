@@ -36,7 +36,7 @@ impl LQModel {
             f.set_expr(rule);
             return;
         }
-        self.rules.insert(target, func::Rule::from_expr(rule));
+        self.rules.insert(target, func::Rule::from_repr(rule));
     }
 
     pub fn knockout(mut self, uid: usize) -> Self {

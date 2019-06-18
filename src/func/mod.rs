@@ -18,10 +18,28 @@ pub trait Grouped {
 }
 
 /// Supported function representation formats
+#[derive(Clone)]
 pub enum Repr {
     EXPR(Expr),
     GEN(Generator),
     PRIMES(Paths),
+}
+
+/// Common API for all representations of Boolean functions
+pub trait BoolRepr {
+    /// Wrap this function into a Boolean repr
+    fn into_repr(self) -> Repr;
+}
+
+pub trait FromBoolRepr: BoolRepr {
+    fn convert(repr: &Repr) -> Self;
+    fn is_converted(repr: &Repr) -> bool;
+}
+
+impl BoolRepr for Repr {
+    fn into_repr(self) -> Repr {
+        self
+    }
 }
 
 /// Carry a function in any supported format
@@ -43,21 +61,8 @@ pub struct Rule {
 
 impl Repr {
 
-    /// Test if this function is represented as an expression
-    pub fn is_expr(&self) -> bool {
-        match self {
-            Repr::EXPR(_) => true,
-            _ => false,
-        }
-    }
-
-    /// Convert this function into an expression
-    pub fn as_expr(&self) -> Expr {
-        match &self {
-            Repr::EXPR(e) => e.clone(),
-            Repr::GEN(g) => g.to_expr(),
-            Repr::PRIMES(p) => p.to_expr(),
-        }
+    pub fn from<T: BoolRepr>(value: T) -> Repr {
+        value.into_repr()
     }
 
     /// Test if this function is represented as prime implicants
@@ -68,79 +73,48 @@ impl Repr {
         }
     }
 
-    /// Convert this function into a list of prime implicants
-    pub fn as_primes(&self) -> Paths {
-        match &self {
-            Repr::PRIMES(p) => p.clone(),
-            Repr::GEN(g) => g.to_expr().prime_implicants(),
-            Repr::EXPR(e) => e.prime_implicants(),
-        }
+    pub fn convert_as<T: FromBoolRepr>(&self) -> T {
+        T::convert(self)
+    }
+
+    pub fn is_a<T: FromBoolRepr>(&self) -> bool {
+        T::is_converted(self)
     }
 }
 
 impl Formula {
-    pub fn from_repr(repr: Repr) -> Formula {
+    pub fn from<T: BoolRepr>(value: T) -> Formula {
         Formula {
-            repr: repr,
+            repr: Repr::from(value),
             cached: RefCell::new(vec![]),
         }
     }
 
-    pub fn set_repr(&mut self, repr: Repr) {
-        self.repr = repr;
+    pub fn set<T: BoolRepr>(&mut self, value: T) {
+        self.repr = Repr::from(value);
         self.cached.borrow_mut().clear();
-    }
-
-    pub fn from_expr(expr: Expr) -> Formula {
-        Self::from_repr(Repr::EXPR(expr))
-    }
-
-    pub fn from_primes(p: Paths) -> Formula {
-        Self::from_repr(Repr::PRIMES(p))
-    }
-
-    pub fn set_expr(&mut self, expr: Expr) {
-        self.set_repr(Repr::EXPR(expr));
-    }
-
-    pub fn set_primes(&mut self, p: Paths) {
-        self.set_repr(Repr::PRIMES(p));
     }
 
     fn cache_repr(&self, repr: Repr) {
         self.cached.borrow_mut().push(repr);
     }
 
-    pub fn as_expr(&self) -> Expr {
-        if let Repr::EXPR(e) = &self.repr {
-            return e.clone();
+    pub fn convert<T: FromBoolRepr>(&self) -> T {
+
+        if self.repr.is_a::<T>() {
+            return self.repr.convert_as();
         }
         for c in self.cached.borrow().iter() {
-            if let Repr::EXPR(e) = c {
-                return e.clone();
+            if c.is_a::<T>() {
+                return c.convert_as();
             }
         }
 
         // No matching value found, convert it
-        let e = self.repr.as_expr();
-        self.cache_repr(Repr::EXPR(e.clone()));
-        e
-    }
-
-    pub fn as_primes(&self) -> Paths {
-        if let Repr::PRIMES(p) = &self.repr {
-            return p.clone();
-        }
-        for c in self.cached.borrow().iter() {
-            if let Repr::PRIMES(p) = c {
-                return p.clone();
-            }
-        }
-
-        // No matching value found, convert it
-        let p = self.repr.as_primes();
-        self.cache_repr(Repr::PRIMES(p.clone()));
-        p
+        let e: T = self.repr.convert_as();
+        let r = Repr::from(e);
+        self.cache_repr(r.clone());
+        r.convert_as()
     }
 }
 
@@ -153,18 +127,18 @@ impl Rule {
     }
 
     pub fn extend(&mut self, expr: Expr) {
-        self.assignments.insert(self.assignments.len(), Assign { target: 1, formula: Formula::from_expr(expr) })
+        self.assignments.insert(self.assignments.len(), Assign { target: 1, formula: Formula::from(expr) })
     }
 
     pub fn set_expr(&mut self, expr: Expr) {
         self.assignments.clear();
-        let f = Formula::from_expr(expr);
+        let f = Formula::from(expr);
         self.assignments.insert(0, Assign { target: 1, formula: f });
     }
 
 
-    pub fn from_expr(expr: Expr) -> Rule {
-        Self::from_formula(Formula::from_expr(expr))
+    pub fn from_repr<T: BoolRepr>(value: T) -> Rule {
+        Self::from_formula(Formula::from(value))
     }
 
     pub fn as_expr(&self) -> Expr {
@@ -173,14 +147,14 @@ impl Rule {
         }
 
         // FIXME: build the expr for target value 1
-        self.assignments.get(0).unwrap().as_expr()
+        self.assignments.get(0).unwrap().convert()
     }
 }
 
 impl Assign {
 
-    pub fn as_expr(&self) -> Expr {
-        self.formula.as_expr()
+    pub fn convert<T: FromBoolRepr>(&self) -> T {
+        self.formula.convert()
     }
 }
 
