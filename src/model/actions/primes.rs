@@ -2,6 +2,8 @@ use crate::model::LQModel;
 use crate::model::actions::ActionBuilder;
 use crate::model::actions::CLIAction;
 use crate::func::variables::VariableNamer;
+use crate::func::paths;
+use crate::func::expr;
 
 
 pub fn cli_action() -> Box<dyn CLIAction> {
@@ -37,7 +39,7 @@ impl PrimeBuilder {
 impl ActionBuilder for PrimeBuilder {
     fn call(&self) {
         for (u, f) in self.model.rules() {
-            let primes = f.as_expr().prime_implicants();
+            let primes: paths::Paths = f.as_func();
             println!("PI {}: {}", u, primes);
         }
     }
@@ -55,8 +57,8 @@ impl PrimeBuilder {
                 println!(",");
             }
             let name = self.model.get_name(*u);
-            let pos_primes = f.as_expr().prime_implicants();
-            let neg_primes = f.as_expr().not().prime_implicants();
+            let pos_primes: paths::Paths = f.as_func();
+            let neg_primes = f.as_func::<expr::Expr>().not().prime_implicants();
             println!("\"{}\":[", name);
             neg_primes.to_json(&self.model);
             println!(",");

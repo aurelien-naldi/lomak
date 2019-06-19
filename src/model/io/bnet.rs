@@ -113,7 +113,7 @@ impl io::SavingFormat for BNETFormat {
     fn write_rules(&self, model: &LQModel, out: &mut Write) -> Result<(), Error> {
 
         for (uid, r) in model.rules().iter() {
-            write!(out, "{}, {}\n", model.get_name(*uid), NamedExpr{expr: &r.as_expr(), namer: model})?;
+            write!(out, "{}, {}\n", model.get_name(*uid), NamedExpr{expr: &r.as_func(), namer: model})?;
         }
 
         Ok(())

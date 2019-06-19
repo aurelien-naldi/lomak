@@ -13,6 +13,8 @@ use crate::func::Grouped;
 pub mod actions;
 pub mod io;
 pub mod modifier;
+pub mod rule;
+
 
 lazy_static! {
     static ref RE_PRT: Regex = Regex::new(r"([a-zA-Z][a-zA-Z01-9_]*)%([01])").unwrap();
@@ -20,7 +22,7 @@ lazy_static! {
 
 pub struct LQModel {
     grp: variables::Group,
-    rules: HashMap<usize, func::Rule>,
+    rules: HashMap<usize, rule::Rule>,
 }
 
 impl LQModel {
@@ -33,10 +35,10 @@ impl LQModel {
 
     pub fn set_rule(&mut self, target: usize, rule: Expr) {
         if let Some(f) = self.rules.get_mut(&target) {
-            f.set_expr(rule);
+            f.set(rule);
             return;
         }
-        self.rules.insert(target, func::Rule::from_repr(rule));
+        self.rules.insert(target, rule::Rule::from_function(rule));
     }
 
     pub fn knockout(mut self, uid: usize) -> Self {
@@ -76,7 +78,7 @@ impl LQModel {
         }
     }
 
-    pub fn rules(&self) -> &HashMap<usize, func::Rule> {
+    pub fn rules(&self) -> &HashMap<usize, rule::Rule> {
         &self.rules
     }
 }
@@ -121,7 +123,7 @@ impl fmt::Debug for LQModel {
     fn fmt(&self, ft: &mut fmt::Formatter) -> fmt::Result {
         write!(ft, "{}", self.grp)?;
         for (u, f) in &self.rules {
-            let e: &Expr = &f.as_expr();
+            let e: &Expr = &f.as_func();
 
             writeln!(ft, "E{}  : {}", u, e)?;
 

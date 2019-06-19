@@ -105,13 +105,13 @@ impl ActionBuilder for TrapspacesBuilder {
         }
 
         for (u, f) in rules {
-            let e = &f.as_expr();
+            let e: Expr = f.as_func();
             let ne = e.not();
-            restrict(&mut solver, e, 2*u+1);
+            restrict(&mut solver, &e, 2*u+1);
             restrict(&mut solver, &ne, 2*u);
 
             if self.percolate {
-                enforce(&mut solver, e, 2*u);
+                enforce(&mut solver, &e, 2*u);
                 enforce(&mut solver, &ne, 2*u+1);
             }
         }

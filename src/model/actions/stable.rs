@@ -54,8 +54,8 @@ impl ActionBuilder for FixedBuilder {
 
         for (u, f) in rules {
             let cur = Expr::ATOM(*u);
-            let e = &f.as_expr();
-            for p in cur.not().and(e).prime_implicants().items() {
+            let e: Expr = f.as_func();
+            for p in cur.not().and(&e).prime_implicants().items() {
                 solver.restrict(p);
             }
             for p in cur.and(&e.not()).prime_implicants().items() {
