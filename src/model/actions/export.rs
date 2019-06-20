@@ -57,10 +57,14 @@ impl ExportBuilder {
 
 impl ActionBuilder for ExportBuilder {
 
-    fn set_args(&mut self, args: &clap::ArgMatches) {
-        self.output = args.value_of("output").map(|s|s.to_string());
-        self.format = args.value_of("format").map(|s|s.to_string());
+    fn set_value(&mut self, key: &str, value: &str) {
+        match key {
+            "output" => self.output = Some(value.to_string()),
+            "format" => self.format = Some(value.to_string()),
+            _ => (),
+        }
     }
+
 
     fn call(&self) {
         if self.output.is_none() {

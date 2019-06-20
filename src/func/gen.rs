@@ -34,13 +34,6 @@ impl Generator {
         }
         expr.and(&nexpr)
     }
-
-    fn from_repr(repr: &Repr) -> Option<Self> {
-        match repr {
-            Repr::GEN(g) => Some(g.clone()),
-            _ => None,
-        }
-    }
 }
 
 impl BoolRepr for Generator {

@@ -38,11 +38,13 @@ impl ActionManager {
 
 
 pub trait ActionBuilder {
-    fn set_flag(&mut self, _flag: &str) {}
-    fn set_value(&mut self, _key: &str, _value: &str) {}
 
-    fn set_args(&mut self, args: &clap::ArgMatches) {
+    fn set_flag(&mut self, flag: &str) {
+        eprintln!("This action has no flag ({})", flag);
+    }
 
+    fn set_value(&mut self, key: &str, value: &str) {
+        eprintln!("This action has no value ({} = {})", key, value);
     }
 
     fn call(&self);
@@ -156,7 +158,22 @@ pub fn run_command(cmd: &str, args: &clap::ArgMatches, model: LQModel) {
 
     if let Some(cli) = ACTIONS.services.get(cmd) {
         let mut b = cli.builder(model);
-        b.set_args(args);
+
+        // Grab all cli arguments to feed the builder appropriately
+        for descr in cli.arguments() {
+            if descr.has_value {
+                let value = args.value_of(&descr.name);
+                if value.is_some() {
+                    b.set_value(&descr.name, value.unwrap());
+                }
+                // TODO: multiple matches?
+            } else {
+                if args.is_present(&descr.name) {
+                    b.set_flag(&descr.name);
+                }
+            }
+        }
+
         b.call();
     } else {
 

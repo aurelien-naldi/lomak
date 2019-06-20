@@ -63,13 +63,6 @@ impl Expr {
     pub fn or(&self, e: &Expr) -> Self {
         Operator::OR.binary(self, e)
     }
-
-    fn from_repr(repr: &Repr) -> Option<Expr> {
-        match repr {
-            Repr::EXPR(e) => Some(e.clone()),
-            _ => None,
-        }
-    }
 }
 
 impl BoolRepr for Expr {
@@ -90,7 +83,7 @@ impl FromBoolRepr for Expr {
 
     fn is_converted(repr: &Repr) -> bool {
         match repr {
-            Repr::EXPR(e) => true,
+            Repr::EXPR(_) => true,
             _ => false,
         }
     }

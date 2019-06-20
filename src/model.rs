@@ -4,7 +4,6 @@ use std::collections::HashMap;
 use regex::Regex;
 use std::fmt;
 
-use crate::func;
 use crate::func::expr::Expr;
 use crate::func::variables;
 use crate::func::variables::VariableNamer;

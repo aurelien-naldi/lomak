@@ -74,14 +74,12 @@ impl TrapspacesBuilder {
 
 impl ActionBuilder for TrapspacesBuilder {
 
-    fn set_args(&mut self, args: &clap::ArgMatches) {
-        if let Some(filters) = args.values_of("filter") {
-            for f in filters {
-
-            }
+    fn set_flag(&mut self, flag: &str) {
+        match flag {
+            "percolate" => self.percolate = true,
+            "terminal" => self.terminal = true,
+            _ => (),
         }
-        self.percolate = args.is_present("percolate");
-        self.terminal = args.is_present("terminal");
     }
 
     fn call(&self) {

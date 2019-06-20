@@ -4,7 +4,6 @@ use crate::func::*;
 use crate::func::expr::*;
 
 use std::fmt;
-use std::cell::RefCell;
 
 
 /// A formula associated with a target value
