@@ -7,9 +7,9 @@ use core::ops::BitOr;
 use core::ops::Not;
 
 use crate::func;
-use crate::func::*;
 use crate::func::paths::LiteralSet;
 use crate::func::variables::*;
+use crate::func::*;
 
 /* ************************************************************************************* */
 /* ************************ Data structures and basic operations *********************** */
@@ -72,7 +72,6 @@ impl BoolRepr for Expr {
 }
 
 impl FromBoolRepr for Expr {
-
     fn convert(repr: &Repr) -> Self {
         match repr {
             Repr::EXPR(e) => e.clone(),
@@ -404,10 +403,10 @@ impl<'a> FormatContext<'a> {
 
 pub struct NamedExpr<'a> {
     pub expr: &'a Expr,
-    pub namer: &'a dyn VariableNamer
+    pub namer: &'a dyn VariableNamer,
 }
 
-impl <'a> fmt::Display for NamedExpr<'a> {
+impl<'a> fmt::Display for NamedExpr<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.expr.gfmt(self.namer, f)
     }

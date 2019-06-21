@@ -3,9 +3,8 @@ use itertools::Itertools;
 use regex::Regex;
 
 use crate::func::paths::LiteralSet;
-use std::num::ParseIntError;
 use crate::solver::SolverMode;
-
+use std::num::ParseIntError;
 
 lazy_static! {
     static ref RE_VAR: Regex = Regex::new(r"v[0-9]+").unwrap();
@@ -25,15 +24,24 @@ impl ClingoProblem {
         //   To find terminal trapspaces: --enum-mode=domRec --heuristic=Domain --dom-mod=3,16
         //   To find minimal trapspaces:
         match mode {
-            SolverMode::MAX => args.append(&mut vec!["--enum-mode=domRec", "--heuristic=Domain", "--dom-mod=3,16"]),
-            SolverMode::MIN => args.append(&mut vec!["--enum-mode=domRec", "--heuristic=Domain", "--dom-mod=5,16"]),
+            SolverMode::MAX => args.append(&mut vec![
+                "--enum-mode=domRec",
+                "--heuristic=Domain",
+                "--dom-mod=3,16",
+            ]),
+            SolverMode::MIN => args.append(&mut vec![
+                "--enum-mode=domRec",
+                "--heuristic=Domain",
+                "--dom-mod=5,16",
+            ]),
             SolverMode::ALL => (),
         }
 
         ClingoProblem {
             minsolutions: false,
             n: 100,
-            ctl: Control::new(args.into_iter().map(|s|String::from(s)).collect()).expect("Failed creating Control."),
+            ctl: Control::new(args.into_iter().map(|s| String::from(s)).collect())
+                .expect("Failed creating Control."),
         }
     }
 
@@ -49,9 +57,11 @@ impl ClingoProblem {
     }
 
     pub fn restrict(&mut self, p: &LiteralSet) {
-
-        let s = p.positive().iter().map(|u|format!("v{}", u))
-            .chain(p.negative().iter().map(|u|format!("not v{}", u)))
+        let s = p
+            .positive()
+            .iter()
+            .map(|u| format!("v{}", u))
+            .chain(p.negative().iter().map(|u| format!("not v{}", u)))
             .join(",");
 
         self.add(&format!(":- {}.", s));
@@ -61,7 +71,6 @@ impl ClingoProblem {
         // ground the base part
         let cfg = self.ctl.configuration().unwrap();
         println!("{:?}", cfg);
-
 
         let parts = vec![Part::new("base", &[]).unwrap()];
         self.ctl
@@ -105,7 +114,9 @@ impl ClingoProblem {
         }
 
         // close the solve handle
-        handle.get().expect("Failed to get result from solve handle.");
+        handle
+            .get()
+            .expect("Failed to get result from solve handle.");
         handle.close().expect("Failed to close solve handle.");
     }
 }
@@ -124,7 +135,6 @@ fn model_as_pattern(model: &Model) -> LiteralSet {
             Err(_) => (),
         }
     }
-
 
     // retrieve the negated atoms in the model
     let atoms = model

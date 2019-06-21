@@ -1,21 +1,24 @@
-use crate::model::LQModel;
+use crate::func::expr;
+use crate::func::paths;
+use crate::func::variables::VariableNamer;
 use crate::model::actions::ActionBuilder;
 use crate::model::actions::CLIAction;
-use crate::func::variables::VariableNamer;
-use crate::func::paths;
-use crate::func::expr;
-
+use crate::model::LQModel;
 
 pub fn cli_action() -> Box<dyn CLIAction> {
-    Box::new(CLIPrimes{})
+    Box::new(CLIPrimes {})
 }
 
 struct CLIPrimes;
 impl CLIAction for CLIPrimes {
-    fn name(&self) -> &'static str { "primes" }
-    fn about(&self) -> &'static str { "Compute the prime implicants of the model's functions" }
+    fn name(&self) -> &'static str {
+        "primes"
+    }
+    fn about(&self) -> &'static str {
+        "Compute the prime implicants of the model's functions"
+    }
 
-    fn aliases(&self) -> &'static[&'static str] {
+    fn aliases(&self) -> &'static [&'static str] {
         &["pi", "implicants"]
     }
 
@@ -24,15 +27,13 @@ impl CLIAction for CLIPrimes {
     }
 }
 
-
 pub struct PrimeBuilder {
     model: LQModel,
 }
 
-
 impl PrimeBuilder {
     pub fn new(model: LQModel) -> PrimeBuilder {
-        PrimeBuilder{model: model}
+        PrimeBuilder { model: model }
     }
 }
 
@@ -46,7 +47,6 @@ impl ActionBuilder for PrimeBuilder {
 }
 
 impl PrimeBuilder {
-
     pub fn json(&self) {
         println!("{{");
         let mut first = true;
@@ -67,5 +67,4 @@ impl PrimeBuilder {
         }
         println!("\n}}");
     }
-
 }

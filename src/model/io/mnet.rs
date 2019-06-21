@@ -1,13 +1,12 @@
 use crate::model::io;
 
-use std::io::{Error,Write};
 use pest::iterators::*;
 use pest::Parser;
+use std::io::{Error, Write};
 
-use crate::func::expr::{Expr, Operator, NamedExpr};
-use crate::model::LQModel;
+use crate::func::expr::{Expr, NamedExpr, Operator};
 use crate::func::variables::VariableNamer;
-
+use crate::model::LQModel;
 
 #[derive(Parser)]
 #[grammar_inline = r####"
@@ -107,14 +106,20 @@ impl io::ParsingFormat for MNETFormat {
             }
         }
     }
-
 }
 
 impl io::SavingFormat for MNETFormat {
     fn write_rules(&self, model: &LQModel, out: &mut Write) -> Result<(), Error> {
-
         for (uid, r) in model.rules().iter() {
-            write!(out, "{} <- {}\n", model.get_name(*uid), NamedExpr{expr: &r.as_func(), namer: model})?;
+            write!(
+                out,
+                "{} <- {}\n",
+                model.get_name(*uid),
+                NamedExpr {
+                    expr: &r.as_func(),
+                    namer: model
+                }
+            )?;
         }
 
         Ok(())

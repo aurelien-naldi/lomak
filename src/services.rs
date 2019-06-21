@@ -5,7 +5,6 @@ lazy_static! {
     static ref NO_ARGUMENTS: Vec<Argument> = vec!();
 }
 
-
 pub trait Service: Sync {
     fn name(&self) -> &str;
     fn descr(&self) -> &str;

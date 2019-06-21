@@ -1,7 +1,7 @@
 //! Logical model: collections of functions
 
-use std::collections::HashMap;
 use regex::Regex;
+use std::collections::HashMap;
 use std::fmt;
 
 use crate::func::expr::Expr;
@@ -13,7 +13,6 @@ pub mod actions;
 pub mod io;
 pub mod modifier;
 pub mod rule;
-
 
 lazy_static! {
     static ref RE_PRT: Regex = Regex::new(r"([a-zA-Z][a-zA-Z01-9_]*)%([01])").unwrap();
@@ -61,7 +60,7 @@ impl LQModel {
                         _ => {
                             println!("Invalid target value: {}", &cap[2]);
                             ()
-                        },
+                        }
                     }
                 }
             }
@@ -105,7 +104,6 @@ impl VariableNamer for LQModel {
     }
 }
 
-
 impl fmt::Display for LQModel {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for (u, x) in &self.rules {
@@ -118,7 +116,6 @@ impl fmt::Display for LQModel {
 }
 
 impl fmt::Debug for LQModel {
-
     fn fmt(&self, ft: &mut fmt::Formatter) -> fmt::Result {
         write!(ft, "{}", self.grp)?;
         for (u, f) in &self.rules {

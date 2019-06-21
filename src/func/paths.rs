@@ -2,9 +2,9 @@ use bit_set::BitSet;
 use std::fmt;
 use std::vec::Vec;
 
-use crate::func::*;
 use crate::func::expr::Expr;
 use crate::func::variables::VariableNamer;
+use crate::func::*;
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct LiteralSet {
@@ -423,7 +423,6 @@ impl fmt::Display for Paths {
     }
 }
 
-
 impl BoolRepr for Paths {
     fn into_repr(self) -> Repr {
         Repr::PRIMES(self)
@@ -431,7 +430,6 @@ impl BoolRepr for Paths {
 }
 
 impl FromBoolRepr for Paths {
-
     fn convert(repr: &Repr) -> Self {
         match repr {
             Repr::PRIMES(p) => p.clone(),

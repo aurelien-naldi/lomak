@@ -1,28 +1,30 @@
 use crate::model::actions::ActionBuilder;
 
-use crate::model::LQModel;
 use crate::model::actions::CLIAction;
-
+use crate::model::LQModel;
 
 struct CLIShow;
 
 pub fn cli_action() -> Box<dyn CLIAction> {
-    Box::new(CLIShow{})
+    Box::new(CLIShow {})
 }
 
 impl CLIAction for CLIShow {
-    fn name(&self) -> &'static str { "show" }
-    fn about(&self) -> &'static str { "Show the current model" }
+    fn name(&self) -> &'static str {
+        "show"
+    }
+    fn about(&self) -> &'static str {
+        "Show the current model"
+    }
 
-    fn aliases(&self) -> &'static[&'static str] {
+    fn aliases(&self) -> &'static [&'static str] {
         &["display", "print"]
     }
 
     fn builder(&self, model: LQModel) -> Box<ActionBuilder> {
-        Box::new(ShowBuilder::new(model) )
+        Box::new(ShowBuilder::new(model))
     }
 }
-
 
 pub struct ShowBuilder {
     model: LQModel,
@@ -30,12 +32,11 @@ pub struct ShowBuilder {
 
 impl ShowBuilder {
     pub fn new(model: LQModel) -> ShowBuilder {
-        ShowBuilder{model: model}
+        ShowBuilder { model: model }
     }
 }
 
 impl ActionBuilder for ShowBuilder {
-
     fn call(&self) {
         println!("{}", self.model);
     }

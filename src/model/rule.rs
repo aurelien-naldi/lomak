@@ -1,27 +1,28 @@
 //! Rules composing qualitative models
 
-use crate::func::*;
 use crate::func::expr::*;
+use crate::func::*;
 
 use std::fmt;
-
 
 /// A formula associated with a target value
 pub struct Assign {
     pub target: u8,
-    pub formula: Formula
+    pub formula: Formula,
 }
 
 /// List of formulae forming a full assignment
 pub struct Rule {
-    assignments: Vec<Assign>
+    assignments: Vec<Assign>,
 }
-
 
 impl Rule {
     pub fn from_formula(f: Formula) -> Rule {
         Rule {
-            assignments: vec![Assign { target: 1, formula: f }]
+            assignments: vec![Assign {
+                target: 1,
+                formula: f,
+            }],
         }
     }
 
@@ -30,13 +31,25 @@ impl Rule {
     }
 
     pub fn extend<T: BoolRepr>(&mut self, value: T) {
-        self.assignments.insert(self.assignments.len(), Assign { target: 1, formula: Formula::from(value) })
+        self.assignments.insert(
+            self.assignments.len(),
+            Assign {
+                target: 1,
+                formula: Formula::from(value),
+            },
+        )
     }
 
     pub fn set<T: BoolRepr>(&mut self, value: T) {
         self.assignments.clear();
         let f = Formula::from(value);
-        self.assignments.insert(0, Assign { target: 1, formula: f });
+        self.assignments.insert(
+            0,
+            Assign {
+                target: 1,
+                formula: f,
+            },
+        );
     }
 
     pub fn as_func<T: FromBoolRepr>(&self) -> T {
@@ -50,12 +63,10 @@ impl Rule {
 }
 
 impl Assign {
-
     pub fn convert<T: FromBoolRepr>(&self) -> T {
         self.formula.convert_as()
     }
 }
-
 
 impl fmt::Display for Assign {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -87,4 +98,3 @@ impl Grouped for Assign {
         self.formula.gfmt(namer, f)
     }
 }
-

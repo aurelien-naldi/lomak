@@ -1,13 +1,12 @@
-
 use crate::model::actions::ActionBuilder;
 
+use crate::model::actions::ArgumentDescr;
+use crate::model::actions::CLIAction;
 use crate::model::io;
 use crate::model::LQModel;
-use crate::model::actions::CLIAction;
-use crate::model::actions::ArgumentDescr;
 
 lazy_static! {
-    pub static ref PARAMETERS: Vec<ArgumentDescr> = vec!{
+    pub static ref PARAMETERS: Vec<ArgumentDescr> = vec! {
         ArgumentDescr::new("output")
             .help("Set the output file")
             .required(true),
@@ -20,20 +19,24 @@ lazy_static! {
 }
 
 pub fn cli_action() -> Box<dyn CLIAction> {
-    Box::new(CLIExport{})
+    Box::new(CLIExport {})
 }
 
 struct CLIExport;
 impl CLIAction for CLIExport {
-    fn name(&self) -> &'static str { "export" }
+    fn name(&self) -> &'static str {
+        "export"
+    }
 
-    fn about(&self) -> &'static str { "Save the current model" }
+    fn about(&self) -> &'static str {
+        "Save the current model"
+    }
 
-    fn arguments(&self) -> &'static[ArgumentDescr] {
+    fn arguments(&self) -> &'static [ArgumentDescr] {
         &PARAMETERS
     }
 
-    fn aliases(&self) -> &'static[&'static str] {
+    fn aliases(&self) -> &'static [&'static str] {
         &["save", "convert"]
     }
 
@@ -48,15 +51,17 @@ pub struct ExportBuilder {
     format: Option<String>,
 }
 
-
 impl ExportBuilder {
     pub fn new(model: LQModel) -> ExportBuilder {
-        ExportBuilder{model: model, output: None, format: None}
+        ExportBuilder {
+            model: model,
+            output: None,
+            format: None,
+        }
     }
 }
 
 impl ActionBuilder for ExportBuilder {
-
     fn set_value(&mut self, key: &str, value: &str) {
         match key {
             "output" => self.output = Some(value.to_string()),
@@ -65,13 +70,17 @@ impl ActionBuilder for ExportBuilder {
         }
     }
 
-
     fn call(&self) {
         if self.output.is_none() {
             eprintln!("No output file specified");
             return;
         }
 
-        io::save_model(&self.model, &self.output.as_ref().unwrap(), self.format.as_ref().map(|s|&**s)).unwrap();
+        io::save_model(
+            &self.model,
+            &self.output.as_ref().unwrap(),
+            self.format.as_ref().map(|s| &**s),
+        )
+        .unwrap();
     }
 }

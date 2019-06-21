@@ -59,5 +59,4 @@ fn main() {
     if subcmd.is_some() {
         actions::run_command(s_cmd, subcmd.unwrap(), model);
     }
-
 }

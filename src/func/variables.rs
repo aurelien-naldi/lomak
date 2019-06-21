@@ -28,14 +28,12 @@ pub trait VariableNamer {
     /// Returns None if the name is invalid.
     fn get_node_id(&mut self, name: &str) -> Option<usize>;
 
-
     fn get_name(&self, uid: usize) -> String;
 
     /// Assign a name to an existing variable
     /// Returns false if the name is invalid or already assigned
     /// to another variable
     fn set_name(&mut self, uid: usize, name: String) -> bool;
-
 
     /// Rename a variable.
     /// Returns false if the new name is invalid or already assigned
@@ -64,7 +62,6 @@ impl Group {
 }
 
 impl VariableNamer for Group {
-
     fn node_id(&self, name: &str) -> Option<usize> {
         match self.name2uid.get(name) {
             Some(uid) => Some(*uid),

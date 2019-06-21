@@ -1,25 +1,28 @@
-use crate::model::LQModel;
+use crate::func::expr::Expr;
 use crate::model::actions::ActionBuilder;
 use crate::model::actions::CLIAction;
-use crate::func::expr::Expr;
+use crate::model::LQModel;
 
 use crate::solver;
 
-use itertools::Itertools;
-use crate::solver::SolverMode;
 use crate::func::paths::LiteralSet;
-
+use crate::solver::SolverMode;
+use itertools::Itertools;
 
 pub fn cli_action() -> Box<dyn CLIAction> {
-    Box::new(CLIFixed{})
+    Box::new(CLIFixed {})
 }
 
 struct CLIFixed;
 impl CLIAction for CLIFixed {
-    fn name(&self) -> &'static str { "fixpoints" }
-    fn about(&self) -> &'static str { "Compute the fixed points of the model" }
+    fn name(&self) -> &'static str {
+        "fixpoints"
+    }
+    fn about(&self) -> &'static str {
+        "Compute the fixed points of the model"
+    }
 
-    fn aliases(&self) -> &'static[&'static str] {
+    fn aliases(&self) -> &'static [&'static str] {
         &["fixed", "stable", "fp"]
     }
 
@@ -28,30 +31,28 @@ impl CLIAction for CLIFixed {
     }
 }
 
-
-pub struct FixedBuilder{
+pub struct FixedBuilder {
     model: LQModel,
     restriction: Option<LiteralSet>,
 }
 
-
 impl FixedBuilder {
     pub fn new(model: LQModel) -> FixedBuilder {
-        FixedBuilder{model: model, restriction: None}
+        FixedBuilder {
+            model: model,
+            restriction: None,
+        }
     }
 }
 
 impl ActionBuilder for FixedBuilder {
-
     fn call(&self) {
         let mut solver = solver::get_solver(SolverMode::ALL);
         let rules = self.model.rules();
 
-        let s = rules.keys()
-            .map(|u|format!("v{}", u))
-            .join("; ");
+        let s = rules.keys().map(|u| format!("v{}", u)).join("; ");
         let s = format!("{{{}}}.", s);
-        solver.add( &s);
+        solver.add(&s);
 
         for (u, f) in rules {
             let cur = Expr::ATOM(*u);
@@ -64,11 +65,10 @@ impl ActionBuilder for FixedBuilder {
             }
 
             if self.restriction.is_some() {
-                solver.restrict( self.restriction.as_ref().unwrap());
+                solver.restrict(self.restriction.as_ref().unwrap());
             }
         }
 
         solver.solve();
     }
-
 }

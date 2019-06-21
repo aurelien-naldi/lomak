@@ -1,18 +1,18 @@
-use crate::model::LQModel;
-use crate::model::actions::ActionBuilder;
-use crate::model::actions::CLIAction;
 use crate::func::expr::Expr;
+use crate::model::actions::ActionBuilder;
 use crate::model::actions::ArgumentDescr;
+use crate::model::actions::CLIAction;
+use crate::model::LQModel;
 
 use crate::solver;
 
-use itertools::Itertools;
 use crate::solver::clingo::ClingoProblem;
-use std::collections::HashMap;
 use crate::solver::SolverMode;
+use itertools::Itertools;
+use std::collections::HashMap;
 
 lazy_static! {
-    pub static ref PARAMETERS: Vec<ArgumentDescr> = vec!{
+    pub static ref PARAMETERS: Vec<ArgumentDescr> = vec! {
         ArgumentDescr::new("filter")
             .help("Filter the results")
             .long("filter")
@@ -31,15 +31,19 @@ lazy_static! {
 }
 
 pub fn cli_action() -> Box<dyn CLIAction> {
-    Box::new(CLIFixed{})
+    Box::new(CLIFixed {})
 }
 
 struct CLIFixed;
 impl CLIAction for CLIFixed {
-    fn name(&self) -> &'static str { "trapspaces" }
-    fn about(&self) -> &'static str { "Compute the trapspaces (stable patterns) of the model" }
+    fn name(&self) -> &'static str {
+        "trapspaces"
+    }
+    fn about(&self) -> &'static str {
+        "Compute the trapspaces (stable patterns) of the model"
+    }
 
-    fn arguments(&self) -> &'static[ArgumentDescr] {
+    fn arguments(&self) -> &'static [ArgumentDescr] {
         &PARAMETERS
     }
 
@@ -48,18 +52,16 @@ impl CLIAction for CLIFixed {
     }
 }
 
-
-pub struct TrapspacesBuilder{
+pub struct TrapspacesBuilder {
     model: LQModel,
-    filters: HashMap<usize,bool>,
+    filters: HashMap<usize, bool>,
     percolate: bool,
     terminal: bool,
 }
 
-
 impl TrapspacesBuilder {
     pub fn new(model: LQModel) -> Self {
-        TrapspacesBuilder{
+        TrapspacesBuilder {
             model: model,
             filters: HashMap::new(),
             percolate: false,
@@ -73,7 +75,6 @@ impl TrapspacesBuilder {
 }
 
 impl ActionBuilder for TrapspacesBuilder {
-
     fn set_flag(&mut self, flag: &str) {
         match flag {
             "percolate" => self.percolate = true,
@@ -91,38 +92,41 @@ impl ActionBuilder for TrapspacesBuilder {
         let rules = self.model.rules();
 
         // Add all variables
-        let s = rules.keys()
-            .map(|u|format!("v{}; v{}", 2*u, 2*u+1))
+        let s = rules
+            .keys()
+            .map(|u| format!("v{}; v{}", 2 * u, 2 * u + 1))
             .join("; ");
         let s = format!("{{{}}}.\n", s);
-        solver.add( &s);
+        solver.add(&s);
 
         // A variable can only be fixed at a specific value
         for u in rules.keys() {
-            solver.add(&format!(":- v{}, v{}.\n", 2*u, 2*u+1));
+            solver.add(&format!(":- v{}, v{}.\n", 2 * u, 2 * u + 1));
         }
 
         for (u, f) in rules {
             let e: Expr = f.as_func();
             let ne = e.not();
-            restrict(&mut solver, &e, 2*u+1);
-            restrict(&mut solver, &ne, 2*u);
+            restrict(&mut solver, &e, 2 * u + 1);
+            restrict(&mut solver, &ne, 2 * u);
 
             if self.percolate {
-                enforce(&mut solver, &e, 2*u);
-                enforce(&mut solver, &ne, 2*u+1);
+                enforce(&mut solver, &e, 2 * u);
+                enforce(&mut solver, &ne, 2 * u + 1);
             }
         }
 
         solver.solve();
     }
-
 }
 
 fn restrict(solver: &mut ClingoProblem, e: &Expr, u: usize) {
     for p in e.prime_implicants().items() {
-        let s = p.positive().iter().map(|r|format!("not v{}", 2*r+1))
-            .chain(p.negative().iter().map(|r|format!("not v{}", 2*r)))
+        let s = p
+            .positive()
+            .iter()
+            .map(|r| format!("not v{}", 2 * r + 1))
+            .chain(p.negative().iter().map(|r| format!("not v{}", 2 * r)))
             .join(",");
 
         if s.len() > 0 {
@@ -135,8 +139,11 @@ fn restrict(solver: &mut ClingoProblem, e: &Expr, u: usize) {
 
 fn enforce(solver: &mut ClingoProblem, e: &Expr, u: usize) {
     for p in e.prime_implicants().items() {
-        let s = p.positive().iter().map(|r|format!("v{}", 2*r))
-            .chain(p.negative().iter().map(|r|format!("v{}", 2*r+1)))
+        let s = p
+            .positive()
+            .iter()
+            .map(|r| format!("v{}", 2 * r))
+            .chain(p.negative().iter().map(|r| format!("v{}", 2 * r + 1)))
             .join(",");
 
         if s.len() > 0 {

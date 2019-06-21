@@ -1,7 +1,7 @@
+use crate::func::variables::VariableNamer;
+use crate::model::actions::ArgumentDescr;
 use crate::model::modifier::CLIModifier;
 use crate::model::LQModel;
-use crate::model::actions::ArgumentDescr;
-use crate::func::variables::VariableNamer;
 
 lazy_static! {
     pub static ref ARGUMENT: ArgumentDescr = ArgumentDescr::new("mv")
@@ -15,7 +15,7 @@ lazy_static! {
 pub struct CLIRename;
 
 pub fn cli_modifier() -> Box<dyn CLIModifier> {
-    Box::new(CLIRename{})
+    Box::new(CLIRename {})
 }
 
 impl CLIModifier for CLIRename {

@@ -1,17 +1,17 @@
 //! Represent and convert Boolean functions
 
 pub mod convert;
-pub mod variables;
 pub mod expr;
 pub mod gen;
 pub mod paths;
+pub mod variables;
 
 use self::expr::Expr;
 use self::gen::Generator;
 use self::paths::Paths;
 
-use std::fmt;
 use std::cell::RefCell;
+use std::fmt;
 
 pub trait Grouped {
     fn gfmt(&self, group: &dyn variables::VariableNamer, f: &mut fmt::Formatter) -> fmt::Result;
@@ -49,7 +49,6 @@ pub struct Formula {
 }
 
 impl Repr {
-
     pub fn from<T: BoolRepr>(value: T) -> Repr {
         value.into_repr()
     }
@@ -81,7 +80,6 @@ impl Formula {
     }
 
     pub fn convert_as<T: FromBoolRepr>(&self) -> T {
-
         if self.repr.is_a::<T>() {
             return self.repr.convert_as();
         }
@@ -98,7 +96,6 @@ impl Formula {
         r.convert_as()
     }
 }
-
 
 impl fmt::Display for Formula {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
