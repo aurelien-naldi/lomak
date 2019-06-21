@@ -72,6 +72,6 @@ impl ActionBuilder for ExportBuilder {
             return;
         }
 
-        io::save_model(&self.model, &self.output.as_ref().unwrap(), self.format.as_ref().map(|s|&**s));
+        io::save_model(&self.model, &self.output.as_ref().unwrap(), self.format.as_ref().map(|s|&**s)).unwrap();
     }
 }

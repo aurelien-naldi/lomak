@@ -66,7 +66,7 @@ impl fmt::Display for Assign {
 impl fmt::Display for Rule {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for a in &self.assignments {
-            writeln!(f, "{}", a);
+            writeln!(f, "{}", a)?;
         }
         write!(f, "")
     }
@@ -75,7 +75,7 @@ impl fmt::Display for Rule {
 impl Grouped for Rule {
     fn gfmt(&self, namer: &dyn variables::VariableNamer, f: &mut fmt::Formatter) -> fmt::Result {
         for a in &self.assignments {
-            a.gfmt(namer, f);
+            a.gfmt(namer, f)?;
         }
         write!(f, "")
     }
@@ -83,7 +83,7 @@ impl Grouped for Rule {
 
 impl Grouped for Assign {
     fn gfmt(&self, namer: &dyn variables::VariableNamer, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} <- ", self.target);
+        write!(f, "{} <- ", self.target)?;
         self.formula.gfmt(namer, f)
     }
 }

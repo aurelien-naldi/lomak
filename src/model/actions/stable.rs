@@ -31,12 +31,13 @@ impl CLIAction for CLIFixed {
 
 pub struct FixedBuilder{
     model: LQModel,
+    restriction: Option<LiteralSet>,
 }
 
 
 impl FixedBuilder {
     pub fn new(model: LQModel) -> FixedBuilder {
-        FixedBuilder{model: model}
+        FixedBuilder{model: model, restriction: None}
     }
 }
 
@@ -61,18 +62,13 @@ impl ActionBuilder for FixedBuilder {
             for p in cur.and(&e.not()).prime_implicants().items() {
                 solver.restrict(p);
             }
+
+            if self.restriction.is_some() {
+                solver.restrict( self.restriction.as_ref().unwrap());
+            }
         }
 
         solver.solve();
     }
 
-}
-
-fn restrict(p: &LiteralSet) -> String {
-
-    let s = p.positive().iter().map(|u|format!("v{}", u))
-        .chain(p.negative().iter().map(|u|format!("not v{}", u)))
-        .join(",");
-
-    format!(":- {}.", s)
 }

@@ -413,14 +413,6 @@ impl fmt::Display for LiteralSet {
     }
 }
 
-fn fmt_bitset(bs: &BitSet, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "<")?;
-    for u in bs {
-        write!(f, "{} ", u)?;
-    }
-    write!(f, ">")
-}
-
 impl fmt::Display for Paths {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "[")?;

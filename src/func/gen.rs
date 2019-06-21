@@ -46,7 +46,7 @@ impl BoolRepr for Generator {
 impl fmt::Display for Generator {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for k in self.map.keys() {
-            write!(f, "{}{} ", k,self.map.get(k).unwrap());
+            write!(f, "{}{} ", k,self.map.get(k).unwrap())?;
         }
         write!(f, "")
     }
@@ -64,7 +64,7 @@ impl fmt::Display for Sign {
 impl func::Grouped for Generator {
     fn gfmt(&self, namer: &dyn func::variables::VariableNamer, f: &mut fmt::Formatter) -> fmt::Result {
         for k in self.map.keys() {
-            write!(f, "{}{} ", namer.get_name(*k), self.map.get(k).unwrap());
+            write!(f, "{}{} ", namer.get_name(*k), self.map.get(k).unwrap())?;
         }
         write!(f, "")
     }
