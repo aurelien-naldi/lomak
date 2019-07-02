@@ -3,9 +3,10 @@
 use regex::Regex;
 use std::collections::HashMap;
 use std::fmt;
+use slab;
 
 use crate::func::expr::Expr;
-use crate::func::variables;
+use crate::func::{variables, Formula};
 use crate::func::variables::VariableNamer;
 use crate::func::Grouped;
 
@@ -18,35 +19,45 @@ lazy_static! {
     static ref RE_PRT: Regex = Regex::new(r"([a-zA-Z][a-zA-Z01-9_]*)%([01])").unwrap();
 }
 
+pub struct Component {
+    name: String,
+    rule: rule::Rule,
+}
+
 pub struct LQModel {
     grp: variables::Group,
-    rules: HashMap<usize, rule::Rule>,
+    components: slab::Slab<Component>,
+    name2uid: HashMap<String, usize>,
 }
 
 impl LQModel {
     pub fn new() -> LQModel {
         LQModel {
             grp: variables::Group::new(),
-            rules: HashMap::new(),
+            components: slab::Slab::new(),
+            name2uid: HashMap::new(),
         }
     }
 
-    pub fn set_rule(&mut self, target: usize, rule: Expr) {
-        if let Some(f) = self.rules.get_mut(&target) {
-            f.set(rule);
+    pub fn set_rule(&mut self, target: usize, value: u8, rule: Formula) {
+        if let Some(f) = self.rules[target] {
+            f.set_formula(rule);
             return;
         }
-        self.rules.insert(target, rule::Rule::from_function(rule));
+        self.rules.insert(target, rule::Rule::from_formula(rule));
     }
 
-    pub fn knockout(mut self, uid: usize) -> Self {
-        self.set_rule(uid, Expr::FALSE);
+    pub fn lock(mut self, uid: usize, value: bool) -> Self {
+        self.set_rule(uid, 1, Formula::from( Expr::from_bool(value) ) );
         self
     }
 
-    pub fn knockin(mut self, uid: usize) -> Self {
-        self.set_rule(uid, Expr::TRUE);
-        self
+    pub fn knockout(self, uid: usize) -> Self {
+        self.lock(uid, false)
+    }
+
+    pub fn knockin(self, uid: usize) -> Self {
+        self.lock(uid, true)
     }
 
     pub fn perturbation(self, cmd: &str) -> Self {
@@ -68,39 +79,83 @@ impl LQModel {
         self
     }
 
-    #[allow(dead_code)]
-    pub fn extend_rule(&mut self, target: usize, rule: Expr) {
-        match self.rules.remove(&target) {
-            None => self.set_rule(target, rule),
-            Some(mut r) => r.extend(rule),
-        }
-    }
-
     pub fn rules(&self) -> &HashMap<usize, rule::Rule> {
         &self.rules
     }
 }
 
 /// Delegate the VariableNamer trait to the internal Group
+//impl VariableNamer for LQModel {
+//    fn node_id(&self, name: &str) -> Option<usize> {
+//        self.grp.node_id(name)
+//    }
+//
+//    fn get_node_id(&mut self, name: &str) -> Option<usize> {
+//        self.grp.get_node_id(name)
+//    }
+//
+//    fn get_name(&self, uid: usize) -> String {
+//        self.grp.get_name(uid)
+//    }
+//
+//    fn set_name(&mut self, uid: usize, name: String) -> bool {
+//        self.grp.set_name(uid, name)
+//    }
+//
+//}
+
+
 impl VariableNamer for LQModel {
     fn node_id(&self, name: &str) -> Option<usize> {
-        self.grp.node_id(name)
+        match self.name2uid.get(name) {
+            Some(uid) => Some(*uid),
+            None => None,
+        }
     }
 
     fn get_node_id(&mut self, name: &str) -> Option<usize> {
-        self.grp.get_node_id(name)
+        match self.name2uid.get(name) {
+            Some(uid) => return Some(*uid),
+            None => (),
+        };
+
+        if !variables::RE_UID.is_match(&name) {
+            return None;
+        }
+
+        let name = String::from(name);
+        let uid = self.cur_uid;
+        self.cur_uid += 1;
+        let ret = uid;
+        self.name2uid.insert(name.clone(), uid);
+        self.uid2name.insert(uid, name);
+        Some(ret)
     }
 
     fn get_name(&self, uid: usize) -> String {
-        self.grp.get_name(uid)
+        match self.uid2name.get(&uid) {
+            Some(name) => name.clone(),
+            None => format!("_{}", uid),
+        }
     }
 
     fn set_name(&mut self, uid: usize, name: String) -> bool {
-        self.grp.set_name(uid, name)
-    }
+        // Reject invalid new names
+        if !RE_UID.is_match(&name) {
+            return false;
+        }
 
-    fn rename(&mut self, source: &str, name: String) -> bool {
-        self.grp.rename(source, name)
+        // Reject existing names
+        match self.name2uid.get(&name) {
+            Some(u) => return *u == uid,
+            None => (),
+        }
+
+        self.name2uid.remove(&self.get_name(uid));
+        self.name2uid.insert(name.clone(), uid);
+        self.uid2name.insert(uid, name);
+
+        true
     }
 }
 

@@ -41,8 +41,11 @@ impl Rule {
     }
 
     pub fn set<T: BoolRepr>(&mut self, value: T) {
+        self.set_formula( Formula::from(value) );
+    }
+
+    pub fn set_formula(&mut self, f: Formula) {
         self.assignments.clear();
-        let f = Formula::from(value);
         self.assignments.insert(
             0,
             Assign {

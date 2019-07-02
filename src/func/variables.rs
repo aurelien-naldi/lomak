@@ -47,7 +47,7 @@ pub trait VariableNamer {
 }
 
 lazy_static! {
-    static ref RE_UID: Regex = Regex::new(r"[a-zA-Z][a-zA-Z01-9_]*").unwrap();
+    pub static ref RE_UID: Regex = Regex::new(r"[a-zA-Z][a-zA-Z01-9_]*").unwrap();
 }
 
 impl Group {

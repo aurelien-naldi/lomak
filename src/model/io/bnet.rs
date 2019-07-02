@@ -7,6 +7,7 @@ use std::io::{Error, Write};
 use crate::func::expr::{Expr, NamedExpr, Operator};
 use crate::func::variables::VariableNamer;
 use crate::model::LQModel;
+use crate::func::Formula;
 
 #[derive(Parser)]
 #[grammar_inline = r####"
@@ -87,7 +88,7 @@ impl io::ParsingFormat for BNETFormat {
                     let target = model.get_node_id(target).unwrap();
                     let expr = inner.next().unwrap();
                     let expr = self.load_expr(model, expr);
-                    model.set_rule(target, expr);
+                    model.set_rule(target, 1, Formula::from(expr));
                 }
                 Rule::EOI => (),
                 _ => panic!("Should not get there!"),
