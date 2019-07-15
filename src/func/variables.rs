@@ -1,21 +1,8 @@
 //! Associate names to their variables
 
-use regex::Regex;
-use std::collections::HashMap;
-use std::fmt;
-
-/// Define a group of variables.
-///
-/// Each variable is identified by a numeric uid. This struct associated
-/// human-readable names for the variables.
-/// It allows to retrieve and change the name of an existing variable or
-/// to retrieve the uid corresponding to a name.
-#[derive(Clone)]
-pub struct Group {
-    name2uid: HashMap<String, usize>,
-    uid2name: HashMap<usize, String>,
-    cur_uid: usize,
-}
+//use regex::Regex;
+//use std::collections::HashMap;
+//use std::fmt;
 
 pub trait VariableNamer {
     /// Retrieve the uid corresponding to a variable name.
@@ -46,8 +33,19 @@ pub trait VariableNamer {
     }
 }
 
-lazy_static! {
-    pub static ref RE_UID: Regex = Regex::new(r"[a-zA-Z][a-zA-Z01-9_]*").unwrap();
+/*
+
+/// Define a group of variables.
+///
+/// Each variable is identified by a numeric uid. This struct associated
+/// human-readable names for the variables.
+/// It allows to retrieve and change the name of an existing variable or
+/// to retrieve the uid corresponding to a name.
+#[derive(Clone)]
+pub struct Group {
+    name2uid: HashMap<String, usize>,
+    uid2name: HashMap<usize, String>,
+    cur_uid: usize,
 }
 
 impl Group {
@@ -123,3 +121,5 @@ impl fmt::Display for Group {
         write!(f, "\n")
     }
 }
+
+*/

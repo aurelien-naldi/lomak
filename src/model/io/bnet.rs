@@ -6,8 +6,8 @@ use std::io::{Error, Write};
 
 use crate::func::expr::{Expr, NamedExpr, Operator};
 use crate::func::variables::VariableNamer;
-use crate::model::LQModel;
 use crate::func::Formula;
+use crate::model::LQModel;
 
 #[derive(Parser)]
 #[grammar_inline = r####"
@@ -60,16 +60,6 @@ impl BNETFormat {
     }
 }
 
-impl io::Format for BNETFormat {
-    fn as_parser(&self) -> Option<&dyn io::ParsingFormat> {
-        Some(self)
-    }
-
-    fn as_saver(&self) -> Option<&dyn io::SavingFormat> {
-        Some(self)
-    }
-}
-
 impl io::ParsingFormat for BNETFormat {
     fn parse_rules(&self, model: &mut LQModel, expression: &String) {
         let ptree = BNETParser::parse(Rule::file, expression);
@@ -111,11 +101,11 @@ impl io::ParsingFormat for BNETFormat {
 
 impl io::SavingFormat for BNETFormat {
     fn write_rules(&self, model: &LQModel, out: &mut Write) -> Result<(), Error> {
-        for (uid, r) in model.rules().iter() {
+        for (uid, r) in model.components().iter() {
             write!(
                 out,
                 "{}, {}\n",
-                model.get_name(*uid),
+                model.get_name(uid),
                 NamedExpr {
                     expr: &r.as_func(),
                     namer: model

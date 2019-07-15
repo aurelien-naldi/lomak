@@ -10,16 +10,46 @@ use std::path::Path;
 mod bnet;
 mod mnet;
 
-pub trait Format {
-    fn as_parser(&self) -> Option<&dyn ParsingFormat> {
-        None
-    }
+/// A Format may provide import and export filters
+pub trait Format: TrySaving + TryParsing {}
 
+/// Denotes an object which may be able to save a model, or not.
+/// This is a requirement for the definition of a Format. This trait is
+/// automatically derived for structs implementing the SavingFormat trait.
+/// An empty implementor enables the definition of a format without an
+/// export filter.
+pub trait TrySaving {
     fn as_saver(&self) -> Option<&dyn SavingFormat> {
         None
     }
 }
 
+/// Denotes an object which may be able to load a model, or not.
+/// This is a requirement for the definition of a Format. This trait is
+/// automatically derived for structs implementing the ParsingFormat trait.
+/// An empty implementor enables the definition of a format without an
+/// import filter.
+pub trait TryParsing {
+    fn as_parser(&self) -> Option<&dyn ParsingFormat> {
+        None
+    }
+}
+
+impl<T: TrySaving + TryParsing> Format for T {}
+
+impl<T: SavingFormat> TrySaving for T {
+    fn as_saver(&self) -> Option<&dyn SavingFormat> {
+        Some(self)
+    }
+}
+
+impl<T: ParsingFormat> TryParsing for T {
+    fn as_parser(&self) -> Option<&dyn ParsingFormat> {
+        Some(self)
+    }
+}
+
+/// Trait providing the import filter for Formats.
 pub trait ParsingFormat {
     fn parse_file(&self, filename: &str) -> Result<LQModel, io::Error> {
         // Load the input file into a local string
@@ -35,6 +65,7 @@ pub trait ParsingFormat {
     fn parse_formula(&self, model: &mut LQModel, formula: &str) -> Result<Expr, String>;
 }
 
+/// Trait providing the export filter for Formats.
 pub trait SavingFormat {
     fn save_file(&self, model: &LQModel, filename: &str) -> Result<(), io::Error> {
         let f = File::create(filename).expect("Could not create the output file");

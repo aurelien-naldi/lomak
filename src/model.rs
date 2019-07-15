@@ -1,54 +1,135 @@
-//! Logical model: collections of functions
+//! Logical model: collections of components, with associated variables and functions
 
 use regex::Regex;
+use slab;
 use std::collections::HashMap;
 use std::fmt;
-use slab;
 
-use crate::func::expr::Expr;
-use crate::func::{variables, Formula};
+use crate::func::expr::*;
 use crate::func::variables::VariableNamer;
 use crate::func::Grouped;
+use crate::func::*;
 
 pub mod actions;
 pub mod io;
 pub mod modifier;
-pub mod rule;
 
 lazy_static! {
     static ref RE_PRT: Regex = Regex::new(r"([a-zA-Z][a-zA-Z01-9_]*)%([01])").unwrap();
+    static ref RE_UID: Regex = Regex::new(r"[a-zA-Z][a-zA-Z01-9_]*").unwrap();
 }
 
 pub struct Component {
     name: String,
-    rule: rule::Rule,
+    uid: usize,
+    variables: Vec<usize>,
+    assignments: Vec<Assign>,
+}
+
+struct Variable {
+    component: usize,
+    value: usize,
+}
+
+/// A formula associated with a target value
+pub struct Assign {
+    pub target: usize,
+    pub formula: Formula,
 }
 
 pub struct LQModel {
-    grp: variables::Group,
     components: slab::Slab<Component>,
+    variables: slab::Slab<Variable>,
     name2uid: HashMap<String, usize>,
+}
+
+impl Component {
+    // Create a new component and insert it in the model
+    fn create(model: &mut LQModel, name: String) -> usize {
+        let entry = model.components.vacant_entry();
+        let key = entry.key();
+        entry.insert(Component {
+            uid: key,
+            name: name,
+            variables: vec![],
+            assignments: vec![],
+        });
+        key
+    }
+
+    pub fn get_variable(&self, value: usize) -> Option<usize> {
+        if value < 1 || value > self.variables.len() {
+            return None;
+        }
+        Some(self.variables[value - 1])
+    }
+
+    pub fn ensure_variable(&mut self, model: &mut LQModel, value: usize) -> usize {
+        // Make sure that we stay in a valid range of values
+        if value < 1 || value > 9 {
+            return self.ensure_variable(model, 1);
+        }
+
+        for v in self.variables.len()..value {
+            self.variables.push(model.variables.insert(Variable {
+                component: self.uid,
+                value: v + 1,
+            }));
+        }
+
+        self.variables[value - 1]
+    }
+
+    pub fn extend<T: BoolRepr>(&mut self, value: usize, condition: T) {
+        self.assignments.insert(
+            self.assignments.len(),
+            Assign {
+                target: value,
+                formula: Formula::from(condition),
+            },
+        )
+    }
+
+    pub fn set_expression<T: BoolRepr>(&mut self, value: T, v: usize) {
+        self.set_formula(Formula::from(value), v);
+    }
+
+    pub fn set_formula(&mut self, f: Formula, v: usize) {
+        self.assignments.clear();
+        self.assignments.insert(
+            0,
+            Assign {
+                target: v,
+                formula: f,
+            },
+        );
+    }
+
+    pub fn as_func<T: FromBoolRepr>(&self) -> T {
+        if self.assignments.len() < 1 {
+            return Expr::FALSE.into_repr().convert_as();
+        }
+
+        // FIXME: build the expr for target value 1
+        self.assignments.get(0).unwrap().convert()
+    }
 }
 
 impl LQModel {
     pub fn new() -> LQModel {
         LQModel {
-            grp: variables::Group::new(),
             components: slab::Slab::new(),
+            variables: slab::Slab::new(),
             name2uid: HashMap::new(),
         }
     }
 
-    pub fn set_rule(&mut self, target: usize, value: u8, rule: Formula) {
-        if let Some(f) = self.rules[target] {
-            f.set_formula(rule);
-            return;
-        }
-        self.rules.insert(target, rule::Rule::from_formula(rule));
+    pub fn set_rule(&mut self, target: usize, value: usize, rule: Formula) {
+        self.components[target].set_formula(rule, value);
     }
 
     pub fn lock(mut self, uid: usize, value: bool) -> Self {
-        self.set_rule(uid, 1, Formula::from( Expr::from_bool(value) ) );
+        self.set_rule(uid, 1, Formula::from(Expr::from_bool(value)));
         self
     }
 
@@ -79,31 +160,10 @@ impl LQModel {
         self
     }
 
-    pub fn rules(&self) -> &HashMap<usize, rule::Rule> {
-        &self.rules
+    pub fn components(&self) -> &slab::Slab<Component> {
+        &self.components
     }
 }
-
-/// Delegate the VariableNamer trait to the internal Group
-//impl VariableNamer for LQModel {
-//    fn node_id(&self, name: &str) -> Option<usize> {
-//        self.grp.node_id(name)
-//    }
-//
-//    fn get_node_id(&mut self, name: &str) -> Option<usize> {
-//        self.grp.get_node_id(name)
-//    }
-//
-//    fn get_name(&self, uid: usize) -> String {
-//        self.grp.get_name(uid)
-//    }
-//
-//    fn set_name(&mut self, uid: usize, name: String) -> bool {
-//        self.grp.set_name(uid, name)
-//    }
-//
-//}
-
 
 impl VariableNamer for LQModel {
     fn node_id(&self, name: &str) -> Option<usize> {
@@ -119,24 +179,18 @@ impl VariableNamer for LQModel {
             None => (),
         };
 
-        if !variables::RE_UID.is_match(&name) {
+        if !RE_UID.is_match(&name) {
             return None;
         }
 
         let name = String::from(name);
-        let uid = self.cur_uid;
-        self.cur_uid += 1;
-        let ret = uid;
-        self.name2uid.insert(name.clone(), uid);
-        self.uid2name.insert(uid, name);
-        Some(ret)
+        let uid = Component::create(self, name.clone());
+        self.name2uid.insert(name, uid);
+        Some(uid)
     }
 
     fn get_name(&self, uid: usize) -> String {
-        match self.uid2name.get(&uid) {
-            Some(name) => name.clone(),
-            None => format!("_{}", uid),
-        }
+        self.components[uid].name.clone()
     }
 
     fn set_name(&mut self, uid: usize, name: String) -> bool {
@@ -153,7 +207,7 @@ impl VariableNamer for LQModel {
 
         self.name2uid.remove(&self.get_name(uid));
         self.name2uid.insert(name.clone(), uid);
-        self.uid2name.insert(uid, name);
+        self.components[uid].name = name;
 
         true
     }
@@ -161,10 +215,8 @@ impl VariableNamer for LQModel {
 
 impl fmt::Display for LQModel {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for (u, x) in &self.rules {
-            write!(f, "{}: ", self.get_name(*u))?;
-            x.gfmt(&self.grp, f)?;
-            writeln!(f)?;
+        for (_, component) in &self.components {
+            writeln!(f, "{}", component)?;
         }
         write!(f, "")
     }
@@ -172,17 +224,44 @@ impl fmt::Display for LQModel {
 
 impl fmt::Debug for LQModel {
     fn fmt(&self, ft: &mut fmt::Formatter) -> fmt::Result {
-        write!(ft, "{}", self.grp)?;
-        for (u, f) in &self.rules {
-            let e: &Expr = &f.as_func();
+        write!(ft, "{}", self)
+    }
+}
 
-            writeln!(ft, "E{}  : {}", u, e)?;
-
-            let nnf = e.nnf().unwrap_or(e.clone());
-            writeln!(ft, "   N: {}", nnf)?;
-            let primes = e.prime_implicants();
-            writeln!(ft, "   P: {}", primes)?;
+impl fmt::Display for Component {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for a in &self.assignments {
+            writeln!(f, "{}: {}", self.name, a)?;
         }
-        write!(ft, "")
+        write!(f, "")
+    }
+}
+
+impl Grouped for Component {
+    fn gfmt(&self, namer: &dyn variables::VariableNamer, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}: ", self.name)?;
+        for a in &self.assignments {
+            a.gfmt(namer, f)?;
+        }
+        write!(f, "")
+    }
+}
+
+impl Assign {
+    pub fn convert<T: FromBoolRepr>(&self) -> T {
+        self.formula.convert_as()
+    }
+}
+
+impl fmt::Display for Assign {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{} <- {}", self.target, self.formula)
+    }
+}
+
+impl Grouped for Assign {
+    fn gfmt(&self, namer: &dyn variables::VariableNamer, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{} <- ", self.target)?;
+        self.formula.gfmt(namer, f)
     }
 }

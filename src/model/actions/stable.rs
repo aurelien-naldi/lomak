@@ -48,14 +48,14 @@ impl FixedBuilder {
 impl ActionBuilder for FixedBuilder {
     fn call(&self) {
         let mut solver = solver::get_solver(SolverMode::ALL);
-        let rules = self.model.rules();
+        let rules = self.model.components();
 
-        let s = rules.keys().map(|u| format!("v{}", u)).join("; ");
+        let s = rules.iter().map(|(u, _)| format!("v{}", u)).join("; ");
         let s = format!("{{{}}}.", s);
         solver.add(&s);
 
         for (u, f) in rules {
-            let cur = Expr::ATOM(*u);
+            let cur = Expr::ATOM(u);
             let e: Expr = f.as_func();
             for p in cur.not().and(&e).prime_implicants().items() {
                 solver.restrict(p);

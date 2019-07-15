@@ -89,18 +89,18 @@ impl ActionBuilder for TrapspacesBuilder {
             false => SolverMode::ALL,
         };
         let mut solver = solver::get_solver(mode);
-        let rules = self.model.rules();
+        let rules = self.model.components();
 
         // Add all variables
         let s = rules
-            .keys()
-            .map(|u| format!("v{}; v{}", 2 * u, 2 * u + 1))
+            .iter()
+            .map(|(u, _)| format!("v{}; v{}", 2 * u, 2 * u + 1))
             .join("; ");
         let s = format!("{{{}}}.\n", s);
         solver.add(&s);
 
         // A variable can only be fixed at a specific value
-        for u in rules.keys() {
+        for (u, _) in rules.iter() {
             solver.add(&format!(":- v{}, v{}.\n", 2 * u, 2 * u + 1));
         }
 

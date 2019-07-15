@@ -39,7 +39,7 @@ impl PrimeBuilder {
 
 impl ActionBuilder for PrimeBuilder {
     fn call(&self) {
-        for (u, f) in self.model.rules() {
+        for (u, f) in self.model.components() {
             let primes: paths::Paths = f.as_func();
             println!("PI {}: {}", u, primes);
         }
@@ -50,13 +50,13 @@ impl PrimeBuilder {
     pub fn json(&self) {
         println!("{{");
         let mut first = true;
-        for (u, f) in self.model.rules() {
+        for (u, f) in self.model.components() {
             if first {
                 first = false;
             } else {
                 println!(",");
             }
-            let name = self.model.get_name(*u);
+            let name = self.model.get_name(u);
             let pos_primes: paths::Paths = f.as_func();
             let neg_primes = f.as_func::<expr::Expr>().not().prime_implicants();
             println!("\"{}\":[", name);
