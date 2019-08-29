@@ -3,7 +3,7 @@ use std::fmt;
 use std::vec::Vec;
 
 use crate::func::expr::Expr;
-use crate::func::variables::VariableNamer;
+use crate::func::VariableNamer;
 use crate::func::*;
 
 #[derive(Clone, PartialEq, Eq)]
@@ -356,7 +356,7 @@ impl LiteralSet {
             } else {
                 print!(",");
             }
-            print!("\"{}\":1", namer.get_name(uid));
+            print!("\"{}\":1", namer.name(uid));
         }
         for uid in self.negative.iter() {
             if first {
@@ -364,7 +364,7 @@ impl LiteralSet {
             } else {
                 print!(",");
             }
-            print!("\"{}\":0", namer.get_name(uid));
+            print!("\"{}\":0", namer.name(uid));
         }
         print!("}}");
     }

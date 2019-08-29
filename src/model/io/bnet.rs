@@ -5,7 +5,6 @@ use pest::Parser;
 use std::io::{Error, Write};
 
 use crate::func::expr::{Expr, NamedExpr, Operator};
-use crate::func::variables::VariableNamer;
 use crate::func::Formula;
 use crate::model::LQModel;
 
@@ -101,13 +100,13 @@ impl io::ParsingFormat for BNETFormat {
 
 impl io::SavingFormat for BNETFormat {
     fn write_rules(&self, model: &LQModel, out: &mut Write) -> Result<(), Error> {
-        for (uid, r) in model.components().iter() {
+        for c in model.components() {
             write!(
                 out,
                 "{}, {}\n",
-                model.get_name(uid),
+                c.name,
                 NamedExpr {
-                    expr: &r.as_func(),
+                    expr: &c.as_func(),
                     namer: model
                 }
             )?;

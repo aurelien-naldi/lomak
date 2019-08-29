@@ -8,7 +8,6 @@ use core::ops::Not;
 
 use crate::func;
 use crate::func::paths::LiteralSet;
-use crate::func::variables::*;
 use crate::func::*;
 
 /* ************************************************************************************* */
@@ -396,7 +395,7 @@ impl<'a> FormatContext<'a> {
     fn write_var(&self, f: &mut fmt::Formatter, uid: usize) -> fmt::Result {
         match &self.group {
             None => write!(f, "v{}", uid),
-            Some(g) => write!(f, "{}", g.get_name(uid)),
+            Some(g) => g.format_name(f, uid),
         }
     }
 }

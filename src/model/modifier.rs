@@ -1,5 +1,5 @@
 use crate::model::actions::{arg_from_descr, ArgumentDescr};
-use crate::model::LQModel;
+use crate::model::LQModelRef;
 use clap::{App, ArgMatches};
 use std::collections::HashMap;
 
@@ -17,7 +17,7 @@ pub struct ModifierManager {
 pub trait CLIModifier: Sync {
     fn argument(&self) -> &'static ArgumentDescr;
 
-    fn modify(&self, model: LQModel, parameters: &[&str]) -> LQModel;
+    fn modify(&self, model: LQModelRef, parameters: &[&str]) -> LQModelRef;
 }
 
 impl ModifierManager {
@@ -36,7 +36,7 @@ impl ModifierManager {
         self
     }
 
-    fn modify(&self, mut model: LQModel, matches: &ArgMatches) -> LQModel {
+    fn modify(&self, mut model: LQModelRef, matches: &ArgMatches) -> LQModelRef {
         // TODO: apply selected modifiers in the right order
         for (name, cli) in &self.modifiers {
             if matches.is_present(name) {
@@ -59,10 +59,10 @@ pub fn register_modifiers(mut app: App<'static, 'static>) -> App<'static, 'stati
     app
 }
 
-pub fn modify(model: LQModel, matches: &ArgMatches) -> LQModel {
+pub fn modify(model: LQModelRef, matches: &ArgMatches) -> LQModelRef {
     MODIFIERS.modify(model, matches)
 }
 
 pub trait ModelModifier {
-    fn get_model(self) -> LQModel;
+    fn get_model(self) -> LQModelRef;
 }

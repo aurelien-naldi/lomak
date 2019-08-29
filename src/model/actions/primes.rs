@@ -1,9 +1,10 @@
 use crate::func::expr;
 use crate::func::paths;
-use crate::func::variables::VariableNamer;
+use crate::func::VariableNamer;
 use crate::model::actions::ActionBuilder;
 use crate::model::actions::CLIAction;
-use crate::model::LQModel;
+use crate::model::LQModelRef;
+use crate::model::QModel;
 
 pub fn cli_action() -> Box<dyn CLIAction> {
     Box::new(CLIPrimes {})
@@ -22,26 +23,26 @@ impl CLIAction for CLIPrimes {
         &["pi", "implicants"]
     }
 
-    fn builder(&self, model: LQModel) -> Box<dyn ActionBuilder> {
+    fn builder(&self, model: LQModelRef) -> Box<dyn ActionBuilder> {
         Box::new(PrimeBuilder::new(model))
     }
 }
 
 pub struct PrimeBuilder {
-    model: LQModel,
+    model: LQModelRef,
 }
 
 impl PrimeBuilder {
-    pub fn new(model: LQModel) -> PrimeBuilder {
+    pub fn new(model: LQModelRef) -> PrimeBuilder {
         PrimeBuilder { model: model }
     }
 }
 
 impl ActionBuilder for PrimeBuilder {
     fn call(&self) {
-        for (u, f) in self.model.components() {
-            let primes: paths::Paths = f.as_func();
-            println!("PI {}: {}", u, primes);
+        for uid in self.model.variables() {
+            let primes: paths::Paths = self.model.rule(*uid).as_func();
+            println!("PI {}: {}", uid, primes);
         }
     }
 }
@@ -50,15 +51,16 @@ impl PrimeBuilder {
     pub fn json(&self) {
         println!("{{");
         let mut first = true;
-        for (u, f) in self.model.components() {
+        for uid in self.model.variables() {
             if first {
                 first = false;
             } else {
                 println!(",");
             }
-            let name = self.model.get_name(u);
-            let pos_primes: paths::Paths = f.as_func();
-            let neg_primes = f.as_func::<expr::Expr>().not().prime_implicants();
+            let rule = self.model.rule(*uid);
+            let name = self.model.name(*uid);
+            let pos_primes: paths::Paths = rule.as_func();
+            let neg_primes = rule.as_func::<expr::Expr>().not().prime_implicants();
             println!("\"{}\":[", name);
             neg_primes.to_json(&self.model);
             println!(",");

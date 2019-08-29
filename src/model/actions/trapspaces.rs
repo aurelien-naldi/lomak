@@ -2,7 +2,7 @@ use crate::func::expr::Expr;
 use crate::model::actions::ActionBuilder;
 use crate::model::actions::ArgumentDescr;
 use crate::model::actions::CLIAction;
-use crate::model::LQModel;
+use crate::model::LQModelRef;
 
 use crate::solver;
 
@@ -47,20 +47,20 @@ impl CLIAction for CLIFixed {
         &PARAMETERS
     }
 
-    fn builder(&self, model: LQModel) -> Box<dyn ActionBuilder> {
+    fn builder(&self, model: LQModelRef) -> Box<dyn ActionBuilder> {
         Box::new(TrapspacesBuilder::new(model))
     }
 }
 
 pub struct TrapspacesBuilder {
-    model: LQModel,
+    model: LQModelRef,
     filters: HashMap<usize, bool>,
     percolate: bool,
     terminal: bool,
 }
 
 impl TrapspacesBuilder {
-    pub fn new(model: LQModel) -> Self {
+    pub fn new(model: LQModelRef) -> Self {
         TrapspacesBuilder {
             model: model,
             filters: HashMap::new(),
@@ -89,30 +89,28 @@ impl ActionBuilder for TrapspacesBuilder {
             false => SolverMode::ALL,
         };
         let mut solver = solver::get_solver(mode);
-        let rules = self.model.components();
 
         // Add all variables
-        let s = rules
-            .iter()
-            .map(|(u, _)| format!("v{}; v{}", 2 * u, 2 * u + 1))
+        let s = self.model.components()
+            .map(|c| format!("v{}; v{}", 2 * c.uid, 2 * c.uid + 1))
             .join("; ");
         let s = format!("{{{}}}.\n", s);
         solver.add(&s);
 
         // A variable can only be fixed at a specific value
-        for (u, _) in rules.iter() {
-            solver.add(&format!(":- v{}, v{}.\n", 2 * u, 2 * u + 1));
+        for c in self.model.components() {
+            solver.add(&format!(":- v{}, v{}.\n", 2 * c.uid, 2 * c.uid + 1));
         }
 
-        for (u, f) in rules {
-            let e: Expr = f.as_func();
+        for c in self.model.components() {
+            let e: Expr = c.as_func();
             let ne = e.not();
-            restrict(&mut solver, &e, 2 * u + 1);
-            restrict(&mut solver, &ne, 2 * u);
+            restrict(&mut solver, &e, 2 * c.uid + 1);
+            restrict(&mut solver, &ne, 2 * c.uid);
 
             if self.percolate {
-                enforce(&mut solver, &e, 2 * u);
-                enforce(&mut solver, &ne, 2 * u + 1);
+                enforce(&mut solver, &e, 2 * c.uid);
+                enforce(&mut solver, &ne, 2 * c.uid + 1);
             }
         }
 

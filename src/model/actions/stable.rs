@@ -1,7 +1,7 @@
 use crate::func::expr::Expr;
 use crate::model::actions::ActionBuilder;
 use crate::model::actions::CLIAction;
-use crate::model::LQModel;
+use crate::model::{LQModelRef, QModel};
 
 use crate::solver;
 
@@ -26,18 +26,18 @@ impl CLIAction for CLIFixed {
         &["fixed", "stable", "fp"]
     }
 
-    fn builder(&self, model: LQModel) -> Box<dyn ActionBuilder> {
+    fn builder(&self, model: LQModelRef) -> Box<dyn ActionBuilder> {
         Box::new(FixedBuilder::new(model))
     }
 }
 
 pub struct FixedBuilder {
-    model: LQModel,
+    model: LQModelRef,
     restriction: Option<LiteralSet>,
 }
 
 impl FixedBuilder {
-    pub fn new(model: LQModel) -> FixedBuilder {
+    pub fn new(model: LQModelRef) -> FixedBuilder {
         FixedBuilder {
             model: model,
             restriction: None,
@@ -48,15 +48,14 @@ impl FixedBuilder {
 impl ActionBuilder for FixedBuilder {
     fn call(&self) {
         let mut solver = solver::get_solver(SolverMode::ALL);
-        let rules = self.model.components();
-
-        let s = rules.iter().map(|(u, _)| format!("v{}", u)).join("; ");
+        let s = self.model.variables().iter().map(|uid| format!("v{}", uid)).join("; ");
         let s = format!("{{{}}}.", s);
         solver.add(&s);
 
-        for (u, f) in rules {
-            let cur = Expr::ATOM(u);
-            let e: Expr = f.as_func();
+        for uid in self.model.variables() {
+            let rule = self.model.rule(*uid);
+            let cur = Expr::ATOM(*uid);
+            let e: Expr = rule.as_func();
             for p in cur.not().and(&e).prime_implicants().items() {
                 solver.restrict(p);
             }
