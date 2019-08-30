@@ -110,12 +110,11 @@ pub trait QModel: std::marker::Sized {
 
     fn rule<'a>(&'a self, uid: usize) -> &'a DynamicRule;
 
-//    fn components<'a>(&'a self) -> Box<dyn Iterator<Item=&Component>>;
 }
 
 
 struct Variable {
-    model: Weak<LQModel>,
+//    model: Weak<LQModel>,
     uid: usize,
     next: usize,
     info: VariableInfo,
@@ -137,7 +136,7 @@ struct Extension {
     value: usize,
 }
 
-struct DynamicRule {
+pub struct DynamicRule {
     assignments: Vec<Assign>,
 }
 
@@ -147,12 +146,28 @@ pub struct Assign {
     pub formula: Formula,
 }
 
-struct LQModel {
+pub struct LQModel {
     components: slab::Slab<Variable>,
     name2uid: HashMap<String, usize>,
     var_indices: Vec<usize>,
 }
-type LQModelRef = Rc<LQModel>;
+type LQModelRef = LQModel;
+
+impl VariableInfo {
+
+    fn set_name(&mut self, name: &str) {
+        // FIXME
+    }
+
+    fn set_rule(&mut self, value: usize, rule: Formula) {
+
+        match self {
+            VariableInfo::COMPONENT(c) => c.rule.set_formula(rule, value),
+            _ => panic!("set_rule should only be applied on components"),
+        }
+        // FIXME
+    }
+}
 
 impl DynamicRule {
     fn new() -> Self {
@@ -162,7 +177,15 @@ impl DynamicRule {
     }
 }
 
-impl QModel for LQModelRef {
+impl LQModel {
+
+    fn testmut(&mut self) {
+        let cmps = &mut self.components;
+    }
+}
+
+impl QModel for LQModel {
+
     fn get_component(&self, name: &str) -> Option<usize> {
         if let Some(uid) = self.name2uid.get(name) {
             return Some(*uid);
@@ -197,11 +220,10 @@ impl QModel for LQModelRef {
             return *uid;
         }
 
+        let cmps = &mut self.components;
         let entry = self.components.vacant_entry();
         let uid = entry.key();
-        let modelref = Rc::downgrade(&self.clone());
         entry.insert(Variable {
-            model: modelref,
             uid: uid,
             next: 0,
             info: VariableInfo::COMPONENT(Component::new(String::from(name))),
@@ -222,13 +244,11 @@ impl QModel for LQModelRef {
         // FIXME
         let entry = self.components.vacant_entry();
         let vid = entry.key();
-        let modelref = Rc::downgrade(&self.clone());
         let info = Extension {
             component: uid,
             value: value,
         };
         entry.insert(Variable {
-            model: modelref,
             uid: uid,
             next: 0,
             info: VariableInfo::EXTENDED(info),
@@ -237,10 +257,17 @@ impl QModel for LQModelRef {
     }
 
     fn set_rule(&mut self, target: usize, value: usize, rule: Formula) {
-        match &self.components[target].info {
-            &VariableInfo::COMPONENT(mut c) => c.rule.set_formula(rule, value),
-            &VariableInfo::EXTENDED(e) => self.set_rule(e.component, value, rule),
-            &VariableInfo::NEGATION(e) => self.set_rule(e.component, value, rule),
+        let info = &mut self.components[target].info;
+        match info {
+            VariableInfo::COMPONENT(c) => c.rule.set_formula(rule, value),
+            VariableInfo::EXTENDED(e) =>  {
+                let uid = e.component;
+                self.set_rule(uid, value, rule)
+            },
+            VariableInfo::NEGATION(e) =>  {
+                let uid = e.component;
+                self.set_rule(uid, value, rule)
+            },
         }
     }
 
@@ -259,13 +286,23 @@ impl QModel for LQModelRef {
         let old_name = self.name(uid).to_string();
         self.name2uid.remove(&old_name);
         self.name2uid.insert(name.clone(), uid);
-        match &self.components[uid].info {
-            &VariableInfo::COMPONENT(mut c) => {
+
+// FIXME: implement set_name
+
+        let info = &mut self.components[uid].info;
+        match info {
+            VariableInfo::COMPONENT(c) => {
                 c.name = name;
                 true
             },
-            &VariableInfo::EXTENDED(e) => self.set_name(e.component, name),
-            &VariableInfo::NEGATION(e) => self.set_name(e.component, name),
+            VariableInfo::EXTENDED(e) => {
+                let cid = e.component;
+                self.set_name(cid, name)
+            },
+            VariableInfo::NEGATION(e) => {
+                let cid = e.component;
+                self.set_name(cid, name)
+            },
         }
     }
 
@@ -377,11 +414,11 @@ impl LQModel {
 
 }
 
-impl VariableNamer for LQModelRef {
-    fn format_name(&self, f: &mut fmt::Formatter, uid: usize) -> fmt::Result {
-        self.format_name(f, uid)
-    }
-}
+//impl VariableNamer for LQModelRef {
+//    fn format_name(&self, f: &mut fmt::Formatter, uid: usize) -> fmt::Result {
+//        self.format_name(f, uid)
+//    }
+//}
 
 impl VariableNamer for LQModel {
     fn format_name(&self, f: &mut fmt::Formatter, uid: usize) -> fmt::Result {
@@ -398,9 +435,9 @@ impl VariableNamer for LQModel {
 impl fmt::Display for LQModel {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for (_, component) in &self.components {
-            match component.info {
+            match &component.info {
                 VariableInfo::COMPONENT(c) => {
-                    for a in c.rule.assignments {
+                    for a in &c.rule.assignments {
                         write!(f, "{}", c.name)?;
                         if a.target != 1 {
                             write!(f, ":{}", a.target)?;

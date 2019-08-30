@@ -6,7 +6,8 @@ use std::io::{Error, Write};
 
 use crate::func::expr::{Expr, NamedExpr, Operator};
 use crate::func::Formula;
-use crate::model::LQModel;
+use crate::func::VariableNamer;
+use crate::model::{QModel, LQModelRef};
 
 #[derive(Parser)]
 #[grammar_inline = r####"
@@ -38,12 +39,12 @@ impl BNETFormat {
         return BNETFormat {};
     }
 
-    fn load_expr(&self, model: &mut LQModel, expr: Pair<Rule>) -> Expr {
+    fn load_expr(&self, model: &mut LQModelRef, expr: Pair<Rule>) -> Expr {
         let rule = expr.as_rule();
         match rule {
             Rule::bt => Expr::TRUE,
             Rule::bf => Expr::FALSE,
-            Rule::lit => Expr::ATOM(model.get_node_id(expr.as_str()).unwrap()),
+            Rule::lit => Expr::ATOM(model.ensure_component(expr.as_str())),
             _ => {
                 let mut content = expr.into_inner().map(|e| self.load_expr(model, e));
                 match rule {
@@ -60,7 +61,7 @@ impl BNETFormat {
 }
 
 impl io::ParsingFormat for BNETFormat {
-    fn parse_rules(&self, model: &mut LQModel, expression: &String) {
+    fn parse_rules(&self, model: &mut LQModelRef, expression: &String) {
         let ptree = BNETParser::parse(Rule::file, expression);
 
         if ptree.is_err() {
@@ -74,7 +75,7 @@ impl io::ParsingFormat for BNETFormat {
                 Rule::rule => {
                     let mut inner = record.into_inner();
                     let target = inner.next().unwrap().as_str();
-                    let target = model.get_node_id(target).unwrap();
+                    let target = model.ensure_component(target);
                     let expr = inner.next().unwrap();
                     let expr = self.load_expr(model, expr);
                     model.set_rule(target, 1, Formula::from(expr));
@@ -85,7 +86,7 @@ impl io::ParsingFormat for BNETFormat {
         }
     }
 
-    fn parse_formula(&self, model: &mut LQModel, formula: &str) -> Result<Expr, String> {
+    fn parse_formula(&self, model: &mut LQModelRef, formula: &str) -> Result<Expr, String> {
         let ptree = BNETParser::parse(Rule::sxpr, formula);
         match ptree {
             Err(s) => return Err(format!("Parsing error: {}", s)),
@@ -99,14 +100,14 @@ impl io::ParsingFormat for BNETFormat {
 }
 
 impl io::SavingFormat for BNETFormat {
-    fn write_rules(&self, model: &LQModel, out: &mut Write) -> Result<(), Error> {
-        for c in model.components() {
+    fn write_rules(&self, model: &LQModelRef, out: &mut Write) -> Result<(), Error> {
+        for uid in model.variables() {
             write!(
                 out,
                 "{}, {}\n",
-                c.name,
+                model.name(*uid),
                 NamedExpr {
-                    expr: &c.as_func(),
+                    expr: &model.rule(*uid).as_func(),
                     namer: model
                 }
             )?;

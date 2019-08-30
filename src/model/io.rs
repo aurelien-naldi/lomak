@@ -1,5 +1,5 @@
 use crate::func::expr::Expr;
-use crate::model::LQModel;
+use crate::model::{QModel,LQModel};
 use std::ffi::OsStr;
 use std::fs::File;
 use std::io;

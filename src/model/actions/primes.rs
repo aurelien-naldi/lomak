@@ -3,7 +3,7 @@ use crate::func::paths;
 use crate::func::VariableNamer;
 use crate::model::actions::ActionBuilder;
 use crate::model::actions::CLIAction;
-use crate::model::LQModelRef;
+use crate::model::LQModel;
 use crate::model::QModel;
 
 pub fn cli_action() -> Box<dyn CLIAction> {
@@ -23,17 +23,17 @@ impl CLIAction for CLIPrimes {
         &["pi", "implicants"]
     }
 
-    fn builder(&self, model: LQModelRef) -> Box<dyn ActionBuilder> {
+    fn builder(&self, model: LQModel) -> Box<dyn ActionBuilder> {
         Box::new(PrimeBuilder::new(model))
     }
 }
 
 pub struct PrimeBuilder {
-    model: LQModelRef,
+    model: LQModel,
 }
 
 impl PrimeBuilder {
-    pub fn new(model: LQModelRef) -> PrimeBuilder {
+    pub fn new(model: LQModel) -> PrimeBuilder {
         PrimeBuilder { model: model }
     }
 }

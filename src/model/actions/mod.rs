@@ -1,4 +1,4 @@
-use crate::model::LQModelRef;
+use crate::model::LQModel;
 use clap::{App, Arg, SubCommand};
 use std::collections::HashMap;
 
@@ -71,7 +71,7 @@ pub trait CLIAction: Sync {
         app.subcommand(cmd)
     }
 
-    fn builder(&self, model: LQModelRef) -> Box<dyn ActionBuilder>;
+    fn builder(&self, model: LQModel) -> Box<dyn ActionBuilder>;
 }
 
 pub fn arg_from_descr(param: &ArgumentDescr) -> Arg {
@@ -146,7 +146,7 @@ pub fn register_commands(mut app: App<'static, 'static>) -> App<'static, 'static
     app
 }
 
-pub fn run_command(cmd: &str, args: &clap::ArgMatches, model: LQModelRef) {
+pub fn run_command(cmd: &str, args: &clap::ArgMatches, model: LQModel) {
     if let Some(cli) = ACTIONS.services.get(cmd) {
         let mut b = cli.builder(model);
 

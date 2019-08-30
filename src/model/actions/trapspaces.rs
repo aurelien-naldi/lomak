@@ -2,7 +2,7 @@ use crate::func::expr::Expr;
 use crate::model::actions::ActionBuilder;
 use crate::model::actions::ArgumentDescr;
 use crate::model::actions::CLIAction;
-use crate::model::LQModelRef;
+use crate::model::{QModel,LQModelRef};
 
 use crate::solver;
 
@@ -91,26 +91,26 @@ impl ActionBuilder for TrapspacesBuilder {
         let mut solver = solver::get_solver(mode);
 
         // Add all variables
-        let s = self.model.components()
-            .map(|c| format!("v{}; v{}", 2 * c.uid, 2 * c.uid + 1))
+        let s = self.model.variables().iter()
+            .map(|uid| format!("v{}; v{}", 2 * uid, 2 * uid + 1))
             .join("; ");
         let s = format!("{{{}}}.\n", s);
         solver.add(&s);
 
         // A variable can only be fixed at a specific value
-        for c in self.model.components() {
-            solver.add(&format!(":- v{}, v{}.\n", 2 * c.uid, 2 * c.uid + 1));
+        for uid in self.model.variables() {
+            solver.add(&format!(":- v{}, v{}.\n", 2 * uid, 2 * uid + 1));
         }
 
-        for c in self.model.components() {
-            let e: Expr = c.as_func();
+        for uid in self.model.variables() {
+            let e: Expr = self.model.rule(*uid).as_func();
             let ne = e.not();
-            restrict(&mut solver, &e, 2 * c.uid + 1);
-            restrict(&mut solver, &ne, 2 * c.uid);
+            restrict(&mut solver, &e, 2 * uid + 1);
+            restrict(&mut solver, &ne, 2 * uid);
 
             if self.percolate {
-                enforce(&mut solver, &e, 2 * c.uid);
-                enforce(&mut solver, &ne, 2 * c.uid + 1);
+                enforce(&mut solver, &e, 2 * uid);
+                enforce(&mut solver, &ne, 2 * uid + 1);
             }
         }
 
