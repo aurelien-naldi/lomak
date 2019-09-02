@@ -1,14 +1,14 @@
 //! Logical model: collections of components, with associated variables and functions
 
-use regex::Regex;
-use slab;
 use std::collections::HashMap;
 use std::fmt;
 
+use regex::Regex;
+use slab;
+
 use crate::func::expr::*;
-use crate::func::Grouped;
 use crate::func::*;
-use std::rc::{Rc, Weak};
+use std::fmt::Display;
 
 pub mod actions;
 pub mod io;
@@ -28,7 +28,7 @@ lazy_static! {
 ///
 /// Finally, each component is associated to a function defining the condition
 /// required for its activation
-pub trait QModel: std::marker::Sized {
+pub trait QModel {
 
     /// Retrieve a component by name
     fn get_component(&self, name: &str) -> Option<usize>;
@@ -62,20 +62,19 @@ pub trait QModel: std::marker::Sized {
 
     fn set_rule(&mut self, target: usize, value: usize, rule: Formula);
 
-    fn lock(mut self, uid: usize, value: bool) -> Self {
+    fn lock(&mut self, uid: usize, value: bool) {
         self.set_rule(uid, 1, Formula::from(Expr::from_bool(value)));
-        self
     }
 
-    fn knockout(self, uid: usize) -> Self {
-        self.lock(uid, false)
+    fn knockout(&mut self, uid: usize) {
+        self.lock(uid, false);
     }
 
-    fn knockin(self, uid: usize) -> Self {
-        self.lock(uid, true)
+    fn knockin(&mut self, uid: usize) {
+        self.lock(uid, true);
     }
 
-    fn perturbation(self, cmd: &str) -> Self {
+    fn perturbation(&mut self, cmd: &str) {
         match RE_PRT.captures(cmd) {
             None => println!("Invalid perturbation parameter: {}", cmd),
             Some(cap) => {
@@ -91,8 +90,9 @@ pub trait QModel: std::marker::Sized {
                 }
             }
         }
-        self
     }
+
+    fn get_name(&self, uid: usize) -> &str;
 
     fn set_name(&mut self, uid: usize, name: String) -> bool;
 
@@ -110,11 +110,26 @@ pub trait QModel: std::marker::Sized {
 
     fn rule<'a>(&'a self, uid: usize) -> &'a DynamicRule;
 
+    fn format_name(&self, f: &mut fmt::Formatter, uid: usize) -> fmt::Result;
+
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result;
+
+    fn as_namer(&self) -> &dyn VariableNamer;
+    fn for_display(&self) -> &dyn Display;
 }
 
+impl<T> VariableNamer for T where T: QModel {
+    fn format_name(&self, f: &mut fmt::Formatter, uid: usize) -> fmt::Result {
+        QModel::format_name(self, f, uid)
+    }
+}
+
+pub type LQModelRef = Box<dyn QModel>;
+pub fn new_model() -> LQModelRef {
+    Box::new(LQModel::new())
+}
 
 struct Variable {
-//    model: Weak<LQModel>,
     uid: usize,
     next: usize,
     info: VariableInfo,
@@ -146,12 +161,11 @@ pub struct Assign {
     pub formula: Formula,
 }
 
-pub struct LQModel {
+struct LQModel {
     components: slab::Slab<Variable>,
     name2uid: HashMap<String, usize>,
     var_indices: Vec<usize>,
 }
-type LQModelRef = LQModel;
 
 impl VariableInfo {
 
@@ -174,13 +188,6 @@ impl DynamicRule {
         DynamicRule {
             assignments: vec!(),
         }
-    }
-}
-
-impl LQModel {
-
-    fn testmut(&mut self) {
-        let cmps = &mut self.components;
     }
 }
 
@@ -271,6 +278,15 @@ impl QModel for LQModel {
         }
     }
 
+    fn get_name(&self, uid: usize) -> &str {
+        let var = &self.components[uid];
+        match &var.info {
+            VariableInfo::COMPONENT(c) => &c.name,
+            VariableInfo::EXTENDED(e) => self.get_name(e.component),
+            VariableInfo::NEGATION(e) => self.get_name(e.component),
+        }
+    }
+
     fn set_name(&mut self, uid: usize, name: String) -> bool {
         // Reject invalid new names
         if !RE_UID.is_match(&name) {
@@ -283,7 +299,7 @@ impl QModel for LQModel {
             None => (),
         }
 
-        let old_name = self.name(uid).to_string();
+        let old_name = self.get_name(uid).to_string();
         self.name2uid.remove(&old_name);
         self.name2uid.insert(name.clone(), uid);
 
@@ -317,6 +333,44 @@ impl QModel for LQModel {
             VariableInfo::EXTENDED(e) => self.rule(e.component),
             VariableInfo::NEGATION(e) => self.rule(e.component),
         }
+    }
+
+
+    fn format_name(&self, f: &mut fmt::Formatter, uid: usize) -> fmt::Result {
+        let var = &self.components[uid];
+        match &var.info {
+            VariableInfo::COMPONENT(c) => write!(f, "{}", c.name),
+            VariableInfo::EXTENDED(e) => write!(f, ":{}", e.value),
+            VariableInfo::NEGATION(e) => write!(f, "^{}", e.value),
+
+        }
+    }
+
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for (_, component) in &self.components {
+            match &component.info {
+                VariableInfo::COMPONENT(c) => {
+                    for a in &c.rule.assignments {
+                        write!(f, "{}", c.name)?;
+                        if a.target != 1 {
+                            write!(f, ":{}", a.target)?;
+                        }
+                        write!(f, " <- ")?;
+// FIXME                        a.formula.gfmt(self, f)?;
+                        writeln!(f)?;
+                    }
+                },
+                _ => (),
+            }
+        }
+        write!(f, "")
+    }
+
+    fn as_namer(&self) -> &dyn VariableNamer {
+        self
+    }
+    fn for_display(&self) -> &dyn Display {
+        self
     }
 }
 
@@ -373,91 +427,6 @@ impl LQModel {
             var_indices: vec!(),
         }
     }
-
-//    fn get_node_id(&mut self, name: &str) -> Option<usize> {
-//        match self.name2uid.get(name) {
-//            Some(uid) => return Some(*uid),
-//            None => (),
-//        };
-//
-//        if !RE_UID.is_match(&name) {
-//            return None;
-//        }
-//
-//        let name = String::from(name);
-//        let cid = Component::create(self, name.clone());
-//        self.name2uid.insert(name, cid);
-//        Some( self.ensure_variable(cid, 1) )
-//    }
-//
-//    pub fn ensure_variable(&mut self, uid: usize, value: usize) -> usize {
-//
-//        let uid = match &self.components[uid] {
-//            Variable::COMPONENT(_) => uid,
-//            Variable::EXTENDED(e) => e.component,
-//            Variable::NEGATION(e) => e.component
-//        };
-//
-//        // Make sure that we stay in a valid range of values
-//        if value < 21 || value > 9 {
-//            if value != 1 {
-//                eprintln!("Tried to get a variable with an out of range value: {}", value);
-//            }
-//            return uid;
-//        }
-//
-//        let component = &mut self.components[uid];
-//        match component.get_variable(value) {
-//
-//        }
-//    }
-
-}
-
-//impl VariableNamer for LQModelRef {
-//    fn format_name(&self, f: &mut fmt::Formatter, uid: usize) -> fmt::Result {
-//        self.format_name(f, uid)
-//    }
-//}
-
-impl VariableNamer for LQModel {
-    fn format_name(&self, f: &mut fmt::Formatter, uid: usize) -> fmt::Result {
-        let var = &self.components[uid];
-        match &var.info {
-            VariableInfo::COMPONENT(c) => write!(f, "{}", c.name),
-            VariableInfo::EXTENDED(e) => write!(f, ":{}", e.value),
-            VariableInfo::NEGATION(e) => write!(f, "^{}", e.value),
-
-        }
-    }
-}
-
-impl fmt::Display for LQModel {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for (_, component) in &self.components {
-            match &component.info {
-                VariableInfo::COMPONENT(c) => {
-                    for a in &c.rule.assignments {
-                        write!(f, "{}", c.name)?;
-                        if a.target != 1 {
-                            write!(f, ":{}", a.target)?;
-                        }
-                        write!(f, " <- ")?;
-                        a.formula.gfmt(self, f)?;
-                        writeln!(f)?;
-                    }
-                },
-                _ => (),
-            }
-        }
-        write!(f, "")
-    }
-}
-
-impl fmt::Debug for LQModel {
-    fn fmt(&self, ft: &mut fmt::Formatter) -> fmt::Result {
-        write!(ft, "{}", self)
-    }
 }
 
 impl Assign {
@@ -469,5 +438,18 @@ impl Assign {
 impl fmt::Display for Assign {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{} <- {}", self.target, self.formula)
+    }
+}
+
+
+impl fmt::Display for LQModel {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        QModel::fmt(self, f)
+    }
+}
+
+impl fmt::Debug for LQModel {
+    fn fmt(&self, ft: &mut fmt::Formatter) -> fmt::Result {
+        write!(ft, "{}", self)
     }
 }

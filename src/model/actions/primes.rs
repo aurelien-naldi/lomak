@@ -1,9 +1,7 @@
 use crate::func::expr;
 use crate::func::paths;
-use crate::func::VariableNamer;
 use crate::model::actions::ActionBuilder;
 use crate::model::actions::CLIAction;
-use crate::model::LQModel;
 use crate::model::QModel;
 
 pub fn cli_action() -> Box<dyn CLIAction> {
@@ -23,22 +21,22 @@ impl CLIAction for CLIPrimes {
         &["pi", "implicants"]
     }
 
-    fn builder(&self, model: LQModel) -> Box<dyn ActionBuilder> {
+    fn builder<'a>(&self, model: &'a dyn QModel) -> Box<dyn ActionBuilder + 'a> {
         Box::new(PrimeBuilder::new(model))
     }
 }
 
-pub struct PrimeBuilder {
-    model: LQModel,
+pub struct PrimeBuilder<'a> {
+    model: &'a dyn QModel,
 }
 
-impl PrimeBuilder {
-    pub fn new(model: LQModel) -> PrimeBuilder {
+impl<'a> PrimeBuilder<'a> {
+    pub fn new(model: &'a dyn QModel) -> PrimeBuilder<'a> {
         PrimeBuilder { model: model }
     }
 }
 
-impl ActionBuilder for PrimeBuilder {
+impl ActionBuilder for PrimeBuilder<'_> {
     fn call(&self) {
         for uid in self.model.variables() {
             let primes: paths::Paths = self.model.rule(*uid).as_func();
@@ -47,10 +45,11 @@ impl ActionBuilder for PrimeBuilder {
     }
 }
 
-impl PrimeBuilder {
+impl<'a> PrimeBuilder<'a> {
     pub fn json(&self) {
         println!("{{");
         let mut first = true;
+        let namer = self.model.as_namer();
         for uid in self.model.variables() {
             if first {
                 first = false;
@@ -58,13 +57,13 @@ impl PrimeBuilder {
                 println!(",");
             }
             let rule = self.model.rule(*uid);
-            let name = self.model.name(*uid);
+            let name = self.model.get_name(*uid);
             let pos_primes: paths::Paths = rule.as_func();
             let neg_primes = rule.as_func::<expr::Expr>().not().prime_implicants();
             println!("\"{}\":[", name);
-            neg_primes.to_json(&self.model);
+            neg_primes.to_json(namer);
             println!(",");
-            pos_primes.to_json(&self.model);
+            pos_primes.to_json(namer);
             print!("]");
         }
         println!("\n}}");

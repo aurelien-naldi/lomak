@@ -5,9 +5,8 @@ use pest::Parser;
 use std::io::{Error, Write};
 
 use crate::func::expr::{Expr, NamedExpr, Operator};
-use crate::func::VariableNamer;
 use crate::func::Formula;
-use crate::model::{LQModelRef,QModel};
+use crate::model::QModel;
 
 #[derive(Parser)]
 #[grammar_inline = r####"
@@ -39,7 +38,7 @@ impl MNETFormat {
         return MNETFormat {};
     }
 
-    fn load_expr(&self, model: &mut LQModelRef, expr: Pair<Rule>) -> Expr {
+    fn load_expr(&self, model: &mut dyn QModel, expr: Pair<Rule>) -> Expr {
         let rule = expr.as_rule();
         match rule {
             Rule::bt => Expr::TRUE,
@@ -61,7 +60,7 @@ impl MNETFormat {
 }
 
 impl io::ParsingFormat for MNETFormat {
-    fn parse_rules(&self, model: &mut LQModelRef, expression: &String) {
+    fn parse_rules(&self, model: &mut dyn QModel, expression: &String) {
         let ptree = MNETParser::parse(Rule::file, expression);
 
         if ptree.is_err() {
@@ -86,7 +85,7 @@ impl io::ParsingFormat for MNETFormat {
         }
     }
 
-    fn parse_formula(&self, model: &mut LQModelRef, formula: &str) -> Result<Expr, String> {
+    fn parse_formula(&self, model: &mut dyn QModel, formula: &str) -> Result<Expr, String> {
         let ptree = MNETParser::parse(Rule::sxpr, formula);
         match ptree {
             Err(s) => return Err(format!("Parsing error: {}", s)),
@@ -100,15 +99,16 @@ impl io::ParsingFormat for MNETFormat {
 }
 
 impl io::SavingFormat for MNETFormat {
-    fn write_rules(&self, model: &LQModelRef, out: &mut Write) -> Result<(), Error> {
+    fn write_rules(&self, model: &dyn QModel, out: &mut dyn Write) -> Result<(), Error> {
+        let namer = model.as_namer();
         for uid in model.variables() {
             write!(
                 out,
                 "{} <- {}\n",
-                model.name(*uid),
+                model.get_name(*uid),
                 NamedExpr {
                     expr: &model.rule(*uid).as_func(),
-                    namer: model
+                    namer: namer,
                 }
             )?;
         }

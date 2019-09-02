@@ -1,11 +1,12 @@
 use crate::func::expr::Expr;
-use crate::model::{QModel,LQModel};
+use crate::model::{QModel, LQModelRef, new_model};
 use std::ffi::OsStr;
 use std::fs::File;
 use std::io;
 use std::io::ErrorKind;
 use std::io::{BufWriter, Read, Write};
 use std::path::Path;
+use std::borrow::BorrowMut;
 
 mod bnet;
 mod mnet;
@@ -51,32 +52,33 @@ impl<T: ParsingFormat> TryParsing for T {
 
 /// Trait providing the import filter for Formats.
 pub trait ParsingFormat {
-    fn parse_file(&self, filename: &str) -> Result<LQModel, io::Error> {
+    fn parse_file(&self, filename: &str) -> Result<LQModelRef, io::Error> {
         // Load the input file into a local string
         let mut unparsed_file = String::new();
         File::open(filename)?.read_to_string(&mut unparsed_file)?;
-        let mut model = LQModel::new();
-        self.parse_rules(&mut model, &unparsed_file);
+        let mut model = new_model();
+        let m: &mut dyn QModel = model.borrow_mut();
+        self.parse_rules(m, &unparsed_file);
         Ok(model)
     }
 
-    fn parse_rules(&self, model: &mut LQModel, expression: &String);
+    fn parse_rules(&self, model: &mut dyn QModel, expression: &String);
 
-    fn parse_formula(&self, model: &mut LQModel, formula: &str) -> Result<Expr, String>;
+    fn parse_formula(&self, model: &mut dyn QModel, formula: &str) -> Result<Expr, String>;
 }
 
 /// Trait providing the export filter for Formats.
 pub trait SavingFormat {
-    fn save_file(&self, model: &LQModel, filename: &str) -> Result<(), io::Error> {
+    fn save_file(&self, model: &dyn QModel, filename: &str) -> Result<(), io::Error> {
         let f = File::create(filename).expect("Could not create the output file");
         let mut out = BufWriter::new(f);
         self.write_rules(model, &mut out)
     }
 
-    fn write_rules(&self, model: &LQModel, out: &mut Write) -> Result<(), io::Error>;
+    fn write_rules(&self, model: &dyn QModel, out: &mut dyn Write) -> Result<(), io::Error>;
 }
 
-pub fn get_format(fmt: &str) -> Result<Box<Format>, io::Error> {
+pub fn get_format(fmt: &str) -> Result<Box<dyn Format>, io::Error> {
     // TODO: select the right format
     match fmt.to_lowercase().trim() {
         "mnet" => Result::Ok(Box::new(mnet::MNETFormat::new())),
@@ -85,7 +87,7 @@ pub fn get_format(fmt: &str) -> Result<Box<Format>, io::Error> {
     }
 }
 
-fn guess_format(filename: &str) -> Result<Box<Format>, io::Error> {
+fn guess_format(filename: &str) -> Result<Box<dyn Format>, io::Error> {
     Path::new(filename)
         .extension()
         .and_then(OsStr::to_str)
@@ -96,7 +98,7 @@ fn guess_format(filename: &str) -> Result<Box<Format>, io::Error> {
         .and_then(get_format)
 }
 
-pub fn load_model(filename: &str, fmt: Option<&str>) -> Result<LQModel, io::Error> {
+pub fn load_model(filename: &str, fmt: Option<&str>) -> Result<LQModelRef, io::Error> {
     let f = match fmt {
         None => guess_format(filename),
         Some(s) => get_format(s),
@@ -114,7 +116,7 @@ pub fn load_model(filename: &str, fmt: Option<&str>) -> Result<LQModel, io::Erro
     }
 }
 
-pub fn save_model(model: &LQModel, filename: &str, fmt: Option<&str>) -> Result<(), io::Error> {
+pub fn save_model(model: &dyn QModel, filename: &str, fmt: Option<&str>) -> Result<(), io::Error> {
     let f = match fmt {
         None => guess_format(filename),
         Some(s) => get_format(s),

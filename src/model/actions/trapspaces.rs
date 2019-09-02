@@ -2,7 +2,7 @@ use crate::func::expr::Expr;
 use crate::model::actions::ActionBuilder;
 use crate::model::actions::ArgumentDescr;
 use crate::model::actions::CLIAction;
-use crate::model::{QModel,LQModelRef};
+use crate::model::QModel;
 
 use crate::solver;
 
@@ -47,20 +47,20 @@ impl CLIAction for CLIFixed {
         &PARAMETERS
     }
 
-    fn builder(&self, model: LQModelRef) -> Box<dyn ActionBuilder> {
+    fn builder<'a>(&self, model: &'a dyn QModel) -> Box<dyn ActionBuilder + 'a> {
         Box::new(TrapspacesBuilder::new(model))
     }
 }
 
-pub struct TrapspacesBuilder {
-    model: LQModelRef,
+pub struct TrapspacesBuilder<'a> {
+    model: &'a dyn QModel,
     filters: HashMap<usize, bool>,
     percolate: bool,
     terminal: bool,
 }
 
-impl TrapspacesBuilder {
-    pub fn new(model: LQModelRef) -> Self {
+impl<'a> TrapspacesBuilder<'a> {
+    pub fn new(model: &'a dyn QModel) -> Self {
         TrapspacesBuilder {
             model: model,
             filters: HashMap::new(),
@@ -74,7 +74,7 @@ impl TrapspacesBuilder {
     }
 }
 
-impl ActionBuilder for TrapspacesBuilder {
+impl ActionBuilder for TrapspacesBuilder<'_> {
     fn set_flag(&mut self, flag: &str) {
         match flag {
             "percolate" => self.percolate = true,

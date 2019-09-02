@@ -1,7 +1,7 @@
 use crate::func::expr::Expr;
 use crate::model::actions::ActionBuilder;
 use crate::model::actions::CLIAction;
-use crate::model::{LQModelRef, QModel};
+use crate::model::QModel;
 
 use crate::solver;
 
@@ -26,18 +26,18 @@ impl CLIAction for CLIFixed {
         &["fixed", "stable", "fp"]
     }
 
-    fn builder(&self, model: LQModelRef) -> Box<dyn ActionBuilder> {
+    fn builder<'a>(&self, model: &'a dyn QModel) -> Box<dyn ActionBuilder + 'a> {
         Box::new(FixedBuilder::new(model))
     }
 }
 
-pub struct FixedBuilder {
-    model: LQModelRef,
+pub struct FixedBuilder<'a> {
+    model: &'a dyn QModel,
     restriction: Option<LiteralSet>,
 }
 
-impl FixedBuilder {
-    pub fn new(model: LQModelRef) -> FixedBuilder {
+impl<'a> FixedBuilder<'a> {
+    pub fn new(model: &'a dyn QModel) -> FixedBuilder<'a> {
         FixedBuilder {
             model: model,
             restriction: None,
@@ -45,7 +45,7 @@ impl FixedBuilder {
     }
 }
 
-impl ActionBuilder for FixedBuilder {
+impl ActionBuilder for FixedBuilder<'_> {
     fn call(&self) {
         let mut solver = solver::get_solver(SolverMode::ALL);
         let s = self.model.variables().iter().map(|uid| format!("v{}", uid)).join("; ");

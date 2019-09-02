@@ -3,7 +3,7 @@ use crate::model::actions::ActionBuilder;
 use crate::model::actions::ArgumentDescr;
 use crate::model::actions::CLIAction;
 use crate::model::io;
-use crate::model::LQModel;
+use crate::model::QModel;
 
 lazy_static! {
     pub static ref PARAMETERS: Vec<ArgumentDescr> = vec! {
@@ -40,19 +40,19 @@ impl CLIAction for CLIExport {
         &["save", "convert"]
     }
 
-    fn builder(&self, model: LQModel) -> Box<dyn ActionBuilder> {
+    fn builder<'a>(&self, model: &'a dyn QModel) -> Box<dyn ActionBuilder + 'a> {
         Box::new(ExportBuilder::new(model))
     }
 }
 
-pub struct ExportBuilder {
-    model: LQModel,
+pub struct ExportBuilder<'a> {
+    model: &'a dyn QModel,
     output: Option<String>,
     format: Option<String>,
 }
 
-impl ExportBuilder {
-    pub fn new(model: LQModel) -> ExportBuilder {
+impl<'a> ExportBuilder<'a> {
+    pub fn new(model: &'a dyn QModel) -> ExportBuilder<'a> {
         ExportBuilder {
             model: model,
             output: None,
@@ -61,7 +61,7 @@ impl ExportBuilder {
     }
 }
 
-impl ActionBuilder for ExportBuilder {
+impl ActionBuilder for ExportBuilder<'_> {
     fn set_value(&mut self, key: &str, value: &str) {
         match key {
             "output" => self.output = Some(value.to_string()),
@@ -77,7 +77,7 @@ impl ActionBuilder for ExportBuilder {
         }
 
         io::save_model(
-            &self.model,
+            self.model,
             &self.output.as_ref().unwrap(),
             self.format.as_ref().map(|s| &**s),
         )
