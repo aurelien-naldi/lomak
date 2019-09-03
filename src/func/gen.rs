@@ -59,13 +59,9 @@ impl fmt::Display for Sign {
 }
 
 impl func::Grouped for Generator {
-    fn gfmt(
-        &self,
-        namer: &dyn func::VariableNamer,
-        f: &mut fmt::Formatter,
-    ) -> fmt::Result {
+    fn gfmt(&self, namer: &dyn func::VariableNamer, f: &mut fmt::Formatter) -> fmt::Result {
         for k in self.map.keys() {
-            namer.format_name(f,*k);
+            namer.format_name(f, *k)?;
             write!(f, "{} ", self.map.get(k).unwrap())?;
         }
         write!(f, "")

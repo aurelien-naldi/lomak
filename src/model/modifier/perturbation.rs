@@ -1,8 +1,12 @@
+use regex::Regex;
+
 use crate::model::actions::ArgumentDescr;
 use crate::model::modifier::CLIModifier;
-use crate::model::LQModelRef;
+use crate::model::{LQModelRef, QModel};
+use std::borrow::BorrowMut;
 
 lazy_static! {
+    static ref RE_PRT: Regex = Regex::new(r"([a-zA-Z][a-zA-Z01-9_]*)%([01])").unwrap();
     pub static ref ARGUMENT: ArgumentDescr = ArgumentDescr::new("prt")
         .long("perturbation")
         .short("p")
@@ -22,10 +26,25 @@ impl CLIModifier for CLIPerturbation {
         &ARGUMENT
     }
 
-    fn modify(&self, mut model: LQModelRef, parameters: &[&str]) -> LQModelRef {
+    fn modify(&self, mut rmodel: LQModelRef, parameters: &[&str]) -> LQModelRef {
+        let model: &mut dyn QModel = rmodel.borrow_mut();
         for arg in parameters {
-            model.perturbation(arg);
+            match RE_PRT.captures(arg) {
+                None => println!("Invalid perturbation parameter: {}", arg),
+                Some(cap) => {
+                    if let Some(uid) = model.get_component(&cap[1]) {
+                        match &cap[2] {
+                            "0" => model.lock(uid, false),
+                            "1" => model.lock(uid, true),
+                            _ => {
+                                println!("Invalid target value: {}", &cap[2]);
+                                ()
+                            }
+                        }
+                    }
+                }
+            }
         }
-        model
+        rmodel
     }
 }

@@ -13,7 +13,6 @@ use std::cell::RefCell;
 use std::fmt;
 
 pub trait VariableNamer {
-
     /// Retrieve or assign the uid for a variable name.
     /// If the name is not defined, it will associate it to
     /// a new uid.
@@ -34,7 +33,7 @@ pub struct GroupedTuple<'a, N: VariableNamer, G: Grouped> {
     val: &'a G,
 }
 
-impl<'a,N: VariableNamer, G: Grouped> fmt::Display for GroupedTuple<'a,N,G> {
+impl<'a, N: VariableNamer, G: Grouped> fmt::Display for GroupedTuple<'a, N, G> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.val.gfmt(self.namer, f)
     }

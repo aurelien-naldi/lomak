@@ -1,12 +1,12 @@
 use crate::func::expr::Expr;
-use crate::model::{QModel, LQModelRef, new_model};
+use crate::model::{new_model, LQModelRef, QModel};
+use std::borrow::BorrowMut;
 use std::ffi::OsStr;
 use std::fs::File;
 use std::io;
 use std::io::ErrorKind;
 use std::io::{BufWriter, Read, Write};
 use std::path::Path;
-use std::borrow::BorrowMut;
 
 mod bnet;
 mod mnet;

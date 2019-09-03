@@ -5,16 +5,16 @@ use std::fmt;
 
 use slab;
 
+use crate::func::{Grouped, VariableNamer};
 use crate::model::*;
 use std::fmt::Display;
-use crate::func::{VariableNamer, Grouped};
 
 pub fn new_model() -> impl QModel {
     LQModel {
         components: slab::Slab::new(),
         variables: slab::Slab::new(),
         name2uid: HashMap::new(),
-        var_indices: vec!(),
+        var_indices: vec![],
     }
 }
 
@@ -26,7 +26,6 @@ struct LQModel {
 }
 
 impl QModel for LQModel {
-
     fn get_component(&self, name: &str) -> Option<usize> {
         if let Some(uid) = self.name2uid.get(name) {
             return Some(*uid);
@@ -72,7 +71,7 @@ impl QModel for LQModel {
 
         // Create a new variable and add it to the component
         let component = &mut self.components[cid];
-        let vid = self.variables.insert(Variable::new(cid, value) );
+        let vid = self.variables.insert(Variable::new(cid, value));
         component.variables.insert(value, vid);
 
         // Maintain the list of components?
@@ -120,6 +119,7 @@ impl QModel for LQModel {
     fn as_namer(&self) -> &dyn VariableNamer {
         self
     }
+
     fn for_display(&self) -> &dyn Display {
         self
     }
@@ -160,17 +160,17 @@ impl fmt::Debug for LQModel {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for (u, c) in &self.components {
             write!(f, "{} ({}):", u, c.name)?;
-            for (v, var) in &c.variables {
+            for (v, _) in &c.variables {
                 write!(f, "  {}", v)?;
             }
-            writeln!(f);
+            writeln!(f)?;
         }
-        writeln!(f);
+        writeln!(f)?;
 
         for (u, v) in &self.variables {
             writeln!(f, "{}: {}:{}", u, v.component, v.value)?;
         }
-        writeln!(f);
+        writeln!(f)?;
 
         write!(f, "{}", self)
     }

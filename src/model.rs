@@ -6,8 +6,8 @@ use regex::Regex;
 
 use crate::func::expr::*;
 use crate::func::*;
-use std::fmt::Display;
 use std::collections::HashMap;
+use std::fmt::Display;
 
 pub mod actions;
 pub mod io;
@@ -16,21 +16,18 @@ pub mod modifier;
 mod backend;
 
 lazy_static! {
-    static ref RE_PRT: Regex = Regex::new(r"([a-zA-Z][a-zA-Z01-9_]*)%([01])").unwrap();
     static ref RE_UID: Regex = Regex::new(r"[a-zA-Z][a-zA-Z01-9_]*").unwrap();
 }
 
-/// Define the public API for logical models
+/// Public API for qualitative models
 ///
-/// A model has a list of Boolean variables, which can be Boolean or
-/// multivalued components forming groups of related Boolean variables.
+/// A model contains a list of named components, which are associated to
+/// one or several Boolean variables for each qualitative threshold.
+/// Components and variables are identified by unique handles (positive integers).
 ///
-/// Each component has a name, associated variables also have a value.
-///
-/// Finally, each component is associated to a function defining the condition
-/// required for its activation
+/// Finally, each component is associated to a list of Boolean functions defining
+/// the conditions required for the activation of each threshold.
 pub trait QModel {
-
     /// Find a component by name if it exists
     fn get_component(&self, name: &str) -> Option<usize>;
 
@@ -61,36 +58,11 @@ pub trait QModel {
     /// Find or create a variable for an existing component and a specific threshold value
     fn ensure_associated_variable(&mut self, cid: usize, value: usize) -> usize;
 
+    /// Assign a Boolean condition for a specific threshold
     fn set_rule(&mut self, target: usize, value: usize, rule: Formula);
 
     fn lock(&mut self, uid: usize, value: bool) {
         self.set_rule(uid, 1, Formula::from(Expr::from_bool(value)));
-    }
-
-    fn knockout(&mut self, uid: usize) {
-        self.lock(uid, false);
-    }
-
-    fn knockin(&mut self, uid: usize) {
-        self.lock(uid, true);
-    }
-
-    fn perturbation(&mut self, cmd: &str) {
-        match RE_PRT.captures(cmd) {
-            None => println!("Invalid perturbation parameter: {}", cmd),
-            Some(cap) => {
-                if let Some(uid) = self.get_component(&cap[1]) {
-                    match &cap[2] {
-                        "0" => return self.knockout(uid),
-                        "1" => return self.knockin(uid),
-                        _ => {
-                            println!("Invalid target value: {}", &cap[2]);
-                            ()
-                        }
-                    }
-                }
-            }
-        }
     }
 
     fn get_name(&self, uid: usize) -> &str;
@@ -121,15 +93,18 @@ pub fn new_model() -> LQModelRef {
     Box::new(backend::new_model())
 }
 
+/// A Boolean variable associated to a qualitative thresholds of one of the components
 pub struct Variable {
     component: usize,
     value: usize,
 }
 
+/// The component of a model provide the name, a list of
+/// available variables and the dynamic rule.
 pub struct Component {
     name: String,
     rule: DynamicRule,
-    variables: HashMap<usize,usize>,
+    variables: HashMap<usize, usize>,
 }
 
 pub struct DynamicRule {
@@ -154,7 +129,7 @@ impl Component {
 
 impl Variable {
     fn new(component: usize, value: usize) -> Self {
-        Variable{
+        Variable {
             component: component,
             value: value,
         }
@@ -162,10 +137,9 @@ impl Variable {
 }
 
 impl DynamicRule {
-
     fn new() -> Self {
         DynamicRule {
-            assignments: vec!(),
+            assignments: vec![],
         }
     }
 
@@ -202,7 +176,6 @@ impl DynamicRule {
         self.assignments.get(0).unwrap().convert()
     }
 }
-
 
 impl Assign {
     pub fn convert<T: FromBoolRepr>(&self) -> T {

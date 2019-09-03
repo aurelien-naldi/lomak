@@ -38,9 +38,7 @@ impl<'a> PrimeBuilder<'a> {
 
 impl ActionBuilder for PrimeBuilder<'_> {
     fn call(&self) {
-        println!("LOOKING FOR PRIMES!!");
         for uid in self.model.variables() {
-            let func: expr::Expr = self.model.rule(*uid).as_func();
             let primes: paths::Paths = self.model.rule(*uid).as_func();
             println!("PI {}: {}", uid, primes);
         }

@@ -321,7 +321,11 @@ impl Expr {
 }
 
 impl Children {
-    fn replace_literal(&self, f: &dyn Fn(usize, bool) -> Option<Expr>, op: Operator) -> Option<Expr> {
+    fn replace_literal(
+        &self,
+        f: &dyn Fn(usize, bool) -> Option<Expr>,
+        op: Operator,
+    ) -> Option<Expr> {
         let children: Vec<Option<Expr>> = self.data.iter().map(|c| c.replace_literal(f)).collect();
         let count = children.iter().filter(|c| c.is_some()).count();
         if count > 1 {

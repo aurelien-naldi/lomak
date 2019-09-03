@@ -91,7 +91,10 @@ impl ActionBuilder for TrapspacesBuilder<'_> {
         let mut solver = solver::get_solver(mode);
 
         // Add all variables
-        let s = self.model.variables().iter()
+        let s = self
+            .model
+            .variables()
+            .iter()
             .map(|uid| format!("v{}; v{}", 2 * uid, 2 * uid + 1))
             .join("; ");
         let s = format!("{{{}}}.\n", s);

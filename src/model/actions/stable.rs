@@ -48,7 +48,12 @@ impl<'a> FixedBuilder<'a> {
 impl ActionBuilder for FixedBuilder<'_> {
     fn call(&self) {
         let mut solver = solver::get_solver(SolverMode::ALL);
-        let s = self.model.variables().iter().map(|uid| format!("v{}", uid)).join("; ");
+        let s = self
+            .model
+            .variables()
+            .iter()
+            .map(|uid| format!("v{}", uid))
+            .join("; ");
         let s = format!("{{{}}}.", s);
         solver.add(&s);
 
