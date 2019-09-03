@@ -1,6 +1,6 @@
 use crate::model::actions::ArgumentDescr;
 use crate::model::modifier::CLIModifier;
-use crate::model::{LQModelRef,QModel};
+use crate::model::LQModelRef;
 
 lazy_static! {
     pub static ref ARGUMENT: ArgumentDescr = ArgumentDescr::new("mv")

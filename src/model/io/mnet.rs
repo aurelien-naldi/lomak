@@ -43,7 +43,7 @@ impl MNETFormat {
         match rule {
             Rule::bt => Expr::TRUE,
             Rule::bf => Expr::FALSE,
-            Rule::lit => Expr::ATOM(model.ensure_component(expr.as_str())),
+            Rule::lit => Expr::ATOM(model.ensure_variable(expr.as_str(), 1)),
             _ => {
                 let mut content = expr.into_inner().map(|e| self.load_expr(model, e));
                 match rule {
@@ -74,7 +74,7 @@ impl io::ParsingFormat for MNETFormat {
                 Rule::rule => {
                     let mut inner = record.into_inner();
                     let target = inner.next().unwrap().as_str();
-                    let target = model.ensure_component(target);
+                    let target = model.ensure_variable(target, 1);
                     let expr = inner.next().unwrap();
                     let expr = self.load_expr(model, expr);
                     model.set_rule(target, 1, Formula::from(expr));
