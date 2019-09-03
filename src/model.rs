@@ -1,133 +1,190 @@
-//! Logical model: collections of functions
+//! Logical model: collections of components, with associated variables and functions
 
-use regex::Regex;
-use std::collections::HashMap;
 use std::fmt;
 
-use crate::func::expr::Expr;
-use crate::func::variables;
-use crate::func::variables::VariableNamer;
-use crate::func::Grouped;
+use regex::Regex;
+
+use crate::func::expr::*;
+use crate::func::*;
+use std::collections::HashMap;
+use std::fmt::Display;
 
 pub mod actions;
 pub mod io;
 pub mod modifier;
-pub mod rule;
+
+mod backend;
 
 lazy_static! {
-    static ref RE_PRT: Regex = Regex::new(r"([a-zA-Z][a-zA-Z01-9_]*)%([01])").unwrap();
+    static ref RE_UID: Regex = Regex::new(r"[a-zA-Z][a-zA-Z01-9_]*").unwrap();
 }
 
-pub struct LQModel {
-    grp: variables::Group,
-    rules: HashMap<usize, rule::Rule>,
-}
+/// Public API for qualitative models
+///
+/// A model contains a list of named components, which are associated to
+/// one or several Boolean variables for each qualitative threshold.
+/// Components and variables are identified by unique handles (positive integers).
+///
+/// Finally, each component is associated to a list of Boolean functions defining
+/// the conditions required for the activation of each threshold.
+pub trait QModel {
+    /// Find a component by name if it exists
+    fn get_component(&self, name: &str) -> Option<usize>;
 
-impl LQModel {
-    pub fn new() -> LQModel {
-        LQModel {
-            grp: variables::Group::new(),
-            rules: HashMap::new(),
+    /// Find a variable based on the name of the component and the threshold value
+    fn get_variable(&self, name: &str, value: usize) -> Option<usize> {
+        let base_component = self.get_component(name);
+        if value == 1 {
+            return base_component;
         }
-    }
-
-    pub fn set_rule(&mut self, target: usize, rule: Expr) {
-        if let Some(f) = self.rules.get_mut(&target) {
-            f.set(rule);
-            return;
+        if let Some(uid) = base_component {
+            return self.get_associated_variable(uid, value);
         }
-        self.rules.insert(target, rule::Rule::from_function(rule));
+        None
     }
 
-    pub fn knockout(mut self, uid: usize) -> Self {
-        self.set_rule(uid, Expr::FALSE);
-        self
+    /// Find a variable for an existing component and a threshold value
+    fn get_associated_variable(&self, cid: usize, value: usize) -> Option<usize>;
+
+    /// Find or create a component with a given name
+    fn ensure_component(&mut self, name: &str) -> usize;
+
+    /// Find or create a variable with a given component name and threshold value
+    fn ensure_variable(&mut self, name: &str, value: usize) -> usize {
+        let cid = self.ensure_component(name);
+        self.ensure_associated_variable(cid, value)
     }
 
-    pub fn knockin(mut self, uid: usize) -> Self {
-        self.set_rule(uid, Expr::TRUE);
-        self
+    /// Find or create a variable for an existing component and a specific threshold value
+    fn ensure_associated_variable(&mut self, cid: usize, value: usize) -> usize;
+
+    /// Assign a Boolean condition for a specific threshold
+    fn set_rule(&mut self, target: usize, value: usize, rule: Formula);
+
+    fn lock(&mut self, uid: usize, value: bool) {
+        self.set_rule(uid, 1, Formula::from(Expr::from_bool(value)));
     }
 
-    pub fn perturbation(self, cmd: &str) -> Self {
-        match RE_PRT.captures(cmd) {
-            None => println!("Invalid perturbation parameter: {}", cmd),
-            Some(cap) => {
-                if let Some(uid) = self.node_id(&cap[1]) {
-                    match &cap[2] {
-                        "0" => return self.knockout(uid),
-                        "1" => return self.knockin(uid),
-                        _ => {
-                            println!("Invalid target value: {}", &cap[2]);
-                            ()
-                        }
-                    }
-                }
-            }
-        }
-        self
-    }
+    fn get_name(&self, uid: usize) -> &str;
 
-    #[allow(dead_code)]
-    pub fn extend_rule(&mut self, target: usize, rule: Expr) {
-        match self.rules.remove(&target) {
-            None => self.set_rule(target, rule),
-            Some(mut r) => r.extend(rule),
-        }
-    }
+    fn set_name(&mut self, uid: usize, name: String) -> bool;
 
-    pub fn rules(&self) -> &HashMap<usize, rule::Rule> {
-        &self.rules
-    }
-}
-
-/// Delegate the VariableNamer trait to the internal Group
-impl VariableNamer for LQModel {
-    fn node_id(&self, name: &str) -> Option<usize> {
-        self.grp.node_id(name)
-    }
-
-    fn get_node_id(&mut self, name: &str) -> Option<usize> {
-        self.grp.get_node_id(name)
-    }
-
-    fn get_name(&self, uid: usize) -> String {
-        self.grp.get_name(uid)
-    }
-
-    fn set_name(&mut self, uid: usize, name: String) -> bool {
-        self.grp.set_name(uid, name)
-    }
-
+    /// Rename a component.
+    /// Returns false if the new name is invalid or already assigned
+    /// to another component
     fn rename(&mut self, source: &str, name: String) -> bool {
-        self.grp.rename(source, name)
+        match self.get_component(source) {
+            None => false,
+            Some(u) => self.set_name(u, name),
+        }
+    }
+
+    fn variables(&self) -> &Vec<usize>;
+
+    fn rule(&self, uid: usize) -> &DynamicRule;
+
+    fn as_namer(&self) -> &dyn VariableNamer;
+
+    fn for_display(&self) -> &dyn Display;
+}
+
+pub type LQModelRef = Box<dyn QModel>;
+pub fn new_model() -> LQModelRef {
+    Box::new(backend::new_model())
+}
+
+/// A Boolean variable associated to a qualitative thresholds of one of the components
+pub struct Variable {
+    component: usize,
+    value: usize,
+}
+
+/// The component of a model provide the name, a list of
+/// available variables and the dynamic rule.
+pub struct Component {
+    name: String,
+    rule: DynamicRule,
+    variables: HashMap<usize, usize>,
+}
+
+pub struct DynamicRule {
+    assignments: Vec<Assign>,
+}
+
+/// A formula associated with a target value
+pub struct Assign {
+    pub target: usize,
+    pub formula: Formula,
+}
+
+impl Component {
+    fn new(name: String) -> Self {
+        Component {
+            name: name,
+            rule: DynamicRule::new(),
+            variables: HashMap::new(),
+        }
     }
 }
 
-impl fmt::Display for LQModel {
+impl Variable {
+    fn new(component: usize, value: usize) -> Self {
+        Variable {
+            component: component,
+            value: value,
+        }
+    }
+}
+
+impl DynamicRule {
+    fn new() -> Self {
+        DynamicRule {
+            assignments: vec![],
+        }
+    }
+
+    pub fn extend<T: BoolRepr>(&mut self, value: usize, condition: T) {
+        self.extend_formula(value, Formula::from(condition));
+    }
+
+    pub fn extend_formula(&mut self, value: usize, condition: Formula) {
+        self.assignments.insert(
+            self.assignments.len(),
+            Assign {
+                target: value,
+                formula: condition,
+            },
+        )
+    }
+
+    fn set_expression<T: BoolRepr>(&mut self, condition: T, v: usize) {
+        self.assignments.clear();
+        self.extend(v, condition);
+    }
+
+    fn set_formula(&mut self, f: Formula, v: usize) {
+        self.assignments.clear();
+        self.extend_formula(v, f);
+    }
+
+    pub fn as_func<T: FromBoolRepr>(&self) -> T {
+        if self.assignments.len() < 1 {
+            return Expr::FALSE.into_repr().convert_as();
+        }
+
+        // FIXME: build the expr for target value 1
+        self.assignments.get(0).unwrap().convert()
+    }
+}
+
+impl Assign {
+    pub fn convert<T: FromBoolRepr>(&self) -> T {
+        self.formula.convert_as()
+    }
+}
+
+impl fmt::Display for Assign {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for (u, x) in &self.rules {
-            write!(f, "{}: ", self.get_name(*u))?;
-            x.gfmt(&self.grp, f)?;
-            writeln!(f)?;
-        }
-        write!(f, "")
-    }
-}
-
-impl fmt::Debug for LQModel {
-    fn fmt(&self, ft: &mut fmt::Formatter) -> fmt::Result {
-        write!(ft, "{}", self.grp)?;
-        for (u, f) in &self.rules {
-            let e: &Expr = &f.as_func();
-
-            writeln!(ft, "E{}  : {}", u, e)?;
-
-            let nnf = e.nnf().unwrap_or(e.clone());
-            writeln!(ft, "   N: {}", nnf)?;
-            let primes = e.prime_implicants();
-            writeln!(ft, "   P: {}", primes)?;
-        }
-        write!(ft, "")
+        write!(f, "{} <- {}", self.target, self.formula)
     }
 }

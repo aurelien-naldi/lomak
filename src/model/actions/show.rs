@@ -1,7 +1,7 @@
 use crate::model::actions::ActionBuilder;
 
 use crate::model::actions::CLIAction;
-use crate::model::LQModel;
+use crate::model::QModel;
 
 struct CLIShow;
 
@@ -21,23 +21,23 @@ impl CLIAction for CLIShow {
         &["display", "print"]
     }
 
-    fn builder(&self, model: LQModel) -> Box<ActionBuilder> {
+    fn builder<'a>(&self, model: &'a dyn QModel) -> Box<dyn ActionBuilder + 'a> {
         Box::new(ShowBuilder::new(model))
     }
 }
 
-pub struct ShowBuilder {
-    model: LQModel,
+pub struct ShowBuilder<'a> {
+    model: &'a dyn QModel,
 }
 
-impl ShowBuilder {
-    pub fn new(model: LQModel) -> ShowBuilder {
+impl<'a> ShowBuilder<'a> {
+    pub fn new(model: &'a dyn QModel) -> ShowBuilder<'a> {
         ShowBuilder { model: model }
     }
 }
 
-impl ActionBuilder for ShowBuilder {
+impl ActionBuilder for ShowBuilder<'_> {
     fn call(&self) {
-        println!("{}", self.model);
+        println!("{}", self.model.for_display());
     }
 }

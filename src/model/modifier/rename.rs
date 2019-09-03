@@ -1,7 +1,6 @@
-use crate::func::variables::VariableNamer;
 use crate::model::actions::ArgumentDescr;
 use crate::model::modifier::CLIModifier;
-use crate::model::LQModel;
+use crate::model::LQModelRef;
 
 lazy_static! {
     pub static ref ARGUMENT: ArgumentDescr = ArgumentDescr::new("mv")
@@ -23,7 +22,7 @@ impl CLIModifier for CLIRename {
         &ARGUMENT
     }
 
-    fn modify(&self, mut model: LQModel, parameters: &[&str]) -> LQModel {
+    fn modify(&self, mut model: LQModelRef, parameters: &[&str]) -> LQModelRef {
         for arg in parameters {
             let split: Vec<&str> = arg.split(":").collect();
             if split.len() != 2 {

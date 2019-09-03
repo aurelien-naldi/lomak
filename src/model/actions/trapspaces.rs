@@ -2,7 +2,7 @@ use crate::func::expr::Expr;
 use crate::model::actions::ActionBuilder;
 use crate::model::actions::ArgumentDescr;
 use crate::model::actions::CLIAction;
-use crate::model::LQModel;
+use crate::model::QModel;
 
 use crate::solver;
 
@@ -47,20 +47,20 @@ impl CLIAction for CLIFixed {
         &PARAMETERS
     }
 
-    fn builder(&self, model: LQModel) -> Box<dyn ActionBuilder> {
+    fn builder<'a>(&self, model: &'a dyn QModel) -> Box<dyn ActionBuilder + 'a> {
         Box::new(TrapspacesBuilder::new(model))
     }
 }
 
-pub struct TrapspacesBuilder {
-    model: LQModel,
+pub struct TrapspacesBuilder<'a> {
+    model: &'a dyn QModel,
     filters: HashMap<usize, bool>,
     percolate: bool,
     terminal: bool,
 }
 
-impl TrapspacesBuilder {
-    pub fn new(model: LQModel) -> Self {
+impl<'a> TrapspacesBuilder<'a> {
+    pub fn new(model: &'a dyn QModel) -> Self {
         TrapspacesBuilder {
             model: model,
             filters: HashMap::new(),
@@ -74,7 +74,7 @@ impl TrapspacesBuilder {
     }
 }
 
-impl ActionBuilder for TrapspacesBuilder {
+impl ActionBuilder for TrapspacesBuilder<'_> {
     fn set_flag(&mut self, flag: &str) {
         match flag {
             "percolate" => self.percolate = true,
@@ -89,30 +89,31 @@ impl ActionBuilder for TrapspacesBuilder {
             false => SolverMode::ALL,
         };
         let mut solver = solver::get_solver(mode);
-        let rules = self.model.rules();
 
         // Add all variables
-        let s = rules
-            .keys()
-            .map(|u| format!("v{}; v{}", 2 * u, 2 * u + 1))
+        let s = self
+            .model
+            .variables()
+            .iter()
+            .map(|uid| format!("v{}; v{}", 2 * uid, 2 * uid + 1))
             .join("; ");
         let s = format!("{{{}}}.\n", s);
         solver.add(&s);
 
         // A variable can only be fixed at a specific value
-        for u in rules.keys() {
-            solver.add(&format!(":- v{}, v{}.\n", 2 * u, 2 * u + 1));
+        for uid in self.model.variables() {
+            solver.add(&format!(":- v{}, v{}.\n", 2 * uid, 2 * uid + 1));
         }
 
-        for (u, f) in rules {
-            let e: Expr = f.as_func();
+        for uid in self.model.variables() {
+            let e: Expr = self.model.rule(*uid).as_func();
             let ne = e.not();
-            restrict(&mut solver, &e, 2 * u + 1);
-            restrict(&mut solver, &ne, 2 * u);
+            restrict(&mut solver, &e, 2 * uid + 1);
+            restrict(&mut solver, &ne, 2 * uid);
 
             if self.percolate {
-                enforce(&mut solver, &e, 2 * u);
-                enforce(&mut solver, &ne, 2 * u + 1);
+                enforce(&mut solver, &e, 2 * uid);
+                enforce(&mut solver, &ne, 2 * uid + 1);
             }
         }
 

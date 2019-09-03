@@ -8,7 +8,6 @@ use core::ops::Not;
 
 use crate::func;
 use crate::func::paths::LiteralSet;
-use crate::func::variables::*;
 use crate::func::*;
 
 /* ************************************************************************************* */
@@ -103,7 +102,7 @@ impl Operator {
     }
 
     // TODO: ensure that all atoms in a complex expression use the same variable group?
-    pub fn join(self, iter: &mut Iterator<Item = Expr>) -> Expr {
+    pub fn join(self, iter: &mut dyn Iterator<Item = Expr>) -> Expr {
         let children = Children::from_expressions(iter);
         // TODO: filter unnecessary elements
         match children.len() {
@@ -171,7 +170,7 @@ impl Operator {
 
 /*  ******************** Manipulate the list of children ******************** */
 impl Children {
-    pub fn from_expressions(iter: &mut Iterator<Item = Expr>) -> Children {
+    pub fn from_expressions(iter: &mut dyn Iterator<Item = Expr>) -> Children {
         Children {
             data: Rc::new(iter.collect()),
         }
@@ -285,7 +284,7 @@ impl Children {
 
 impl Expr {
     #[allow(dead_code)]
-    pub fn replace_literal(&self, f: &Fn(usize, bool) -> Option<Expr>) -> Option<Expr> {
+    pub fn replace_literal(&self, f: &dyn Fn(usize, bool) -> Option<Expr>) -> Option<Expr> {
         match self {
             Expr::TRUE => None,
             Expr::FALSE => None,
@@ -322,7 +321,11 @@ impl Expr {
 }
 
 impl Children {
-    fn replace_literal(&self, f: &Fn(usize, bool) -> Option<Expr>, op: Operator) -> Option<Expr> {
+    fn replace_literal(
+        &self,
+        f: &dyn Fn(usize, bool) -> Option<Expr>,
+        op: Operator,
+    ) -> Option<Expr> {
         let children: Vec<Option<Expr>> = self.data.iter().map(|c| c.replace_literal(f)).collect();
         let count = children.iter().filter(|c| c.is_some()).count();
         if count > 1 {
@@ -369,7 +372,7 @@ impl Children {
 
 struct FormatContext<'a> {
     parent_priority: u8,
-    group: Option<&'a VariableNamer>,
+    group: Option<&'a dyn VariableNamer>,
 }
 
 impl<'a> FormatContext<'a> {
@@ -396,7 +399,7 @@ impl<'a> FormatContext<'a> {
     fn write_var(&self, f: &mut fmt::Formatter, uid: usize) -> fmt::Result {
         match &self.group {
             None => write!(f, "v{}", uid),
-            Some(g) => write!(f, "{}", g.get_name(uid)),
+            Some(g) => g.format_name(f, uid),
         }
     }
 }

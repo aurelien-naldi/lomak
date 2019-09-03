@@ -1,4 +1,4 @@
-use crate::model::LQModel;
+use crate::model::QModel;
 use clap::{App, Arg, SubCommand};
 use std::collections::HashMap;
 
@@ -22,9 +22,9 @@ impl ActionManager {
         ActionManager {
             services: HashMap::new(),
         }
-        .register(show::cli_action())
         .register(export::cli_action())
         .register(primes::cli_action())
+        .register(show::cli_action())
         .register(stable::cli_action())
         .register(trapspaces::cli_action())
     }
@@ -71,7 +71,7 @@ pub trait CLIAction: Sync {
         app.subcommand(cmd)
     }
 
-    fn builder(&self, model: LQModel) -> Box<dyn ActionBuilder>;
+    fn builder<'a>(&self, model: &'a dyn QModel) -> Box<dyn ActionBuilder + 'a>;
 }
 
 pub fn arg_from_descr(param: &ArgumentDescr) -> Arg {
@@ -146,7 +146,7 @@ pub fn register_commands(mut app: App<'static, 'static>) -> App<'static, 'static
     app
 }
 
-pub fn run_command(cmd: &str, args: &clap::ArgMatches, model: LQModel) {
+pub fn run_command(cmd: &str, args: &clap::ArgMatches, model: &dyn QModel) {
     if let Some(cli) = ACTIONS.services.get(cmd) {
         let mut b = cli.builder(model);
 

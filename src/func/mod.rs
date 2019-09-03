@@ -4,7 +4,6 @@ pub mod convert;
 pub mod expr;
 pub mod gen;
 pub mod paths;
-pub mod variables;
 
 use self::expr::Expr;
 use self::gen::Generator;
@@ -13,8 +12,31 @@ use self::paths::Paths;
 use std::cell::RefCell;
 use std::fmt;
 
+pub trait VariableNamer {
+    /// Retrieve or assign the uid for a variable name.
+    /// If the name is not defined, it will associate it to
+    /// a new uid.
+    /// Returns None if the name is invalid.
+    fn format_name(&self, f: &mut fmt::Formatter, uid: usize) -> fmt::Result;
+
+    fn name(&self, uid: usize) -> String {
+        format!("x{}", uid)
+    }
+}
+
 pub trait Grouped {
-    fn gfmt(&self, group: &dyn variables::VariableNamer, f: &mut fmt::Formatter) -> fmt::Result;
+    fn gfmt(&self, group: &dyn VariableNamer, f: &mut fmt::Formatter) -> fmt::Result;
+}
+
+pub struct GroupedTuple<'a, N: VariableNamer, G: Grouped> {
+    namer: &'a N,
+    val: &'a G,
+}
+
+impl<'a, N: VariableNamer, G: Grouped> fmt::Display for GroupedTuple<'a, N, G> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.val.gfmt(self.namer, f)
+    }
 }
 
 /// Supported function representation formats
@@ -104,7 +126,7 @@ impl fmt::Display for Formula {
 }
 
 impl Grouped for Formula {
-    fn gfmt(&self, namer: &dyn variables::VariableNamer, f: &mut fmt::Formatter) -> fmt::Result {
+    fn gfmt(&self, namer: &dyn VariableNamer, f: &mut fmt::Formatter) -> fmt::Result {
         match &self.repr {
             Repr::EXPR(e) => e.gfmt(namer, f),
             Repr::GEN(g) => g.gfmt(namer, f),

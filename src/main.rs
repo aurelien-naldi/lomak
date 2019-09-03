@@ -8,8 +8,6 @@ use model::modifier;
 
 use clap::AppSettings;
 
-use log::debug;
-
 fn main() {
     let mut app = app_from_crate!()
         .setting(AppSettings::UnifiedHelpMessage)
@@ -42,7 +40,6 @@ fn main() {
     let filename = matches.value_of("INPUT").unwrap();
     let format = matches.value_of("fmt");
 
-    debug!("Loading input file: {}", filename);
     let model = match io::load_model(filename, format) {
         Err(e) => {
             println!("ERROR loading \"{}\": {}", filename, e);
@@ -57,6 +54,6 @@ fn main() {
     // Call the selected command with its parameters
     let (s_cmd, subcmd) = matches.subcommand();
     if subcmd.is_some() {
-        actions::run_command(s_cmd, subcmd.unwrap(), model);
+        actions::run_command(s_cmd, subcmd.unwrap(), model.as_ref());
     }
 }

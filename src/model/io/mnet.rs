@@ -5,8 +5,8 @@ use pest::Parser;
 use std::io::{Error, Write};
 
 use crate::func::expr::{Expr, NamedExpr, Operator};
-use crate::func::variables::VariableNamer;
-use crate::model::LQModel;
+use crate::func::Formula;
+use crate::model::QModel;
 
 #[derive(Parser)]
 #[grammar_inline = r####"
@@ -38,12 +38,12 @@ impl MNETFormat {
         return MNETFormat {};
     }
 
-    fn load_expr(&self, model: &mut LQModel, expr: Pair<Rule>) -> Expr {
+    fn load_expr(&self, model: &mut dyn QModel, expr: Pair<Rule>) -> Expr {
         let rule = expr.as_rule();
         match rule {
             Rule::bt => Expr::TRUE,
             Rule::bf => Expr::FALSE,
-            Rule::lit => Expr::ATOM(model.get_node_id(expr.as_str()).unwrap()),
+            Rule::lit => Expr::ATOM(model.ensure_variable(expr.as_str(), 1)),
             _ => {
                 let mut content = expr.into_inner().map(|e| self.load_expr(model, e));
                 match rule {
@@ -59,18 +59,8 @@ impl MNETFormat {
     }
 }
 
-impl io::Format for MNETFormat {
-    fn as_parser(&self) -> Option<&dyn io::ParsingFormat> {
-        Some(self)
-    }
-
-    fn as_saver(&self) -> Option<&dyn io::SavingFormat> {
-        Some(self)
-    }
-}
-
 impl io::ParsingFormat for MNETFormat {
-    fn parse_rules(&self, model: &mut LQModel, expression: &String) {
+    fn parse_rules(&self, model: &mut dyn QModel, expression: &String) {
         let ptree = MNETParser::parse(Rule::file, expression);
 
         if ptree.is_err() {
@@ -84,10 +74,10 @@ impl io::ParsingFormat for MNETFormat {
                 Rule::rule => {
                     let mut inner = record.into_inner();
                     let target = inner.next().unwrap().as_str();
-                    let target = model.get_node_id(target).unwrap();
+                    let target = model.ensure_variable(target, 1);
                     let expr = inner.next().unwrap();
                     let expr = self.load_expr(model, expr);
-                    model.set_rule(target, expr);
+                    model.set_rule(target, 1, Formula::from(expr));
                 }
                 Rule::EOI => (),
                 _ => panic!("Should not get there!"),
@@ -95,7 +85,7 @@ impl io::ParsingFormat for MNETFormat {
         }
     }
 
-    fn parse_formula(&self, model: &mut LQModel, formula: &str) -> Result<Expr, String> {
+    fn parse_formula(&self, model: &mut dyn QModel, formula: &str) -> Result<Expr, String> {
         let ptree = MNETParser::parse(Rule::sxpr, formula);
         match ptree {
             Err(s) => return Err(format!("Parsing error: {}", s)),
@@ -109,15 +99,16 @@ impl io::ParsingFormat for MNETFormat {
 }
 
 impl io::SavingFormat for MNETFormat {
-    fn write_rules(&self, model: &LQModel, out: &mut Write) -> Result<(), Error> {
-        for (uid, r) in model.rules().iter() {
+    fn write_rules(&self, model: &dyn QModel, out: &mut dyn Write) -> Result<(), Error> {
+        let namer = model.as_namer();
+        for uid in model.variables() {
             write!(
                 out,
                 "{} <- {}\n",
                 model.get_name(*uid),
                 NamedExpr {
-                    expr: &r.as_func(),
-                    namer: model
+                    expr: &model.rule(*uid).as_func(),
+                    namer: namer,
                 }
             )?;
         }
