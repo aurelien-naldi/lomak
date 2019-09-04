@@ -38,8 +38,8 @@ impl<'a> PrimeBuilder<'a> {
 
 impl ActionBuilder for PrimeBuilder<'_> {
     fn call(&self) {
-        for uid in self.model.variables() {
-            let primes: paths::Paths = self.model.rule(*uid).as_func();
+        for (uid, _) in self.model.variables() {
+            let primes: paths::Paths = self.model.rule(uid).as_func();
             println!("PI {}: {}", uid, primes);
         }
     }
@@ -50,14 +50,14 @@ impl<'a> PrimeBuilder<'a> {
         println!("{{");
         let mut first = true;
         let namer = self.model.as_namer();
-        for uid in self.model.variables() {
+        for (uid, _) in self.model.variables() {
             if first {
                 first = false;
             } else {
                 println!(",");
             }
-            let rule = self.model.rule(*uid);
-            let name = self.model.get_name(*uid);
+            let rule = self.model.rule(uid);
+            let name = self.model.get_name(uid);
             let pos_primes: paths::Paths = rule.as_func();
             let neg_primes = rule.as_func::<expr::Expr>().not().prime_implicants();
             println!("\"{}\":[", name);

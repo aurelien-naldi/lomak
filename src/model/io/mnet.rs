@@ -101,13 +101,14 @@ impl io::ParsingFormat for MNETFormat {
 impl io::SavingFormat for MNETFormat {
     fn write_rules(&self, model: &dyn QModel, out: &mut dyn Write) -> Result<(), Error> {
         let namer = model.as_namer();
-        for uid in model.variables() {
+        for (uid, var) in model.variables() {
+            // FIXME: handle multivalued
             write!(
                 out,
                 "{} <- {}\n",
-                model.get_name(*uid),
+                model.get_name(var.component),
                 NamedExpr {
-                    expr: &model.rule(*uid).as_func(),
+                    expr: &model.rule(uid).as_func(),
                     namer: namer,
                 }
             )?;

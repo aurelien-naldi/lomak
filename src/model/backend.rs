@@ -108,8 +108,8 @@ impl QModel for LQModel {
         true
     }
 
-    fn variables(&self) -> &Vec<usize> {
-        &self.var_indices
+    fn variables<'a>(&'a self) -> Box<dyn Iterator<Item = (usize, &'a Variable)> + 'a> {
+        Box::new(self.variables.iter())
     }
 
     fn rule(&self, uid: usize) -> &DynamicRule {
@@ -124,6 +124,8 @@ impl QModel for LQModel {
         self
     }
 }
+
+impl LQModel {}
 
 impl VariableNamer for LQModel {
     fn format_name(&self, f: &mut fmt::Formatter, uid: usize) -> fmt::Result {

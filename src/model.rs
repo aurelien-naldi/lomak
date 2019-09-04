@@ -79,7 +79,7 @@ pub trait QModel {
         }
     }
 
-    fn variables(&self) -> &Vec<usize>;
+    fn variables<'a>(&'a self) -> Box<dyn Iterator<Item = (usize, &'a Variable)> + 'a>;
 
     fn rule(&self, uid: usize) -> &DynamicRule;
 

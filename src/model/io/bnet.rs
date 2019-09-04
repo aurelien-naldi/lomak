@@ -101,13 +101,16 @@ impl io::ParsingFormat for BNETFormat {
 impl io::SavingFormat for BNETFormat {
     fn write_rules(&self, model: &dyn QModel, out: &mut dyn Write) -> Result<(), Error> {
         let namer = model.as_namer();
-        for uid in model.variables() {
+        for (uid, var) in model.variables() {
+            if var.value != 1 {
+                panic!("Multivalued models are not yet fully supported");
+            }
             write!(
                 out,
                 "{}, {}\n",
-                model.get_name(*uid),
+                model.get_name(var.component),
                 NamedExpr {
-                    expr: &model.rule(*uid).as_func(),
+                    expr: &model.rule(uid).as_func(),
                     namer: namer,
                 }
             )?;

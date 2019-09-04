@@ -94,19 +94,18 @@ impl ActionBuilder for TrapspacesBuilder<'_> {
         let s = self
             .model
             .variables()
-            .iter()
-            .map(|uid| format!("v{}; v{}", 2 * uid, 2 * uid + 1))
+            .map(|(uid, _)| format!("v{}; v{}", 2 * uid, 2 * uid + 1))
             .join("; ");
         let s = format!("{{{}}}.\n", s);
         solver.add(&s);
 
         // A variable can only be fixed at a specific value
-        for uid in self.model.variables() {
+        for (uid, _) in self.model.variables() {
             solver.add(&format!(":- v{}, v{}.\n", 2 * uid, 2 * uid + 1));
         }
 
-        for uid in self.model.variables() {
-            let e: Expr = self.model.rule(*uid).as_func();
+        for (uid, _) in self.model.variables() {
+            let e: Expr = self.model.rule(uid).as_func();
             let ne = e.not();
             restrict(&mut solver, &e, 2 * uid + 1);
             restrict(&mut solver, &ne, 2 * uid);
