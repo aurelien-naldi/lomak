@@ -14,7 +14,6 @@ pub fn new_model() -> impl QModel {
         components: slab::Slab::new(),
         variables: slab::Slab::new(),
         name2uid: HashMap::new(),
-        var_indices: vec![],
     }
 }
 
@@ -22,7 +21,6 @@ struct LQModel {
     components: slab::Slab<Component>,
     variables: slab::Slab<Variable>,
     name2uid: HashMap<String, usize>,
-    var_indices: Vec<usize>,
 }
 
 impl QModel for LQModel {
@@ -74,9 +72,6 @@ impl QModel for LQModel {
         let vid = self.variables.insert(Variable::new(cid, value));
         component.variables.insert(value, vid);
 
-        // Maintain the list of components?
-        self.var_indices.push(vid);
-
         return vid;
     }
 
@@ -110,6 +105,10 @@ impl QModel for LQModel {
 
     fn variables<'a>(&'a self) -> Box<dyn Iterator<Item = (usize, &'a Variable)> + 'a> {
         Box::new(self.variables.iter())
+    }
+
+    fn components<'a>(&'a self) -> Box<dyn Iterator<Item = (usize, &'a Component)> + 'a> {
+        Box::new(self.components.iter())
     }
 
     fn rule(&self, uid: usize) -> &DynamicRule {

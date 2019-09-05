@@ -81,6 +81,8 @@ pub trait QModel {
 
     fn variables<'a>(&'a self) -> Box<dyn Iterator<Item = (usize, &'a Variable)> + 'a>;
 
+    fn components<'a>(&'a self) -> Box<dyn Iterator<Item = (usize, &'a Component)> + 'a>;
+
     fn rule(&self, uid: usize) -> &DynamicRule;
 
     fn as_namer(&self) -> &dyn VariableNamer;
