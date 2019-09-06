@@ -133,3 +133,8 @@ pub fn save_model(model: &dyn QModel, filename: &str, fmt: Option<&str>) -> Resu
         },
     }
 }
+
+pub fn parse_expr(model: &mut dyn QModel, expr: &str) -> Result<Expr,String> {
+    let parser = mnet::MNETFormat::new();
+    parser.parse_formula(model, expr)
+}

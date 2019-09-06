@@ -1,10 +1,11 @@
-#![feature(specialization, const_fn)]
+//#![feature(specialization)]
 
 use pyo3::{PyResult, exceptions};
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 use pyo3::class::basic::PyObjectProtocol;
 
+use lomak::func;
 use lomak::model;
 use lomak::model::actions::*;
 use lomak::model::io;
@@ -12,34 +13,51 @@ use lomak::model::io;
 
 #[pyfunction]
 /// Create a new instance
-fn new_model() -> LModel {
-    LModel{ m: model::new_model() }
+fn new_model() -> Model {
+    Model{ m: model::new_model() }
 }
 
 #[pyfunction]
 /// Create a new instance
-fn load_model(filename: &str) -> PyResult<LModel> {
+fn load_model(filename: &str) -> PyResult<Model> {
     match io::load_model(filename, None) {
-        Ok(m) => Ok(LModel{m: m}),
+        Ok(m) => Ok(Model{m: m}),
         Err(e) => Err(exceptions::ValueError::py_err(format!("{}",e))),
     }
 }
+
+#[pyfunction]
+/// Create a new instance
+fn expr_from_bool(value: bool) -> Expr {
+    Expr::from_bool(value)
+}
+
+
 
 /// Simple python wrapper for our rust code
 #[pymodule]
 fn lomak(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(new_model))?;
     m.add_wrapped(wrap_pyfunction!(load_model))?;
+    m.add_wrapped(wrap_pyfunction!(expr_from_bool))?;
+//    m.add_wrapped(wrap_pyfunction!(Model))?;
+//    m.add("Model", new_model());
     Ok(())
 }
 
 /// Wrap a Logical model as a Python object
 #[pyclass]
-struct LModel {
+pub struct Model {
     m: model::LQModelRef
 }
 
-/// Wrap a Logical model as a Python object
+/// Python API for Boolean expressions
+#[pyclass]
+pub struct Expr {
+    expr: func::expr::Expr,
+}
+
+/// Wrap any model action as a Python object
 #[pyclass]
 struct ModelAction {
     m: Box<dyn model::actions::ActionBuilder>
@@ -47,12 +65,12 @@ struct ModelAction {
 
 
 #[pymethods]
-impl LModel {
+impl Model {
 
     #[new]
     fn new(obj: &PyRawObject) {
         obj.init({
-            LModel { m: model::new_model() }
+            Model { m: model::new_model() }
         });
     }
 
@@ -92,10 +110,28 @@ impl LModel {
         builder.call();
     }
 
+    fn expr(&mut self, repr: &str) {
+        let result = io::parse_expr(self.m.as_mut(), repr);
+    }
+}
+
+#[pymethods]
+impl Expr {
+
+    #[staticmethod]
+    fn from_bool(val: bool) -> Expr {
+        Expr { expr: func::expr::Expr::from_bool(val) }
+    }
+
+    #[staticmethod]
+    fn from_uid(val: usize) -> Expr {
+        Expr { expr: func::expr::Expr::ATOM(val) }
+    }
+
 }
 
 #[pyproto]
-impl PyObjectProtocol<'_> for LModel {
+impl PyObjectProtocol<'_> for Model {
 
 
     fn __str__(&self) -> PyResult<String> {
