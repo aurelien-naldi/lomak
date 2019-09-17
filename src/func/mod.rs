@@ -39,6 +39,14 @@ impl<'a, N: VariableNamer, G: Grouped> fmt::Display for GroupedTuple<'a, N, G> {
     }
 }
 
+struct TrivialNamer{}
+
+impl VariableNamer for TrivialNamer {
+    fn format_name(&self, f: &mut fmt::Formatter, uid: usize) -> fmt::Result {
+        write!(f, "v{}", uid)
+    }
+}
+
 /// Supported function representation formats
 #[derive(Clone)]
 pub enum Repr {

@@ -157,14 +157,14 @@ impl Paths {
         false
     }
 
-    pub fn extend(&mut self, idx: usize, negated: bool) {
-        // Look for the extended node in all paths, extend them if needed.
-        // Trivially and properly extended paths are stored separately for final filtering
+    /// Look for the extended node in all paths, extend them if needed.
+    /// Trivially and properly extended paths are stored separately for final filtering
+    pub fn extend_literal(&mut self, idx: usize, value: bool) {
         let n = self.paths.len();
         let mut trivial: Vec<LiteralSet> = Vec::with_capacity(n);
         let mut extended: Vec<LiteralSet> = Vec::with_capacity(n);
         for b in &self.paths {
-            b.extend_sort(idx, negated, &mut trivial, &mut extended);
+            b.extend_sort_literal(idx, value, &mut trivial, &mut extended);
         }
 
         // Eliminate subsumed paths
@@ -302,27 +302,27 @@ impl LiteralSet {
         return -1;
     }
 
-    pub fn set(&mut self, idx: usize, negated: bool) {
-        if negated {
-            self.positive.remove(idx);
-            self.negative.insert(idx);
-        } else {
+    pub fn set_literal(&mut self, idx: usize, value: bool) {
+        if value {
             self.negative.remove(idx);
             self.positive.insert(idx);
+        } else {
+            self.positive.remove(idx);
+            self.negative.insert(idx);
         }
     }
 
-    pub fn extend_sort(
+    fn extend_sort_literal(
         &self,
         idx: usize,
-        neg: bool,
+        val: bool,
         trivials: &mut Vec<Self>,
         extended: &mut Vec<Self>,
     ) {
-        let (conflict, trivial) = if neg {
-            (&self.positive, &self.negative)
-        } else {
+        let (conflict, trivial) = if val {
             (&self.negative, &self.positive)
+        } else {
+            (&self.positive, &self.negative)
         };
         // Reject conflicting paths
         if conflict.contains(idx) {
@@ -337,7 +337,7 @@ impl LiteralSet {
 
         // Otherwise, create a properly extended path
         let mut p = self.clone();
-        p.set(idx, neg);
+        p.set_literal(idx, val);
         extended.push(p);
     }
 

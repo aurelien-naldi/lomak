@@ -131,7 +131,7 @@ fn model_as_pattern(model: &Model) -> LiteralSet {
 
     for atom in atoms {
         match atom_to_uid(&atom) {
-            Ok(u) => result.set(u, false),
+            Ok(u) => result.set_literal(u, true),
             Err(_) => (),
         }
     }
@@ -143,7 +143,7 @@ fn model_as_pattern(model: &Model) -> LiteralSet {
 
     for atom in atoms {
         match atom_to_uid(&atom) {
-            Ok(u) => result.set(u, true),
+            Ok(u) => result.set_literal(u, false),
             Err(_) => (),
         }
     }

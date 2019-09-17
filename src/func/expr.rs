@@ -576,19 +576,16 @@ impl<'a> BitOr<&'a Expr> for &'a Expr {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::func::variables::*;
+    use crate::func::*;
 
     #[test]
     fn conj_extension() {
-        let grp = Group::new();
-        let a = Expr::ATOM(Group::get_var_from_name(&grp, "A"));
-        let b = Expr::ATOM(Group::get_var_from_name(&grp, "B"));
-        let c = Expr::ATOM(Group::get_var_from_name(&grp, "C"));
+        let grp = TrivialNamer{};
+        let a = Expr::ATOM(1);
+        let b = Expr::ATOM(2);
+        let c = Expr::ATOM(3);
 
         let x = a & b | c;
-        // let y = a & c;
-
-        // assert_eq!(format!("{}",y), "");
 
         let s = x.simplify();
         assert_eq!(s, None);
