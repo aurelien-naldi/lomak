@@ -27,7 +27,7 @@ lazy_static! {
 ///
 /// Finally, each component is associated to a list of Boolean functions defining
 /// the conditions required for the activation of each threshold.
-pub trait QModel {
+pub trait QModel: VariableNamer {
     /// Find a component by name if it exists
     fn get_component(&self, name: &str) -> Option<usize>;
 
@@ -84,8 +84,6 @@ pub trait QModel {
     fn components<'a>(&'a self) -> Box<dyn Iterator<Item = (usize, &'a Component)> + 'a>;
 
     fn rule(&self, uid: usize) -> &DynamicRule;
-
-    fn as_namer(&self) -> &dyn VariableNamer;
 
     fn for_display(&self) -> &dyn Display;
 }

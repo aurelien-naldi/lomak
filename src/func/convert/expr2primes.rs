@@ -27,7 +27,12 @@ impl Expr {
                 let n = c.len();
                 if n < 1 {
                     // An empty disjunction is false
-                    paths.clear();
+                    Expr::FALSE._prime_implicants(paths);
+                    return;
+                }
+
+                if n == 1 {
+                    c.data[0]._prime_implicants(paths);
                     return;
                 }
 

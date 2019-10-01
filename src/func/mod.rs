@@ -19,8 +19,21 @@ pub trait VariableNamer {
     /// Returns None if the name is invalid.
     fn format_name(&self, f: &mut fmt::Formatter, uid: usize) -> fmt::Result;
 
+    fn as_namer(&self) -> &dyn VariableNamer;
+
     fn name(&self, uid: usize) -> String {
-        format!("x{}", uid)
+        format!("{}", NamedItem{ namer:self.as_namer(), uid:uid })
+    }
+}
+
+struct NamedItem<'a> {
+    namer: &'a dyn VariableNamer,
+    uid: usize,
+}
+
+impl fmt::Display for NamedItem<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.namer.format_name(f, self.uid)
     }
 }
 
@@ -44,6 +57,10 @@ struct TrivialNamer{}
 impl VariableNamer for TrivialNamer {
     fn format_name(&self, f: &mut fmt::Formatter, uid: usize) -> fmt::Result {
         write!(f, "v{}", uid)
+    }
+
+    fn as_namer(&self) -> &dyn VariableNamer {
+        self
     }
 }
 

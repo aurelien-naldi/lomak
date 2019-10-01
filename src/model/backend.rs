@@ -115,10 +115,6 @@ impl QModel for LQModel {
         &self.components[uid].rule
     }
 
-    fn as_namer(&self) -> &dyn VariableNamer {
-        self
-    }
-
     fn for_display(&self) -> &dyn Display {
         self
     }
@@ -136,6 +132,11 @@ impl VariableNamer for LQModel {
             write!(f, "{}", cmp.name)
         }
     }
+
+    fn as_namer(&self) -> &dyn VariableNamer {
+        self
+    }
+
 }
 
 impl fmt::Display for LQModel {

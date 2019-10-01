@@ -1,8 +1,17 @@
 use crate::func::expr;
 use crate::func::paths;
-use crate::model::actions::ActionBuilder;
+use crate::model::actions::{ActionBuilder, ArgumentDescr};
 use crate::model::actions::CLIAction;
 use crate::model::QModel;
+
+lazy_static! {
+    pub static ref PARAMETERS: Vec<ArgumentDescr> = vec! {
+        ArgumentDescr::new("json")
+            .help("Output prime implicants as JSON")
+            .long("json")
+            .short("j"),
+    };
+}
 
 pub fn cli_action() -> Box<dyn CLIAction> {
     Box::new(CLIPrimes {})
@@ -17,6 +26,10 @@ impl CLIAction for CLIPrimes {
         "Compute the prime implicants of the model's functions"
     }
 
+    fn arguments(&self) -> &'static [ArgumentDescr] {
+        &PARAMETERS
+    }
+
     fn aliases(&self) -> &'static [&'static str] {
         &["pi", "implicants"]
     }
@@ -28,16 +41,30 @@ impl CLIAction for CLIPrimes {
 
 pub struct PrimeBuilder<'a> {
     model: &'a dyn QModel,
+    json: bool,
 }
 
 impl<'a> PrimeBuilder<'a> {
     pub fn new(model: &'a dyn QModel) -> PrimeBuilder<'a> {
-        PrimeBuilder { model: model }
+        PrimeBuilder { model: model, json:false }
     }
 }
 
 impl ActionBuilder for PrimeBuilder<'_> {
+    fn set_flag(&mut self, key: &str) {
+        match key {
+            "json" => self.json = true,
+            _ => (),
+        }
+    }
+
     fn call(&self) {
+
+        if self.json {
+            self.json();
+            return;
+        }
+
         for (uid, _) in self.model.variables() {
             let primes: paths::Paths = self.model.rule(uid).as_func();
             println!("PI {}: {}", uid, primes);
