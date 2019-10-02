@@ -23,10 +23,10 @@ lazy_static! {
             .help("Percolate (propagate) fixed components")
             .long("percolate")
             .short("p"),
-        ArgumentDescr::new("terminal")
-            .help("Only terminal trapspaces (lower bound for attractors)")
-            .long("terminal")
-            .short("t"),
+        ArgumentDescr::new("all")
+            .help("All trapspaces instead of only the terminal ones")
+            .long("all")
+            .short("a"),
     };
 }
 
@@ -56,7 +56,7 @@ pub struct TrapspacesBuilder<'a> {
     model: &'a dyn QModel,
     filters: HashMap<usize, bool>,
     percolate: bool,
-    terminal: bool,
+    all: bool,
 }
 
 impl<'a> TrapspacesBuilder<'a> {
@@ -65,7 +65,7 @@ impl<'a> TrapspacesBuilder<'a> {
             model: model,
             filters: HashMap::new(),
             percolate: false,
-            terminal: false,
+            all: false,
         }
     }
 
@@ -78,15 +78,15 @@ impl ActionBuilder for TrapspacesBuilder<'_> {
     fn set_flag(&mut self, flag: &str) {
         match flag {
             "percolate" => self.percolate = true,
-            "terminal" => self.terminal = true,
+            "all" => self.all = true,
             _ => (),
         }
     }
 
     fn call(&self) {
-        let mode = match self.terminal {
-            true => SolverMode::MAX,
-            false => SolverMode::ALL,
+        let mode = match self.all {
+            true => SolverMode::ALL,
+            false => SolverMode::MAX,
         };
         let mut solver = solver::get_solver(mode);
 

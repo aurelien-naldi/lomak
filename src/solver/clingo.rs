@@ -91,16 +91,15 @@ impl ClingoProblem {
                 let model_type = model.model_type().unwrap();
 
                 let type_string = match model_type {
-                    ModelType::StableModel => "Stable model",
-                    ModelType::BraveConsequences => "Brave consequences",
-                    ModelType::CautiousConsequences => "Cautious consequences",
+                    ModelType::StableModel => "Stable",
+                    ModelType::BraveConsequences => "Brave",
+                    ModelType::CautiousConsequences => "Cautious",
                 };
 
                 // get running number of model
                 let number = model.number().unwrap();
 
-                println!("{}: {}", type_string, number);
-                println!("    {}", model_as_pattern(model));
+                println!("{} {:4}: {}", type_string, number, model_as_pattern(model));
 
                 if self.n > 0 && number >= self.n {
                     println!("Reached the max model");

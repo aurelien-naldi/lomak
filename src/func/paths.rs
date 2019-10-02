@@ -391,35 +391,34 @@ impl LiteralSet {
 
 impl fmt::Display for LiteralSet {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "(")?;
-        let mut next = false;
+        let mut result = vec!();
         for v in &self.positive {
-            if next {
-                write!(f, ",")?;
-            } else {
-                next = true;
+            if result.len() <= v {
+                for i in result.len()..(v+1) {
+                    result.push('-');
+                }
             }
-            write!(f, "{}", v)?;
+            result[v] = '1';
         }
         for v in &self.negative {
-            if next {
-                write!(f, ",")?;
-            } else {
-                next = true;
+            if result.len() <= v {
+                for i in result.len()..(v+1) {
+                    result.push('-');
+                }
             }
-            write!(f, "~{}", v)?;
+            result[v] = '0';
         }
-        write!(f, ")")
+        let s: String = result.iter().collect();
+        write!(f, "{}", &s)
     }
 }
 
 impl fmt::Display for Paths {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "[")?;
         for i in &self.paths {
-            write!(f, "{} ", i)?;
+            write!(f, "{}\n", i)?;
         }
-        write!(f, "]")
+        write!(f, "")
     }
 }
 
