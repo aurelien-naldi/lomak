@@ -391,10 +391,10 @@ impl LiteralSet {
 
 impl fmt::Display for LiteralSet {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut result = vec!();
+        let mut result = vec![];
         for v in &self.positive {
             if result.len() <= v {
-                for i in result.len()..(v+1) {
+                for i in result.len()..(v + 1) {
                     result.push('-');
                 }
             }
@@ -402,7 +402,7 @@ impl fmt::Display for LiteralSet {
         }
         for v in &self.negative {
             if result.len() <= v {
-                for i in result.len()..(v+1) {
+                for i in result.len()..(v + 1) {
                     result.push('-');
                 }
             }
