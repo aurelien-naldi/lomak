@@ -136,7 +136,6 @@ impl VariableNamer for LQModel {
     fn as_namer(&self) -> &dyn VariableNamer {
         self
     }
-
 }
 
 impl fmt::Display for LQModel {

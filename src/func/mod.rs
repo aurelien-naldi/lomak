@@ -22,7 +22,13 @@ pub trait VariableNamer {
     fn as_namer(&self) -> &dyn VariableNamer;
 
     fn name(&self, uid: usize) -> String {
-        format!("{}", NamedItem{ namer:self.as_namer(), uid:uid })
+        format!(
+            "{}",
+            NamedItem {
+                namer: self.as_namer(),
+                uid: uid
+            }
+        )
     }
 }
 
@@ -52,7 +58,7 @@ impl<'a, N: VariableNamer, G: Grouped> fmt::Display for GroupedTuple<'a, N, G> {
     }
 }
 
-struct TrivialNamer{}
+struct TrivialNamer {}
 
 impl VariableNamer for TrivialNamer {
     fn format_name(&self, f: &mut fmt::Formatter, uid: usize) -> fmt::Result {

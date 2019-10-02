@@ -167,6 +167,5 @@ pub fn run_command(cmd: &str, args: &clap::ArgMatches, model: &dyn QModel) {
 
         b.call();
     } else {
-
     }
 }

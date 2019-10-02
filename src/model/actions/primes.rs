@@ -1,7 +1,7 @@
 use crate::func::expr;
 use crate::func::paths;
-use crate::model::actions::{ActionBuilder, ArgumentDescr};
 use crate::model::actions::CLIAction;
+use crate::model::actions::{ActionBuilder, ArgumentDescr};
 use crate::model::QModel;
 
 lazy_static! {
@@ -46,7 +46,10 @@ pub struct PrimeBuilder<'a> {
 
 impl<'a> PrimeBuilder<'a> {
     pub fn new(model: &'a dyn QModel) -> PrimeBuilder<'a> {
-        PrimeBuilder { model: model, json:false }
+        PrimeBuilder {
+            model: model,
+            json: false,
+        }
     }
 }
 
@@ -59,7 +62,6 @@ impl ActionBuilder for PrimeBuilder<'_> {
     }
 
     fn call(&self) {
-
         if self.json {
             self.json();
             return;

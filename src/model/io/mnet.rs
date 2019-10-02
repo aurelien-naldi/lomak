@@ -107,7 +107,9 @@ impl io::SavingFormat for MNETFormat {
                 if assign.target != 1 {
                     write!(out, ":{}", assign.target)?;
                 }
-                writeln!(out, "<- {}",
+                writeln!(
+                    out,
+                    "<- {}",
                     NamedExpr {
                         expr: &assign.formula.convert_as(),
                         namer: namer,

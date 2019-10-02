@@ -580,7 +580,7 @@ mod tests {
 
     #[test]
     fn conj_extension() {
-        let grp = TrivialNamer{};
+        let grp = TrivialNamer {};
         let a = Expr::ATOM(1);
         let b = Expr::ATOM(2);
         let c = Expr::ATOM(3);

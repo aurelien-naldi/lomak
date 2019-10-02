@@ -105,15 +105,20 @@ impl io::SavingFormat for BNETFormat {
             if var.value != 1 {
                 panic!("Multivalued models are not yet fully supported");
             }
-            write!(
-                out,
-                "{}, {}\n",
-                model.get_name(var.component),
-                NamedExpr {
-                    expr: &model.rule(uid).as_func(),
-                    namer: namer,
-                }
-            )?;
+            let func = &model.rule(uid).as_func();
+            write!(out, "{}, ", model.get_name(var.component))?;
+            match func {
+                Expr::TRUE => write!(out, "1\n")?,
+                Expr::FALSE => write!(out, "0\n")?,
+                _ => write!(
+                    out,
+                    "{}\n",
+                    NamedExpr {
+                        expr: &func,
+                        namer: namer,
+                    }
+                )?,
+            }
         }
 
         Ok(())

@@ -9,6 +9,7 @@ lazy_static! {
     pub static ref PARAMETERS: Vec<ArgumentDescr> = vec! {
         ArgumentDescr::new("output")
             .help("Set the output file")
+            .has_value(true)
             .required(true),
         ArgumentDescr::new("format")
             .help("Enforce the output format")
