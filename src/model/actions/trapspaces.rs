@@ -30,6 +30,12 @@ lazy_static! {
     };
 }
 
+impl dyn QModel {
+    pub fn trapspaces<'a>(&'a self) -> TrapspacesBuilder<'a> {
+        TrapspacesBuilder::new(self)
+    }
+}
+
 pub fn cli_action() -> Box<dyn CLIAction> {
     Box::new(CLIFixed {})
 }
@@ -74,13 +80,24 @@ impl<'a> TrapspacesBuilder<'a> {
     }
 }
 
+impl TrapspacesBuilder<'_> {
+    pub fn percolate(&mut self) -> &mut Self {
+        self.percolate = true;
+        self
+    }
+    pub fn show_all(&mut self) -> &mut Self {
+        self.all = true;
+        self
+    }
+}
+
 impl ActionBuilder for TrapspacesBuilder<'_> {
     fn set_flag(&mut self, flag: &str) {
         match flag {
-            "percolate" => self.percolate = true,
-            "all" => self.all = true,
-            _ => (),
-        }
+            "percolate" => self.percolate(),
+            "all" => self.show_all(),
+            _ => self,
+        };
     }
 
     fn call(&self) {

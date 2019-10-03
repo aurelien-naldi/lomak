@@ -13,33 +13,29 @@ use std::cell::RefCell;
 use std::fmt;
 
 pub trait VariableNamer {
-    /// Retrieve or assign the uid for a variable name.
-    /// If the name is not defined, it will associate it to
-    /// a new uid.
-    /// Returns None if the name is invalid.
-    fn format_name(&self, f: &mut fmt::Formatter, uid: usize) -> fmt::Result;
+    /// Write the name corresponding to the given UID
+    fn format_name(&self, f: &mut fmt::Formatter, uid: usize) -> fmt::Result {
+        write!(f, "v{}", uid)
+    }
 
     fn as_namer(&self) -> &dyn VariableNamer;
 
+    /// Create a String with the name of the given UID
     fn name(&self, uid: usize) -> String {
-        format!(
-            "{}",
-            NamedItem {
-                namer: self.as_namer(),
-                uid: uid
-            }
-        )
+        format!("{}", Fmt(|f| self.format_name(f, uid)))
     }
 }
 
-struct NamedItem<'a> {
-    namer: &'a dyn VariableNamer,
-    uid: usize,
-}
+pub struct Fmt<F>(pub F)
+where
+    F: Fn(&mut fmt::Formatter) -> fmt::Result;
 
-impl fmt::Display for NamedItem<'_> {
+impl<F> fmt::Display for Fmt<F>
+where
+    F: Fn(&mut fmt::Formatter) -> fmt::Result,
+{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.namer.format_name(f, self.uid)
+        (self.0)(f)
     }
 }
 
@@ -58,13 +54,9 @@ impl<'a, N: VariableNamer, G: Grouped> fmt::Display for GroupedTuple<'a, N, G> {
     }
 }
 
-struct TrivialNamer {}
+pub struct TrivialNamer {}
 
 impl VariableNamer for TrivialNamer {
-    fn format_name(&self, f: &mut fmt::Formatter, uid: usize) -> fmt::Result {
-        write!(f, "v{}", uid)
-    }
-
     fn as_namer(&self) -> &dyn VariableNamer {
         self
     }

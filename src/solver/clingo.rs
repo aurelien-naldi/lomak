@@ -80,8 +80,6 @@ impl ClingoProblem {
 
     pub fn solve(&mut self) -> ClingoResults {
         // ground the base part
-        let cfg = self.ctl.configuration().unwrap();
-
         let parts = vec![Part::new("base", &[]).unwrap()];
         self.ctl
             .ground(&parts)

@@ -9,6 +9,12 @@ use crate::func::paths::LiteralSet;
 use crate::solver::SolverMode;
 use itertools::Itertools;
 
+impl dyn QModel {
+    pub fn fixpoints<'a>(&'a self) -> FixedBuilder<'a> {
+        FixedBuilder::new(self)
+    }
+}
+
 pub fn cli_action() -> Box<dyn CLIAction> {
     Box::new(CLIFixed {})
 }

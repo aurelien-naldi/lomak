@@ -101,12 +101,12 @@ impl Model {
     }
 
     fn fixpoints(&self) {
-        let builder = model::actions::stable::FixedBuilder::new(self.m.as_ref());
+        let builder = self.m.as_ref().fixpoints();
         builder.call();
     }
 
     fn trapspaces(&self) {
-        let builder = model::actions::trapspaces::TrapspacesBuilder::new(self.m.as_ref());
+        let builder = self.m.as_ref().trapspaces();
         builder.call();
     }
 
@@ -132,7 +132,6 @@ impl Expr {
 
 #[pyproto]
 impl PyObjectProtocol<'_> for Model {
-
 
     fn __str__(&self) -> PyResult<String> {
         Ok(format!("{}", self.m.for_display()))
