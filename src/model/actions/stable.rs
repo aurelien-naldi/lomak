@@ -72,6 +72,9 @@ impl ActionBuilder for FixedBuilder<'_> {
             }
         }
 
-        solver.solve();
+        let results = solver.solve();
+        for r in results {
+            println!("{}", r);
+        }
     }
 }

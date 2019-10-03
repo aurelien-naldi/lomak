@@ -69,7 +69,7 @@ impl ActionBuilder for PrimeBuilder<'_> {
 
         for (uid, _) in self.model.variables() {
             let primes: paths::Paths = self.model.rule(uid).as_func();
-            println!("PI {}: {}", uid, primes);
+            println!("PI {}:\n{}", self.model.name(uid), primes);
         }
     }
 }

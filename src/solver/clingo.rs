@@ -6,14 +6,26 @@ use crate::func::paths::LiteralSet;
 use crate::solver::SolverMode;
 use std::num::ParseIntError;
 
+use std::fmt;
+
 lazy_static! {
     static ref RE_VAR: Regex = Regex::new(r"v[0-9]+").unwrap();
 }
 
 pub struct ClingoProblem {
     minsolutions: bool,
-    n: u64,
     ctl: Control,
+}
+
+pub struct ClingoResults<'a> {
+    handle: Option<SolveHandle<'a>>,
+    halved: bool,
+}
+
+pub struct ClingoResultModel {
+    number: u64,
+    model_type: ModelType,
+    pattern: LiteralSet,
 }
 
 impl ClingoProblem {
@@ -39,7 +51,6 @@ impl ClingoProblem {
 
         ClingoProblem {
             minsolutions: false,
-            n: 100,
             ctl: Control::new(args.into_iter().map(|s| String::from(s)).collect())
                 .expect("Failed creating Control."),
         }
@@ -67,10 +78,9 @@ impl ClingoProblem {
         self.add(&format!(":- {}.", s));
     }
 
-    pub fn solve(&mut self) {
+    pub fn solve(&mut self) -> ClingoResults {
         // ground the base part
         let cfg = self.ctl.configuration().unwrap();
-        println!("{:?}", cfg);
 
         let parts = vec![Part::new("base", &[]).unwrap()];
         self.ctl
@@ -78,49 +88,79 @@ impl ClingoProblem {
             .expect("Failed to ground a logic program.");
 
         // get a solve handle
-        let mut handle = self
+        let handle = self
             .ctl
             .solve(SolveMode::YIELD, &[])
             .expect("Failed retrieving solve handle.");
 
-        // loop over all models
-        loop {
-            handle.resume().expect("Failed resume on solve handle.");
-            if let Ok(Some(model)) = handle.model() {
-                // get model type
-                let model_type = model.model_type().unwrap();
-
-                let type_string = match model_type {
-                    ModelType::StableModel => "Stable",
-                    ModelType::BraveConsequences => "Brave",
-                    ModelType::CautiousConsequences => "Cautious",
-                };
-
-                // get running number of model
-                let number = model.number().unwrap();
-
-                println!("{} {:4}: {}", type_string, number, model_as_pattern(model));
-
-                if self.n > 0 && number >= self.n {
-                    println!("Reached the max model");
-                    break;
-                }
-            } else {
-                // stop if there are no more models
-                println!("No more models");
-                break;
-            }
+        ClingoResults {
+            handle: Some(handle),
+            halved: false,
         }
-
-        // close the solve handle
-        handle
-            .get()
-            .expect("Failed to get result from solve handle.");
-        handle.close().expect("Failed to close solve handle.");
     }
 }
 
-fn model_as_pattern(model: &Model) -> LiteralSet {
+impl ClingoResults<'_> {
+    pub fn set_halved(&mut self) {
+        self.halved = true;
+    }
+}
+
+impl Drop for ClingoResults<'_> {
+    fn drop(&mut self) {
+        if self.handle.is_none() {
+            return;
+        }
+
+        self.handle
+            .take()
+            .unwrap()
+            .close()
+            .expect("Failed to close solve handle.");
+    }
+}
+
+impl Iterator for ClingoResults<'_> {
+    type Item = ClingoResultModel;
+
+    fn next(&mut self) -> Option<ClingoResultModel> {
+        if self.handle.is_none() {
+            return None;
+        }
+        let handle = self.handle.as_mut().unwrap();
+        handle.resume().expect("Failed resume on solve handle.");
+        if let Ok(Some(model)) = handle.model() {
+            return Some(ClingoResultModel {
+                number: model.number().unwrap(),
+                model_type: model.model_type().unwrap(),
+                pattern: model_as_pattern(model, self.halved),
+            });
+        }
+        None
+    }
+}
+
+impl fmt::Display for ClingoResultModel {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let type_string = match self.model_type {
+            ModelType::StableModel => "Stable",
+            ModelType::BraveConsequences => "Brave",
+            ModelType::CautiousConsequences => "Cautious",
+        };
+
+        write!(f, "{} {:4}: {}", type_string, self.number, self.pattern)
+    }
+}
+
+fn model_as_pattern(model: &Model, halved: bool) -> LiteralSet {
+    if halved {
+        model_as_half_pattern(model)
+    } else {
+        model_as_full_pattern(model)
+    }
+}
+
+fn model_as_full_pattern(model: &Model) -> LiteralSet {
     let mut result = LiteralSet::new();
 
     // retrieve the selected atoms in the model
@@ -143,6 +183,24 @@ fn model_as_pattern(model: &Model) -> LiteralSet {
     for atom in atoms {
         match atom_to_uid(&atom) {
             Ok(u) => result.set_literal(u, false),
+            Err(_) => (),
+        }
+    }
+
+    result
+}
+
+fn model_as_half_pattern(model: &Model) -> LiteralSet {
+    let mut result = LiteralSet::new();
+
+    // retrieve the selected atoms in the model
+    let atoms = model
+        .symbols(ShowType::ATOMS)
+        .expect("Failed to retrieve symbols in the model.");
+
+    for atom in atoms {
+        match atom_to_uid(&atom) {
+            Ok(u) => result.set_literal(u / 2, u % 2 == 0),
             Err(_) => (),
         }
     }

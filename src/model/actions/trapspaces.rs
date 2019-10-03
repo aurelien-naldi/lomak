@@ -116,7 +116,11 @@ impl ActionBuilder for TrapspacesBuilder<'_> {
             }
         }
 
-        solver.solve();
+        let mut results = solver.solve();
+        results.set_halved();
+        for r in results {
+            println!("{}", r);
+        }
     }
 }
 
