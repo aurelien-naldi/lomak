@@ -29,14 +29,13 @@ lazy_static! {
 /// the conditions required for the activation of each threshold.
 pub trait QModel: VariableNamer {
     /// Find a component by name if it exists
+    /// Components are NOT valid variables: they carry the name and
+    /// the list of proper Boolean variables for each threshold.
     fn get_component(&self, name: &str) -> Option<usize>;
 
     /// Find a variable based on the name of the component and the threshold value
     fn get_variable(&self, name: &str, value: usize) -> Option<usize> {
         let base_component = self.get_component(name);
-        if value == 1 {
-            return base_component;
-        }
         if let Some(uid) = base_component {
             return self.get_associated_variable(uid, value);
         }
@@ -93,7 +92,7 @@ pub fn new_model() -> LQModelRef {
     Box::new(backend::new_model())
 }
 
-/// A Boolean variable associated to a qualitative thresholds of one of the components
+/// A Boolean variable associated to a qualitative threshold of one of the components
 pub struct Variable {
     component: usize,
     value: usize,
