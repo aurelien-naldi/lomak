@@ -138,6 +138,16 @@ impl Iterator for ClingoResults<'_> {
     }
 }
 
+impl ClingoResultModel {
+
+    pub fn filter(mut self, filter: &Option<Vec<usize>>) -> ClingoResultModel {
+        if let Some(uids) = filter {
+            self.pattern = self.pattern.filter_map(uids);
+        }
+        self
+    }
+}
+
 impl fmt::Display for ClingoResultModel {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let type_string = match self.model_type {

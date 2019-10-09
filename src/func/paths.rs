@@ -387,6 +387,22 @@ impl LiteralSet {
     pub fn negative(&self) -> &BitSet {
         &self.negative
     }
+
+    /// Build a new LiteralSet where only the provided positions are retained and mapped to the provided order
+    pub fn filter_map(self, filter: &Vec<usize>) -> Self {
+        let mut result = LiteralSet::new();
+        let mut k = 0;
+        for uid in filter {
+            if self.positive.contains(*uid) {
+                result.positive.insert(k);
+            }
+            if self.negative.contains(*uid) {
+                result.negative.insert(k);
+            }
+            k += 1;
+        }
+        result
+    }
 }
 
 impl fmt::Display for LiteralSet {
