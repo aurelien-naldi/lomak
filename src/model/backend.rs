@@ -24,17 +24,17 @@ struct LQModel {
 }
 
 impl QModel for LQModel {
-    fn get_component(&self, name: &str) -> Option<usize> {
+    fn component_by_name(&self, name: &str) -> Option<usize> {
         if let Some(uid) = self.name2uid.get(name) {
             return Some(*uid);
         }
         None
     }
 
-    fn get_associated_variable(&self, cid: usize, value: usize) -> Option<usize> {
+    fn associated_variable_with_threshold(&self, cid: usize, value: usize) -> Option<usize> {
         if value < 1 || value > 9 {
             eprintln!("Tried to access a strange value: {}", value);
-            return self.get_associated_variable(cid, 1);
+            return self.associated_variable(cid);
         }
 
         if let Some(vid) = self.components[cid].variables.get(&value) {
@@ -44,7 +44,7 @@ impl QModel for LQModel {
     }
 
     fn ensure_component(&mut self, name: &str) -> usize {
-        if let Some(uid) = self.get_component(name) {
+        if let Some(uid) = self.component_by_name(name) {
             return uid;
         }
 
@@ -63,7 +63,7 @@ impl QModel for LQModel {
         }
 
         // Return existing variable
-        if let Some(vid) = self.get_associated_variable(cid, value) {
+        if let Some(vid) = self.associated_variable_with_threshold(cid, value) {
             return vid;
         }
 
@@ -89,7 +89,7 @@ impl QModel for LQModel {
         &self.components[uid].name
     }
 
-    fn set_name(&mut self, uid: usize, name: String) -> bool {
+    fn set_component_name(&mut self, uid: usize, name: String) -> bool {
         // Reject invalid new names
         if !RE_UID.is_match(&name) {
             return false;

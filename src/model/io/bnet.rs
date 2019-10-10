@@ -43,7 +43,7 @@ impl BNETFormat {
         match rule {
             Rule::bt => Expr::TRUE,
             Rule::bf => Expr::FALSE,
-            Rule::lit => Expr::ATOM(model.ensure_variable(expr.as_str(), 1)),
+            Rule::lit => Expr::ATOM(model.ensure_variable(expr.as_str())),
             _ => {
                 let mut content = expr.into_inner().map(|e| self.load_expr(model, e));
                 match rule {
@@ -76,7 +76,7 @@ impl io::ParsingFormat for BNETFormat {
                 Rule::rule => {
                     let mut inner = record.into_inner();
                     let target = inner.next().unwrap().as_str();
-                    let target = model.ensure_variable(target, 1);
+                    let target = model.ensure_variable(target);
                     expressions.push( (target, inner.next().unwrap()) );
                 }
                 Rule::EOI => (),

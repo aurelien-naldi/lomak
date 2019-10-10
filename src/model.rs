@@ -31,25 +31,48 @@ pub trait QModel: VariableNamer {
     /// Find a component by name if it exists
     /// Components are NOT valid variables: they carry the name and
     /// the list of proper Boolean variables for each threshold.
-    fn get_component(&self, name: &str) -> Option<usize>;
+    fn component_by_name(&self, name: &str) -> Option<usize>;
+
+    /// Find the base variable corresponding to the name of a component
+    ///
+    /// Equivalent to variable_by_name_and_threshold(name, 1)
+    ///
+    /// TODO: should it attempt to extract the threshold from the name's suffix?
+    fn variable_by_name(&self, name: &str) -> Option<usize> {
+        self.variable_by_name_and_threshold(name, 1)
+    }
 
     /// Find a variable based on the name of the component and the threshold value
-    fn get_variable(&self, name: &str, value: usize) -> Option<usize> {
-        let base_component = self.get_component(name);
+    fn variable_by_name_and_threshold(&self, name: &str, value: usize) -> Option<usize> {
+        let base_component = self.component_by_name(name);
         if let Some(uid) = base_component {
-            return self.get_associated_variable(uid, value);
+            return self.associated_variable_with_threshold(uid, value);
         }
         None
     }
 
+    /// Find the base variable for an existing component
+    ///
+    /// Equivalent to associated_variable_with_threshold(cid, 1)
+    fn associated_variable(&self, cid: usize) -> Option<usize> {
+        self.associated_variable_with_threshold(cid, 1)
+    }
+
     /// Find a variable for an existing component and a threshold value
-    fn get_associated_variable(&self, cid: usize, value: usize) -> Option<usize>;
+    fn associated_variable_with_threshold(&self, cid: usize, value: usize) -> Option<usize>;
 
     /// Find or create a component with a given name
     fn ensure_component(&mut self, name: &str) -> usize;
 
     /// Find or create a variable with a given component name and threshold value
-    fn ensure_variable(&mut self, name: &str, value: usize) -> usize {
+    ///
+    /// Equivalent to ensure_variable_with_threshold(name, 1)
+    fn ensure_variable(&mut self, name: &str) -> usize {
+        self.ensure_variable_with_threshold(name, 1)
+    }
+
+    /// Find or create a variable with a given component name and threshold value
+    fn ensure_variable_with_threshold(&mut self, name: &str, value: usize) -> usize {
         let cid = self.ensure_component(name);
         self.ensure_associated_variable(cid, value)
     }
@@ -57,27 +80,27 @@ pub trait QModel: VariableNamer {
     /// Find or create a variable for an existing component and a specific threshold value
     fn ensure_associated_variable(&mut self, cid: usize, value: usize) -> usize;
 
-    /// Assign a Boolean condition for a specific threshold
-    fn set_rule(&mut self, target: usize, rule: Formula);
+    /// Assign a Boolean condition to a variable
+    fn set_rule(&mut self, variable: usize, rule: Formula);
 
     /// Assign a Boolean condition for a specific threshold
-    fn extend_rule(&mut self, target: usize, rule: Formula);
+    fn extend_rule(&mut self, variable: usize, rule: Formula);
 
     fn lock(&mut self, uid: usize, value: bool) {
-        self.set_rule(uid, Formula::from(Expr::from_bool(value)));
+        self.set_rule(uid, Formula::from_bool(value));
     }
 
     fn get_name(&self, uid: usize) -> &str;
 
-    fn set_name(&mut self, uid: usize, name: String) -> bool;
+    fn set_component_name(&mut self, uid: usize, name: String) -> bool;
 
     /// Rename a component.
     /// Returns false if the new name is invalid or already assigned
     /// to another component
     fn rename(&mut self, source: &str, name: String) -> bool {
-        match self.get_component(source) {
+        match self.component_by_name(source) {
             None => false,
-            Some(u) => self.set_name(u, name),
+            Some(u) => self.set_component_name(u, name),
         }
     }
 

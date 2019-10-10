@@ -13,21 +13,6 @@ use lomak::model::io;
 
 #[pyfunction]
 /// Create a new instance
-fn new_model() -> Model {
-    Model{ m: model::new_model() }
-}
-
-#[pyfunction]
-/// Create a new instance
-fn load_model(filename: &str) -> PyResult<Model> {
-    match io::load_model(filename, None) {
-        Ok(m) => Ok(Model{m: m}),
-        Err(e) => Err(exceptions::ValueError::py_err(format!("{}",e))),
-    }
-}
-
-#[pyfunction]
-/// Create a new instance
 fn expr_from_bool(value: bool) -> Expr {
     Expr::from_bool(value)
 }
@@ -36,17 +21,14 @@ fn expr_from_bool(value: bool) -> Expr {
 
 /// Simple python wrapper for our rust code
 #[pymodule]
-fn lomak(py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_wrapped(wrap_pyfunction!(new_model))?;
-    m.add_wrapped(wrap_pyfunction!(load_model))?;
+fn lomak(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(expr_from_bool))?;
-//    m.add_wrapped(wrap_pyfunction!(Model))?;
-//    m.add("Model", new_model());
+    m.add_class::<Model>()?;
     Ok(())
 }
 
 /// Wrap a Logical model as a Python object
-#[pyclass]
+#[pyclass(module="lomak")]
 pub struct Model {
     m: model::LQModelRef
 }
@@ -68,9 +50,19 @@ struct ModelAction {
 impl Model {
 
     #[new]
-    fn new(obj: &PyRawObject) {
+    fn new(obj: &PyRawObject, filename: Option<&str>) {
+        let model = match filename {
+            None => model::new_model(),
+            Some(filename) => {
+                match io::load_model(filename, None) {
+                    Ok(m) => m,
+                    Err(e) => model::new_model(),
+                }
+            }
+        };
+
         obj.init({
-            Model { m: model::new_model() }
+            Model { m: model }
         });
     }
 
@@ -82,7 +74,7 @@ impl Model {
     /// Lock a component of the model
     fn lock(&mut self, name: &str, value: bool) -> bool {
         let model = self.m.as_mut();
-        if let Some(uid) = model.get_component(name) {
+        if let Some(uid) = model.component_by_name(name) {
             model.lock(uid, value);
             return true
         }

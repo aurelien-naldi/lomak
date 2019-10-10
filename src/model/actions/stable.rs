@@ -74,7 +74,7 @@ impl<'a> FixedBuilder<'a> {
         let displayed = self.displayed.as_mut().unwrap();
         for name in names {
             // FIXME: multi-valued case
-            let uid = self.model.get_variable(name,1 );
+            let uid = self.model.variable_by_name(name);
             match &uid {
                 Some(uid) => displayed.push(*uid),
                 None => println!("Selected display component not found: {}", name),

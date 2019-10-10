@@ -115,6 +115,10 @@ impl Formula {
         }
     }
 
+    pub fn from_bool(value: bool) -> Formula {
+        Self::from(Expr::from_bool(value))
+    }
+
     pub fn set<T: BoolRepr>(&mut self, value: T) {
         self.repr = Repr::from(value);
         self.cached.borrow_mut().clear();

@@ -13,6 +13,6 @@ crate-type = ["cdylib"]
 lomak = { path = "../.." }
 
 [dependencies.pyo3]
-version = "0.7"
+version = "0.8"
 features = ["extension-module"]
 

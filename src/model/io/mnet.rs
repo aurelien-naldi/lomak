@@ -65,7 +65,7 @@ impl MNETFormat {
             None => 1,
             Some(e) => e.as_str().parse().unwrap(),
         };
-        model.ensure_variable(component, value)
+        model.ensure_variable_with_threshold(component, value)
     }
 }
 

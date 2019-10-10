@@ -32,7 +32,7 @@ impl CLIModifier for CLIPerturbation {
             match RE_PRT.captures(arg) {
                 None => println!("Invalid perturbation parameter: {}", arg),
                 Some(cap) => {
-                    if let Some(uid) = model.get_component(&cap[1]) {
+                    if let Some(uid) = model.component_by_name(&cap[1]) {
                         match &cap[2] {
                             "0" => model.lock(uid, false),
                             "1" => model.lock(uid, true),
