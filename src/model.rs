@@ -58,10 +58,13 @@ pub trait QModel: VariableNamer {
     fn ensure_associated_variable(&mut self, cid: usize, value: usize) -> usize;
 
     /// Assign a Boolean condition for a specific threshold
-    fn set_rule(&mut self, target: usize, value: usize, rule: Formula);
+    fn set_rule(&mut self, target: usize, rule: Formula);
+
+    /// Assign a Boolean condition for a specific threshold
+    fn extend_rule(&mut self, target: usize, rule: Formula);
 
     fn lock(&mut self, uid: usize, value: bool) {
-        self.set_rule(uid, 1, Formula::from(Expr::from_bool(value)));
+        self.set_rule(uid, Formula::from(Expr::from_bool(value)));
     }
 
     fn get_name(&self, uid: usize) -> &str;
@@ -147,8 +150,7 @@ impl DynamicRule {
     }
 
     pub fn extend_formula(&mut self, value: usize, condition: Formula) {
-        self.assignments.insert(
-            self.assignments.len(),
+        self.assignments.push(
             Assign {
                 target: value,
                 formula: condition,

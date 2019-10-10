@@ -75,8 +75,14 @@ impl QModel for LQModel {
         return vid;
     }
 
-    fn set_rule(&mut self, target: usize, value: usize, rule: Formula) {
-        &self.components[target].rule.set_formula(rule, value);
+    fn set_rule(&mut self, target: usize, rule: Formula) {
+        let var = &self.variables[target];
+        &self.components[ var.component ].rule.set_formula(rule, var.value);
+    }
+
+    fn extend_rule(&mut self, target: usize, rule: Formula) {
+        let var = &self.variables[target];
+        &self.components[ var.component ].rule.extend_formula(var.value, rule);
     }
 
     fn get_name(&self, uid: usize) -> &str {

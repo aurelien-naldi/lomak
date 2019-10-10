@@ -68,20 +68,26 @@ impl io::ParsingFormat for BNETFormat {
             return;
         }
 
+        // Load all lines to restore the component order
         let ptree = ptree.unwrap().next().unwrap();
+        let mut expressions = vec!();
         for record in ptree.into_inner() {
             match record.as_rule() {
                 Rule::rule => {
                     let mut inner = record.into_inner();
                     let target = inner.next().unwrap().as_str();
                     let target = model.ensure_variable(target, 1);
-                    let expr = inner.next().unwrap();
-                    let expr = self.load_expr(model, expr);
-                    model.set_rule(target, 1, Formula::from(expr));
+                    expressions.push( (target, inner.next().unwrap()) );
                 }
                 Rule::EOI => (),
                 _ => panic!("Should not get there!"),
             }
+        }
+
+        // Parse all expressions
+        for e in expressions {
+            let expr = self.load_expr(model, e.1);
+            model.set_rule(e.0, Formula::from(expr));
         }
     }
 
