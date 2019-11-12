@@ -23,6 +23,10 @@ lazy_static! {
             .help("Percolate (propagate) fixed components")
             .long("percolate")
             .short("p"),
+        ArgumentDescr::new("elementary")
+            .help("Show only elementary trapspaces, i.e. minimal stable motifs")
+            .long("elementary")
+            .short("e"),
         ArgumentDescr::new("all")
             .help("All trapspaces instead of only the terminal ones")
             .long("all")
@@ -62,7 +66,7 @@ pub struct TrapspacesBuilder<'a> {
     model: &'a dyn QModel,
     filters: HashMap<usize, bool>,
     percolate: bool,
-    all: bool,
+    mode: SolverMode,
 }
 
 impl<'a> TrapspacesBuilder<'a> {
@@ -71,7 +75,7 @@ impl<'a> TrapspacesBuilder<'a> {
             model: model,
             filters: HashMap::new(),
             percolate: false,
-            all: false,
+            mode: SolverMode::MAX,
         }
     }
 
@@ -86,7 +90,11 @@ impl TrapspacesBuilder<'_> {
         self
     }
     pub fn show_all(&mut self) -> &mut Self {
-        self.all = true;
+        self.mode = SolverMode::ALL;
+        self
+    }
+    pub fn show_elementary(&mut self) -> &mut Self {
+        self.mode = SolverMode::MIN;
         self
     }
 }
@@ -96,16 +104,13 @@ impl ActionBuilder for TrapspacesBuilder<'_> {
         match flag {
             "percolate" => self.percolate(),
             "all" => self.show_all(),
+            "elementary" => self.show_elementary(),
             _ => self,
         };
     }
 
     fn call(&self) {
-        let mode = match self.all {
-            true => SolverMode::ALL,
-            false => SolverMode::MAX,
-        };
-        let mut solver = solver::get_solver(mode);
+        let mut solver = solver::get_solver(self.mode);
 
         // Add all variables
         let s = self
@@ -130,6 +135,17 @@ impl ActionBuilder for TrapspacesBuilder<'_> {
             if self.percolate {
                 enforce(&mut solver, &e, 2 * uid);
                 enforce(&mut solver, &ne, 2 * uid + 1);
+            }
+
+            // Remove the full state space from the solutions when computing elementary trapspaces
+            if self.mode == SolverMode::MIN {
+                let s = self
+                    .model
+                    .variables()
+                    .map(|(uid, _)| format!("not v{}, not v{}", 2 * uid, 2 * uid + 1))
+                    .join(", ");
+                let s = format!(":- {}.\n", s);
+                solver.add(&s);
             }
         }
 

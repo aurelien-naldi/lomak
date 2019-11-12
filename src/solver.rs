@@ -2,6 +2,7 @@ use crate::func::expr::Expr;
 
 pub mod clingo;
 
+#[derive(Clone,Copy,PartialEq)]
 pub enum SolverMode {
     MAX,
     MIN,
