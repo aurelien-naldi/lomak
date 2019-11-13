@@ -53,7 +53,7 @@ fn main() {
 
     // Call the selected command with its parameters
     let (s_cmd, subcmd) = matches.subcommand();
-    if subcmd.is_some() {
-        actions::run_command(s_cmd, subcmd.unwrap(), model.as_ref());
+    if let Some(s) = subcmd {
+        actions::run_command(s_cmd, s, model.as_ref());
     }
 }

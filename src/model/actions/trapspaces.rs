@@ -35,7 +35,7 @@ lazy_static! {
 }
 
 impl dyn QModel {
-    pub fn trapspaces<'a>(&'a self) -> TrapspacesBuilder<'a> {
+    pub fn trapspaces(&'_ self) -> TrapspacesBuilder<'_> {
         TrapspacesBuilder::new(self)
     }
 }
@@ -72,7 +72,7 @@ pub struct TrapspacesBuilder<'a> {
 impl<'a> TrapspacesBuilder<'a> {
     pub fn new(model: &'a dyn QModel) -> Self {
         TrapspacesBuilder {
-            model: model,
+            model,
             filters: HashMap::new(),
             percolate: false,
             mode: SolverMode::MAX,
@@ -166,10 +166,10 @@ fn restrict(solver: &mut ClingoProblem, e: &Expr, u: usize) {
             .chain(p.negative().iter().map(|r| format!("not v{}", 2 * r)))
             .join(",");
 
-        if s.len() > 0 {
-            solver.add(&format!(":- v{}, {}.\n", u, s));
-        } else {
+        if s.is_empty() {
             solver.add(&format!(":- v{}.\n", u));
+        } else {
+            solver.add(&format!(":- v{}, {}.\n", u, s));
         }
     }
 }
@@ -183,10 +183,10 @@ fn enforce(solver: &mut ClingoProblem, e: &Expr, u: usize) {
             .chain(p.negative().iter().map(|r| format!("v{}", 2 * r + 1)))
             .join(",");
 
-        if s.len() > 0 {
-            solver.add(&format!("v{} :- {}.\n", u, s));
-        } else {
+        if s.is_empty() {
             solver.add(&format!("v{}.\n", u));
+        } else {
+            solver.add(&format!("v{} :- {}.\n", u, s));
         }
     }
 }

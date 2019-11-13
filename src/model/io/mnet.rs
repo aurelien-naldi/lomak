@@ -35,7 +35,7 @@ pub struct MNETFormat;
 
 impl MNETFormat {
     pub fn new() -> MNETFormat {
-        return MNETFormat {};
+        MNETFormat {}
     }
 
     fn load_expr(&self, model: &mut dyn QModel, expr: Pair<Rule>) -> Expr {
@@ -70,24 +70,24 @@ impl MNETFormat {
 }
 
 impl io::ParsingFormat for MNETFormat {
-    fn parse_rules(&self, model: &mut dyn QModel, expression: &String) {
+    fn parse_rules(&self, model: &mut dyn QModel, expression: &str) {
         let ptree = MNETParser::parse(Rule::file, expression);
 
-        if ptree.is_err() {
-            println!("Parsing error: {}", ptree.unwrap_err());
+        if let Err(err) = ptree {
+            println!("Parsing error: {}", err);
             return;
         }
 
         // Load all lines to restore the component order
         let ptree = ptree.unwrap().next().unwrap();
-        let mut expressions = vec!();
+        let mut expressions = vec![];
         for record in ptree.into_inner() {
             match record.as_rule() {
                 Rule::rule => {
                     let mut inner = record.into_inner();
                     let target = inner.next().unwrap();
                     let var = self.load_lit(model, target);
-                    expressions.push( (var, inner.next().unwrap()) );
+                    expressions.push((var, inner.next().unwrap()));
                 }
                 Rule::EOI => (),
                 _ => panic!("Should not get there!"),
@@ -104,11 +104,11 @@ impl io::ParsingFormat for MNETFormat {
     fn parse_formula(&self, model: &mut dyn QModel, formula: &str) -> Result<Expr, String> {
         let ptree = MNETParser::parse(Rule::sxpr, formula);
         match ptree {
-            Err(s) => return Err(format!("Parsing error: {}", s)),
+            Err(s) => Err(format!("Parsing error: {}", s)),
             Ok(mut ptree) => {
                 let expr = ptree.next().unwrap().into_inner().next().unwrap();
                 let expr = self.load_expr(model, expr);
-                return Ok(expr);
+                Ok(expr)
             }
         }
     }

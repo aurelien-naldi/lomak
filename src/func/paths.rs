@@ -6,13 +6,13 @@ use crate::func::expr::Expr;
 use crate::func::VariableNamer;
 use crate::func::*;
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Default)]
 pub struct LiteralSet {
     positive: BitSet,
     negative: BitSet,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Paths {
     paths: Vec<LiteralSet>,
 }
@@ -26,6 +26,10 @@ impl Paths {
 
     pub fn len(&self) -> usize {
         self.paths.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.paths.is_empty()
     }
 
     pub fn items(&self) -> &Vec<LiteralSet> {
@@ -42,7 +46,7 @@ impl Paths {
         for l in self.paths.iter() {
             lits.union_with(l);
         }
-        return lits;
+        lits
     }
 
     pub fn merge_raw(&mut self, next: &Paths) {
@@ -73,7 +77,7 @@ impl Paths {
         let conflicts = s_lits.conflicts(&n_lits);
         let mut c_subsumed = BitSet::new();
         let mut cpaths = Vec::new();
-        if conflicts.len() > 0 {
+        if !conflicts.is_empty() {
             // Another round to search for conflict-solving patterns
             for (i, b) in self.paths.iter().enumerate() {
                 if s_subsumed.contains(i) {
@@ -130,7 +134,7 @@ impl Paths {
         self.paths = npaths;
 
         // Integrate the new conflict-solving patterns in the result
-        if cpaths.len() > 0 {
+        if !cpaths.is_empty() {
             let cpaths = cpaths
                 .into_iter()
                 .enumerate()
@@ -282,6 +286,10 @@ impl LiteralSet {
         self.len_pos() + self.len_neg()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.positive.is_empty() && self.negative.is_empty()
+    }
+
     pub fn len_pos(&self) -> usize {
         self.positive.len()
     }
@@ -299,7 +307,7 @@ impl LiteralSet {
         if self.negative.contains(idx) {
             return 0;
         }
-        return -1;
+        -1
     }
 
     pub fn set_literal(&mut self, idx: usize, value: bool) {
@@ -389,17 +397,15 @@ impl LiteralSet {
     }
 
     /// Build a new LiteralSet where only the provided positions are retained and mapped to the provided order
-    pub fn filter_map(self, filter: &Vec<usize>) -> Self {
+    pub fn filter_map(self, filter: &[usize]) -> Self {
         let mut result = LiteralSet::new();
-        let mut k = 0;
-        for uid in filter {
+        for (k, uid) in filter.iter().enumerate() {
             if self.positive.contains(*uid) {
                 result.positive.insert(k);
             }
             if self.negative.contains(*uid) {
                 result.negative.insert(k);
             }
-            k += 1;
         }
         result
     }
@@ -410,7 +416,7 @@ impl fmt::Display for LiteralSet {
         let mut result = vec![];
         for v in &self.positive {
             if result.len() <= v {
-                for _ in result.len()..(v + 1) {
+                for _ in result.len()..=v {
                     result.push('-');
                 }
             }
@@ -418,7 +424,7 @@ impl fmt::Display for LiteralSet {
         }
         for v in &self.negative {
             if result.len() <= v {
-                for _ in result.len()..(v + 1) {
+                for _ in result.len()..=v {
                     result.push('-');
                 }
             }
@@ -432,7 +438,7 @@ impl fmt::Display for LiteralSet {
 impl fmt::Display for Paths {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for i in &self.paths {
-            write!(f, "{}\n", i)?;
+            writeln!(f, "{}", i)?;
         }
         write!(f, "")
     }

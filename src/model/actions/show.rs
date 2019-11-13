@@ -32,7 +32,7 @@ pub struct ShowBuilder<'a> {
 
 impl<'a> ShowBuilder<'a> {
     pub fn new(model: &'a dyn QModel) -> ShowBuilder<'a> {
-        ShowBuilder { model: model }
+        ShowBuilder { model }
     }
 }
 

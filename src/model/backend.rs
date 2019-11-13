@@ -72,17 +72,21 @@ impl QModel for LQModel {
         let vid = self.variables.insert(Variable::new(cid, value));
         component.variables.insert(value, vid);
 
-        return vid;
+        vid
     }
 
     fn set_rule(&mut self, target: usize, rule: Formula) {
         let var = &self.variables[target];
-        &self.components[ var.component ].rule.set_formula(rule, var.value);
+        self.components[var.component]
+            .rule
+            .set_formula(rule, var.value);
     }
 
     fn extend_rule(&mut self, target: usize, rule: Formula) {
         let var = &self.variables[target];
-        &self.components[ var.component ].rule.extend_formula(var.value, rule);
+        self.components[var.component]
+            .rule
+            .extend_formula(var.value, rule);
     }
 
     fn get_name(&self, uid: usize) -> &str {
@@ -96,9 +100,8 @@ impl QModel for LQModel {
         }
 
         // Reject existing names
-        match self.name2uid.get(&name) {
-            Some(u) => return *u == uid,
-            None => (),
+        if let Some(u) = self.name2uid.get(&name) {
+            return *u == uid;
         }
 
         let old_name = self.get_name(uid).to_string();
@@ -167,7 +170,7 @@ impl fmt::Debug for LQModel {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for (u, c) in &self.components {
             write!(f, "{} ({}):", u, c.name)?;
-            for (v, _) in &c.variables {
+            for v in c.variables.keys() {
                 write!(f, "  {}", v)?;
             }
             writeln!(f)?;

@@ -24,12 +24,12 @@ impl CLIModifier for CLIRename {
 
     fn modify(&self, mut model: LQModelRef, parameters: &[&str]) -> LQModelRef {
         for arg in parameters {
-            let split: Vec<&str> = arg.split(":").collect();
+            let split: Vec<&str> = arg.split(':').collect();
             if split.len() != 2 {
                 println!("invalid rename pattern");
                 continue;
             }
-            model.rename(split[0], format!("{}", split[1]));
+            model.rename(split[0], split[1].to_string());
         }
         model
     }

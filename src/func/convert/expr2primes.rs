@@ -14,7 +14,7 @@ impl Expr {
 
     /// Look for prime implicants, dissolving dlinks as we go
     fn _prime_implicants(&self, paths: &mut Paths) {
-        if paths.len() < 1 {
+        if paths.is_empty() {
             return;
         }
 

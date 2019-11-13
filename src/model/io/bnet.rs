@@ -35,7 +35,7 @@ pub struct BNETFormat;
 
 impl BNETFormat {
     pub fn new() -> BNETFormat {
-        return BNETFormat {};
+        BNETFormat {}
     }
 
     fn load_expr(&self, model: &mut dyn QModel, expr: Pair<Rule>) -> Expr {
@@ -60,24 +60,24 @@ impl BNETFormat {
 }
 
 impl io::ParsingFormat for BNETFormat {
-    fn parse_rules(&self, model: &mut dyn QModel, expression: &String) {
+    fn parse_rules(&self, model: &mut dyn QModel, expression: &str) {
         let ptree = BNETParser::parse(Rule::file, expression);
 
-        if ptree.is_err() {
-            println!("Parsing error: {}", ptree.unwrap_err());
+        if let Err(err) = ptree {
+            println!("Parsing error: {}", err);
             return;
         }
 
         // Load all lines to restore the component order
         let ptree = ptree.unwrap().next().unwrap();
-        let mut expressions = vec!();
+        let mut expressions = vec![];
         for record in ptree.into_inner() {
             match record.as_rule() {
                 Rule::rule => {
                     let mut inner = record.into_inner();
                     let target = inner.next().unwrap().as_str();
                     let target = model.ensure_variable(target);
-                    expressions.push( (target, inner.next().unwrap()) );
+                    expressions.push((target, inner.next().unwrap()));
                 }
                 Rule::EOI => (),
                 _ => panic!("Should not get there!"),
@@ -94,11 +94,11 @@ impl io::ParsingFormat for BNETFormat {
     fn parse_formula(&self, model: &mut dyn QModel, formula: &str) -> Result<Expr, String> {
         let ptree = BNETParser::parse(Rule::sxpr, formula);
         match ptree {
-            Err(s) => return Err(format!("Parsing error: {}", s)),
+            Err(s) => Err(format!("Parsing error: {}", s)),
             Ok(mut ptree) => {
                 let expr = ptree.next().unwrap().into_inner().next().unwrap();
                 let expr = self.load_expr(model, expr);
-                return Ok(expr);
+                Ok(expr)
             }
         }
     }
@@ -114,11 +114,11 @@ impl io::SavingFormat for BNETFormat {
             let func = &model.rule(uid).as_func();
             write!(out, "{}, ", model.get_name(var.component))?;
             match func {
-                Expr::TRUE => write!(out, "1\n")?,
-                Expr::FALSE => write!(out, "0\n")?,
-                _ => write!(
+                Expr::TRUE => writeln!(out, "1")?,
+                Expr::FALSE => writeln!(out, "0")?,
+                _ => writeln!(
                     out,
-                    "{}\n",
+                    "{}",
                     NamedExpr {
                         expr: &func,
                         namer: namer,

@@ -145,7 +145,7 @@ pub struct Assign {
 impl Component {
     fn new(name: String) -> Self {
         Component {
-            name: name,
+            name,
             rule: DynamicRule::new(),
             variables: HashMap::new(),
         }
@@ -154,10 +154,7 @@ impl Component {
 
 impl Variable {
     fn new(component: usize, value: usize) -> Self {
-        Variable {
-            component: component,
-            value: value,
-        }
+        Variable { component, value }
     }
 }
 
@@ -173,17 +170,10 @@ impl DynamicRule {
     }
 
     pub fn extend_formula(&mut self, value: usize, condition: Formula) {
-        self.assignments.push(
-            Assign {
-                target: value,
-                formula: condition,
-            },
-        )
-    }
-
-    fn set_expression<T: BoolRepr>(&mut self, condition: T, v: usize) {
-        self.assignments.clear();
-        self.extend(v, condition);
+        self.assignments.push(Assign {
+            target: value,
+            formula: condition,
+        })
     }
 
     fn set_formula(&mut self, f: Formula, v: usize) {
@@ -192,7 +182,7 @@ impl DynamicRule {
     }
 
     pub fn as_func<T: FromBoolRepr>(&self) -> T {
-        if self.assignments.len() < 1 {
+        if self.assignments.is_empty() {
             return Expr::FALSE.into_repr().convert_as();
         }
 

@@ -36,10 +36,7 @@ impl CLIModifier for CLIPerturbation {
                         match &cap[2] {
                             "0" => model.lock(uid, false),
                             "1" => model.lock(uid, true),
-                            _ => {
-                                println!("Invalid target value: {}", &cap[2]);
-                                ()
-                            }
+                            _ => println!("Invalid target value: {}", &cap[2]),
                         }
                     }
                 }

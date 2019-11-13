@@ -154,14 +154,12 @@ pub fn run_command(cmd: &str, args: &clap::ArgMatches, model: &dyn QModel) {
         for descr in cli.arguments() {
             if descr.has_value {
                 let value = args.value_of(&descr.name);
-                if value.is_some() {
-                    b.set_value(&descr.name, value.unwrap());
+                if let Some(v) = value {
+                    b.set_value(&descr.name, v);
                 }
             // TODO: multiple matches?
-            } else {
-                if args.is_present(&descr.name) {
-                    b.set_flag(&descr.name);
-                }
+            } else if args.is_present(&descr.name) {
+                b.set_flag(&descr.name);
             }
         }
 

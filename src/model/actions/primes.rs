@@ -46,18 +46,14 @@ pub struct PrimeBuilder<'a> {
 
 impl<'a> PrimeBuilder<'a> {
     pub fn new(model: &'a dyn QModel) -> PrimeBuilder<'a> {
-        PrimeBuilder {
-            model: model,
-            json: false,
-        }
+        PrimeBuilder { model, json: false }
     }
 }
 
 impl ActionBuilder for PrimeBuilder<'_> {
     fn set_flag(&mut self, key: &str) {
-        match key {
-            "json" => self.json = true,
-            _ => (),
+        if let "json" = key {
+            self.json = true;
         }
     }
 

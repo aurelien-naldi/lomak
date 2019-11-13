@@ -51,7 +51,7 @@ impl ClingoProblem {
 
         ClingoProblem {
             minsolutions: false,
-            ctl: Control::new(args.into_iter().map(|s| String::from(s)).collect())
+            ctl: Control::new(args.into_iter().map(String::from).collect())
                 .expect("Failed creating Control."),
         }
     }
@@ -122,24 +122,21 @@ impl Iterator for ClingoResults<'_> {
     type Item = ClingoResultModel;
 
     fn next(&mut self) -> Option<ClingoResultModel> {
-        if self.handle.is_none() {
-            return None;
-        }
-        let handle = self.handle.as_mut().unwrap();
-        handle.resume().expect("Failed resume on solve handle.");
-        if let Ok(Some(model)) = handle.model() {
-            return Some(ClingoResultModel {
-                number: model.number().unwrap(),
-                model_type: model.model_type().unwrap(),
-                pattern: model_as_pattern(model, self.halved),
-            });
+        if let Some(handle) = self.handle.as_mut() {
+            handle.resume().expect("Failed resume on solve handle.");
+            if let Ok(Some(model)) = handle.model() {
+                return Some(ClingoResultModel {
+                    number: model.number().unwrap(),
+                    model_type: model.model_type().unwrap(),
+                    pattern: model_as_pattern(model, self.halved),
+                });
+            }
         }
         None
     }
 }
 
 impl ClingoResultModel {
-
     pub fn filter(mut self, filter: &Option<Vec<usize>>) -> ClingoResultModel {
         if let Some(uids) = filter {
             self.pattern = self.pattern.filter_map(uids);
@@ -177,9 +174,8 @@ fn model_as_full_pattern(model: &Model) -> LiteralSet {
         .expect("Failed to retrieve symbols in the model.");
 
     for atom in atoms {
-        match atom_to_uid(&atom) {
-            Ok(u) => result.set_literal(u, true),
-            Err(_) => (),
+        if let Ok(u) = atom_to_uid(atom) {
+            result.set_literal(u, true);
         }
     }
 
@@ -189,9 +185,8 @@ fn model_as_full_pattern(model: &Model) -> LiteralSet {
         .expect("Failed to retrieve symbols in the model.");
 
     for atom in atoms {
-        match atom_to_uid(&atom) {
-            Ok(u) => result.set_literal(u, false),
-            Err(_) => (),
+        if let Ok(u) = atom_to_uid(atom) {
+            result.set_literal(u, false);
         }
     }
 
@@ -207,18 +202,17 @@ fn model_as_half_pattern(model: &Model) -> LiteralSet {
         .expect("Failed to retrieve symbols in the model.");
 
     for atom in atoms {
-        match atom_to_uid(&atom) {
-            Ok(u) => result.set_literal(u / 2, u % 2 == 0),
-            Err(_) => (),
+        if let Ok(u) = atom_to_uid(atom) {
+            result.set_literal(u / 2, u % 2 == 0);
         }
     }
 
     result
 }
 
-fn atom_to_uid(atom: &Symbol) -> Result<usize, ParseIntError> {
+fn atom_to_uid(atom: Symbol) -> Result<usize, ParseIntError> {
     let name = atom.to_string().unwrap();
-    if name.starts_with("v") {
+    if name.starts_with('v') {
         let s = &name[1..].to_string();
         return s.parse::<usize>();
     }

@@ -130,14 +130,12 @@ impl Operator {
     }
 
     fn propagate_not(self, neg: bool) -> (Self, bool) {
-        let ret = match self.negate(neg) {
+        match self.negate(neg) {
             Operator::AND => (Operator::AND, false),
             Operator::OR => (Operator::OR, false),
             Operator::NAND => (Operator::OR, true),
             Operator::NOR => (Operator::AND, true),
-        };
-        //        println!("PROPAGATE: {},{},{} => {},{}", self, self.is_neg(),neg, ret.0, ret.1);
-        ret
+        }
     }
 
     fn priority(self) -> u8 {
@@ -178,6 +176,10 @@ impl Children {
 
     pub fn len(&self) -> usize {
         self.data.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.data.is_empty()
     }
 }
 
@@ -329,13 +331,14 @@ impl Children {
         let children: Vec<Option<Expr>> = self.data.iter().map(|c| c.replace_literal(f)).collect();
         let count = children.iter().filter(|c| c.is_some()).count();
         if count > 1 {
-            let children = self.data.iter().zip(children.into_iter()).map(|(c, r)| {
-                if r.is_some() {
-                    r.unwrap()
-                } else {
-                    c.clone()
-                }
-            });
+            let children = self
+                .data
+                .iter()
+                .zip(children.into_iter())
+                .map(|(c, r)| match r {
+                    Some(e) => e,
+                    None => c.clone(),
+                });
             return Some(Expr::OPER(
                 op,
                 Children {

@@ -21,7 +21,7 @@ lazy_static! {
 }
 
 impl dyn QModel {
-    pub fn fixpoints<'a>(&'a self) -> FixedBuilder<'a> {
+    pub fn fixpoints(&'_ self) -> FixedBuilder<'_> {
         FixedBuilder::new(self)
     }
 }
@@ -61,7 +61,7 @@ pub struct FixedBuilder<'a> {
 impl<'a> FixedBuilder<'a> {
     pub fn new(model: &'a dyn QModel) -> FixedBuilder<'a> {
         FixedBuilder {
-            model: model,
+            model,
             restriction: None,
             displayed: None,
         }
@@ -69,7 +69,7 @@ impl<'a> FixedBuilder<'a> {
 
     pub fn set_displayed_names(&mut self, names: Vec<&str>) {
         if self.displayed.is_none() {
-            self.displayed = Some(vec!());
+            self.displayed = Some(vec![]);
         }
         let displayed = self.displayed.as_mut().unwrap();
         for name in names {
@@ -84,12 +84,10 @@ impl<'a> FixedBuilder<'a> {
 }
 
 impl ActionBuilder for FixedBuilder<'_> {
-
     fn set_value(&mut self, key: &str, value: &str) {
-        match key {
-            "displayed" => self.set_displayed_names(value.split(',').collect()),
-            _ => (),
-        };
+        if let "displayed" = key {
+            self.set_displayed_names(value.split(',').collect());
+        }
     }
 
     fn call(&self) {
@@ -127,12 +125,11 @@ impl ActionBuilder for FixedBuilder<'_> {
                     .map(|(uid, _)| self.model.get_name(uid))
                     .join(" ");
                 println!("{}", s);
-            },
+            }
             Some(dsp) => {
-                let s = dsp.iter().map(|uid| self.model.get_name(*uid))
-                    .join(" ");
+                let s = dsp.iter().map(|uid| self.model.get_name(*uid)).join(" ");
                 println!("{}", s);
-            },
+            }
         }
         for r in results {
             println!("{}", r.filter(&self.displayed));

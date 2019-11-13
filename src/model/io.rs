@@ -62,7 +62,7 @@ pub trait ParsingFormat {
         Ok(model)
     }
 
-    fn parse_rules(&self, model: &mut dyn QModel, expression: &String);
+    fn parse_rules(&self, model: &mut dyn QModel, expression: &str);
 
     fn parse_formula(&self, model: &mut dyn QModel, formula: &str) -> Result<Expr, String>;
 }
@@ -91,10 +91,7 @@ fn guess_format(filename: &str) -> Result<Box<dyn Format>, io::Error> {
     Path::new(filename)
         .extension()
         .and_then(OsStr::to_str)
-        .ok_or(io::Error::new(
-            io::ErrorKind::NotFound,
-            "Could not guess the extension",
-        ))
+        .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Could not guess the extension"))
         .and_then(get_format)
 }
 

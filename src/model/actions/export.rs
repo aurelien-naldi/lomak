@@ -55,7 +55,7 @@ pub struct ExportBuilder<'a> {
 impl<'a> ExportBuilder<'a> {
     pub fn new(model: &'a dyn QModel) -> ExportBuilder<'a> {
         ExportBuilder {
-            model: model,
+            model,
             output: None,
             format: None,
         }
