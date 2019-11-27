@@ -10,19 +10,9 @@ use lomak::model;
 use lomak::model::actions::*;
 use lomak::model::io;
 
-
-#[pyfunction]
-/// Create a new instance
-fn expr_from_bool(value: bool) -> Expr {
-    Expr::from_bool(value)
-}
-
-
-
 /// Simple python wrapper for our rust code
 #[pymodule]
 fn lomak(_py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_wrapped(wrap_pyfunction!(expr_from_bool))?;
     m.add_class::<Model>()?;
     Ok(())
 }
@@ -34,7 +24,7 @@ pub struct Model {
 }
 
 /// Python API for Boolean expressions
-#[pyclass]
+#[pyclass(module="lomak")]
 pub struct Expr {
     expr: func::expr::Expr,
 }
