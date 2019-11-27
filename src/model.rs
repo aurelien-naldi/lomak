@@ -154,11 +154,29 @@ impl Component {
         for asg in self.assignments.iter() {
             let cur: Expr = asg.formula.convert_as();
             if asg.target < value {
-                expr = expr.and(&cur);
+                expr = expr.and(&cur.not());
             } else {
                 expr = expr.or(&cur);
             }
         }
+
+
+        match self.variables.get( &(value+1)) {
+            None => (),
+            Some(next_var) => {
+                let cur_var = self.variables.get( &value).unwrap();
+                let cur_active = Expr::ATOM(*cur_var);
+                let next_active = Expr::ATOM(*next_var);
+                expr = expr.or( &cur_active.and(&next_active));
+            }
+        }
+
+        if value > 1 {
+            let prev_var = self.variables.get( &(value-1)).unwrap();
+            let prev_active = Expr::ATOM(*prev_var);
+            expr = expr.and( &prev_active);
+        }
+
         expr.simplify().unwrap_or(expr)
     }
 

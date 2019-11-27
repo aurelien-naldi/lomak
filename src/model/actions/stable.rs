@@ -85,8 +85,9 @@ impl<'a> FixedBuilder<'a> {
 
 impl ActionBuilder for FixedBuilder<'_> {
     fn set_value(&mut self, key: &str, value: &str) {
-        if let "displayed" = key {
-            self.set_displayed_names(value.split(',').collect());
+        match key {
+            "displayed" => self.set_displayed_names(value.split(',').collect()),
+            _ => eprintln!("This action has no value ({} = {})", key, value),
         }
     }
 
@@ -104,7 +105,7 @@ impl ActionBuilder for FixedBuilder<'_> {
             let cpt = self.model.get_component(var.component);
             let cur = Expr::ATOM(uid);
             let e: Expr = cpt.as_func(var.value);
-            for p in cur.not().and(&e).prime_implicants().items() {
+                for p in cur.not().and(&e).prime_implicants().items() {
                 solver.restrict(p);
             }
             for p in cur.and(&e.not()).prime_implicants().items() {
