@@ -240,7 +240,7 @@ impl Children {
             (op, neg)
         };
 
-        let disjunction = op.is_disjunction();
+        let disjunction = next_op.is_disjunction();
         for child in self.data.iter() {
             match child._simplify(next_neg, nnf) {
                 None => children.push(child.clone()),
@@ -593,5 +593,24 @@ mod tests {
         let s = x.simplify();
         assert_eq!(s, None);
         assert_eq!(4, 4);
+    }
+
+    #[test]
+    fn simplification() {
+        let a = Expr::ATOM(1);
+        let b = Expr::ATOM(2);
+
+        let expr = a.or(&b).not();
+        assert_eq!(expr.simplify(), None);
+
+
+        let c_expr = Expr::FALSE.or(&expr);
+        let s_expr = c_expr.simplify();
+        assert_ne!(s_expr, None);
+
+        assert_eq!(s_expr.unwrap(), expr);
+
+        let n_expr = a.not().and(&b.not());
+        assert_eq!(c_expr.nnf().unwrap(), n_expr);
     }
 }
