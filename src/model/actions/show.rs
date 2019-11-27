@@ -39,5 +39,6 @@ impl<'a> ShowBuilder<'a> {
 impl ActionBuilder for ShowBuilder<'_> {
     fn call(&self) {
         println!("{}", self.model.for_display());
+        println!();
     }
 }

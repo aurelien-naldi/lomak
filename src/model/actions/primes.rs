@@ -63,8 +63,8 @@ impl ActionBuilder for PrimeBuilder<'_> {
             return;
         }
 
-        for (uid, _) in self.model.variables() {
-            let primes: paths::Paths = self.model.rule(uid).as_func();
+        for (uid, var) in self.model.variables() {
+            let primes: paths::Paths = self.model.get_component(var.component).as_func(var.value);
             println!("PI {}:\n{}", self.model.name(uid), primes);
         }
     }
@@ -75,16 +75,16 @@ impl<'a> PrimeBuilder<'a> {
         println!("{{");
         let mut first = true;
         let namer = self.model.as_namer();
-        for (uid, _) in self.model.variables() {
+        for (uid, var) in self.model.variables() {
             if first {
                 first = false;
             } else {
                 println!(",");
             }
-            let rule = self.model.rule(uid);
+            let cpt = self.model.get_component(var.component);
             let name = self.model.get_name(uid);
-            let pos_primes: paths::Paths = rule.as_func();
-            let neg_primes = rule.as_func::<expr::Expr>().not().prime_implicants();
+            let pos_primes: paths::Paths = cpt.as_func(var.value);
+            let neg_primes = cpt.as_func::<expr::Expr>(var.value).not().prime_implicants();
             println!("\"{}\":[", name);
             neg_primes.to_json(namer);
             println!(",");

@@ -100,10 +100,10 @@ impl ActionBuilder for FixedBuilder<'_> {
         let s = format!("{{{}}}.", s);
         solver.add(&s);
 
-        for (uid, _) in self.model.variables() {
-            let rule = self.model.rule(uid);
+        for (uid, var) in self.model.variables() {
+            let cpt = self.model.get_component(var.component);
             let cur = Expr::ATOM(uid);
-            let e: Expr = rule.as_func();
+            let e: Expr = cpt.as_func(var.value);
             for p in cur.not().and(&e).prime_implicants().items() {
                 solver.restrict(p);
             }
@@ -122,7 +122,7 @@ impl ActionBuilder for FixedBuilder<'_> {
                 let s = self
                     .model
                     .variables()
-                    .map(|(uid, _)| self.model.get_name(uid))
+                    .map(|(uid, _)| self.model.name(uid))
                     .join(" ");
                 println!("{}", s);
             }

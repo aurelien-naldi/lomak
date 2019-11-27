@@ -78,14 +78,12 @@ impl QModel for LQModel {
     fn set_rule(&mut self, target: usize, rule: Formula) {
         let var = &self.variables[target];
         self.components[var.component]
-            .rule
             .set_formula(rule, var.value);
     }
 
     fn extend_rule(&mut self, target: usize, rule: Formula) {
         let var = &self.variables[target];
         self.components[var.component]
-            .rule
             .extend_formula(var.value, rule);
     }
 
@@ -120,8 +118,8 @@ impl QModel for LQModel {
         Box::new(self.components.iter())
     }
 
-    fn rule(&self, uid: usize) -> &DynamicRule {
-        &self.components[uid].rule
+    fn get_component<'a>(&'a self, uid: usize) -> &'a Component {
+        self.components.get(uid).unwrap()
     }
 
     fn for_display(&self) -> &dyn Display {
@@ -152,7 +150,7 @@ impl fmt::Display for LQModel {
         let namer = self.as_namer();
 
         for (_, component) in &self.components {
-            for a in &component.rule.assignments {
+            for a in &component.assignments {
                 write!(f, "{}", component.name)?;
                 if a.target != 1 {
                     write!(f, ":{}", a.target)?;

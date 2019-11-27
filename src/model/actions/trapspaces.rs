@@ -126,8 +126,8 @@ impl ActionBuilder for TrapspacesBuilder<'_> {
             solver.add(&format!(":- v{}, v{}.\n", 2 * uid, 2 * uid + 1));
         }
 
-        for (uid, _) in self.model.variables() {
-            let e: Expr = self.model.rule(uid).as_func();
+        for (uid, var) in self.model.variables() {
+            let e: Expr = self.model.get_component(var.component).as_func(var.value);
             let ne = e.not();
             restrict(&mut solver, &e, 2 * uid + 1);
             restrict(&mut solver, &ne, 2 * uid);

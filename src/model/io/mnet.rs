@@ -118,7 +118,7 @@ impl io::SavingFormat for MNETFormat {
     fn write_rules(&self, model: &dyn QModel, out: &mut dyn Write) -> Result<(), Error> {
         let namer = model.as_namer();
         for (_, c) in model.components() {
-            for assign in &c.rule.assignments {
+            for assign in &c.assignments {
                 write!(out, "{}", &c.name)?;
                 if assign.target != 1 {
                     write!(out, ":{}", assign.target)?;

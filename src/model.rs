@@ -108,7 +108,7 @@ pub trait QModel: VariableNamer {
 
     fn components<'a>(&'a self) -> Box<dyn Iterator<Item = (usize, &'a Component)> + 'a>;
 
-    fn rule(&self, uid: usize) -> &DynamicRule;
+    fn get_component<'a>(&'a self, uid: usize) -> &'a Component;
 
     fn for_display(&self) -> &dyn Display;
 }
@@ -128,12 +128,9 @@ pub struct Variable {
 /// available variables and the dynamic rule.
 pub struct Component {
     name: String,
-    rule: DynamicRule,
     variables: HashMap<usize, usize>,
-}
-
-pub struct DynamicRule {
     assignments: Vec<Assign>,
+    cached_rules: HashMap<usize, Formula>,
 }
 
 /// A formula associated with a target value
@@ -146,23 +143,23 @@ impl Component {
     fn new(name: String) -> Self {
         Component {
             name,
-            rule: DynamicRule::new(),
             variables: HashMap::new(),
-        }
-    }
-}
-
-impl Variable {
-    fn new(component: usize, value: usize) -> Self {
-        Variable { component, value }
-    }
-}
-
-impl DynamicRule {
-    fn new() -> Self {
-        DynamicRule {
             assignments: vec![],
+            cached_rules: HashMap::new(),
         }
+    }
+
+    fn get_formula(&self, value: usize) -> Expr {
+        let mut expr = Expr::FALSE;
+        for asg in self.assignments.iter() {
+            let cur: Expr = asg.formula.convert_as();
+            if asg.target < value {
+                expr = expr.and(&cur);
+            } else {
+                expr = expr.or(&cur);
+            }
+        }
+        expr.simplify().unwrap_or(expr)
     }
 
     pub fn extend<T: BoolRepr>(&mut self, value: usize, condition: T) {
@@ -170,6 +167,11 @@ impl DynamicRule {
     }
 
     pub fn extend_formula(&mut self, value: usize, condition: Formula) {
+        if !self.variables.contains_key(&value) {
+            eprintln!("ERROR: Can not assign a non-existing variable -> using default threshold");
+            return self.extend_formula(1, condition);
+        }
+        self.cached_rules.clear();
         self.assignments.push(Assign {
             target: value,
             formula: condition,
@@ -181,13 +183,15 @@ impl DynamicRule {
         self.extend_formula(v, f);
     }
 
-    pub fn as_func<T: FromBoolRepr>(&self) -> T {
-        if self.assignments.is_empty() {
-            return Expr::FALSE.into_repr().convert_as();
-        }
+    pub fn as_func<T: FromBoolRepr>(&self, value: usize) -> T {
+        let expr = Repr::EXPR(self.get_formula(value));
+        T::convert(&expr)
+    }
+}
 
-        // FIXME: build the expr for target value 1
-        self.assignments.get(0).unwrap().convert()
+impl Variable {
+    fn new(component: usize, value: usize) -> Self {
+        Variable { component, value }
     }
 }
 
