@@ -2,6 +2,7 @@
 
 use std::fmt;
 use std::rc::Rc;
+use std::cell::RefCell;
 
 use regex::Regex;
 
@@ -131,7 +132,7 @@ pub struct Component {
     name: String,
     variables: HashMap<usize, usize>,
     assignments: Vec<Assign>,
-    cached_rules: HashMap<usize, Formula>,
+    cached_rules: RefCell<HashMap<usize, Rc<Formula>>>,
 }
 
 /// A formula associated with a target value
@@ -146,11 +147,23 @@ impl Component {
             name,
             variables: HashMap::new(),
             assignments: vec![],
-            cached_rules: HashMap::new(),
+            cached_rules: RefCell::new(HashMap::new()),
         }
     }
 
-    fn get_formula(&self, value: usize) -> Expr {
+    fn get_formula(&self, value: usize) -> Rc<Formula> {
+        if let Some(f) = self.cached_rules.borrow().get(&value) {
+            return Rc::clone(f);
+        }
+
+        let expr = self.build_variable_formula(value);
+        let f = Rc::new( Formula::from(expr) );
+        self.cached_rules.borrow_mut().insert(value, Rc::clone(&f));
+
+        f
+    }
+
+    fn build_variable_formula(&self, value: usize) -> Expr {
         let mut expr = Expr::FALSE;
         for asg in self.assignments.iter() {
             let cur: Rc<Expr> = asg.formula.convert_as();
@@ -190,7 +203,7 @@ impl Component {
             eprintln!("ERROR: Can not assign a non-existing variable -> using default threshold");
             return self.extend_formula(1, condition);
         }
-        self.cached_rules.clear();
+        self.cached_rules.borrow_mut().clear();
         self.assignments.push(Assign {
             target: value,
             formula: condition,
@@ -203,9 +216,8 @@ impl Component {
     }
 
     pub fn as_func<T: FromBoolRepr>(&self, value: usize) -> Rc<T> {
-        let expr = self.get_formula(value).into_repr();
-        let expr: Rc<T> = T::convert(&expr);
-        expr
+        let f = self.get_formula(value);
+        f.convert_as()
     }
 }
 
