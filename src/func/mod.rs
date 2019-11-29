@@ -10,6 +10,7 @@ use self::gen::Generator;
 use self::paths::Paths;
 
 use std::cell::RefCell;
+use std::rc::Rc;
 use std::fmt;
 
 pub trait VariableNamer {
@@ -65,9 +66,9 @@ impl VariableNamer for TrivialNamer {
 /// Supported function representation formats
 #[derive(Clone)]
 pub enum Repr {
-    EXPR(Expr),
-    GEN(Generator),
-    PRIMES(Paths),
+    EXPR(Rc<Expr>),
+    GEN(Rc<Generator>),
+    PRIMES(Rc<Paths>),
 }
 
 /// Common API for all representations of Boolean functions
@@ -77,8 +78,9 @@ pub trait BoolRepr {
 }
 
 pub trait FromBoolRepr: BoolRepr {
-    fn convert(repr: &Repr) -> Self;
+    fn convert(repr: &Repr) -> Rc<Self>;
     fn is_converted(repr: &Repr) -> bool;
+    fn rc_to_repr(rc: Rc<Self>) -> Repr;
 }
 
 impl BoolRepr for Repr {
@@ -98,7 +100,7 @@ impl Repr {
         value.into_repr()
     }
 
-    pub fn convert_as<T: FromBoolRepr>(&self) -> T {
+    pub fn convert_as<T: FromBoolRepr>(&self) -> Rc<T> {
         T::convert(self)
     }
 
@@ -128,7 +130,7 @@ impl Formula {
         self.cached.borrow_mut().push(repr);
     }
 
-    pub fn convert_as<T: FromBoolRepr>(&self) -> T {
+    pub fn convert_as<T: FromBoolRepr>(&self) -> Rc<T> {
         if self.repr.is_a::<T>() {
             return self.repr.convert_as();
         }
@@ -139,10 +141,10 @@ impl Formula {
         }
 
         // No matching value found, convert it
-        let e: T = self.repr.convert_as();
-        let r = Repr::from(e);
-        self.cache_repr(r.clone());
-        r.convert_as()
+        let e: Rc<T> = self.repr.convert_as();
+        let r = FromBoolRepr::rc_to_repr(e.clone());
+        self.cache_repr(r);
+        e
     }
 }
 

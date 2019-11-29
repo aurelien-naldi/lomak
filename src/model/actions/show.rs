@@ -5,6 +5,8 @@ use crate::model::actions::CLIAction;
 use crate::model::QModel;
 use crate::func::expr::Expr;
 
+use std::rc::Rc;
+
 lazy_static! {
     pub static ref PARAMETERS: Vec<ArgumentDescr> = vec! {
         ArgumentDescr::new("booleanized")
@@ -64,8 +66,7 @@ impl ActionBuilder for ShowBuilder<'_> {
         if self.booleanized {
             for (uid, var) in self.model.variables() {
                 let cpt = self.model.get_component(var.component);
-                let cur = Expr::ATOM(uid);
-                let e: Expr = cpt.as_func(var.value);
+                let e: Rc<Expr> = cpt.as_func(var.value);
 
                 println!("{}: {},{} => {}", uid, cpt.name, var.value, e);
             }

@@ -10,6 +10,7 @@ use crate::solver::clingo::ClingoProblem;
 use crate::solver::SolverMode;
 use itertools::Itertools;
 use std::collections::HashMap;
+use std::rc::Rc;
 
 lazy_static! {
     pub static ref PARAMETERS: Vec<ArgumentDescr> = vec! {
@@ -127,7 +128,7 @@ impl ActionBuilder for TrapspacesBuilder<'_> {
         }
 
         for (uid, var) in self.model.variables() {
-            let e: Expr = self.model.get_component(var.component).as_func(var.value);
+            let e: Rc<Expr> = self.model.get_component(var.component).as_func(var.value);
             let ne = e.not();
             restrict(&mut solver, &e, 2 * uid + 1);
             restrict(&mut solver, &ne, 2 * uid);

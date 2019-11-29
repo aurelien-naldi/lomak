@@ -1,6 +1,7 @@
 //! Logical model: collections of components, with associated variables and functions
 
 use std::fmt;
+use std::rc::Rc;
 
 use regex::Regex;
 
@@ -152,7 +153,7 @@ impl Component {
     fn get_formula(&self, value: usize) -> Expr {
         let mut expr = Expr::FALSE;
         for asg in self.assignments.iter() {
-            let cur: Expr = asg.formula.convert_as();
+            let cur: Rc<Expr> = asg.formula.convert_as();
             if asg.target < value {
                 expr = expr.and(&cur.not());
             } else {
@@ -201,9 +202,10 @@ impl Component {
         self.extend_formula(v, f);
     }
 
-    pub fn as_func<T: FromBoolRepr>(&self, value: usize) -> T {
-        let expr = Repr::EXPR(self.get_formula(value));
-        T::convert(&expr)
+    pub fn as_func<T: FromBoolRepr>(&self, value: usize) -> Rc<T> {
+        let expr = self.get_formula(value).into_repr();
+        let expr: Rc<T> = T::convert(&expr);
+        expr
     }
 }
 
@@ -214,7 +216,7 @@ impl Variable {
 }
 
 impl Assign {
-    pub fn convert<T: FromBoolRepr>(&self) -> T {
+    pub fn convert<T: FromBoolRepr>(&self) -> Rc<T> {
         self.formula.convert_as()
     }
 }

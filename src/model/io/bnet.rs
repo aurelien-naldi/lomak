@@ -3,6 +3,7 @@ use crate::model::io;
 use pest::iterators::*;
 use pest::Parser;
 use std::io::{Error, Write};
+use std::rc::Rc;
 
 use crate::func::expr::{Expr, NamedExpr, Operator};
 use crate::func::Formula;
@@ -107,13 +108,13 @@ impl io::ParsingFormat for BNETFormat {
 impl io::SavingFormat for BNETFormat {
     fn write_rules(&self, model: &dyn QModel, out: &mut dyn Write) -> Result<(), Error> {
         let namer = model.as_namer();
-        for (uid, var) in model.variables() {
+        for (_uid, var) in model.variables() {
             if var.value != 1 {
                 panic!("Multivalued models are not yet fully supported");
             }
-            let func = &model.get_component(var.component).as_func(var.value);
+            let func: Rc<Expr> = model.get_component(var.component).as_func(var.value);
             write!(out, "{}, ", model.get_name(var.component))?;
-            match func {
+            match *func {
                 Expr::TRUE => writeln!(out, "1")?,
                 Expr::FALSE => writeln!(out, "0")?,
                 _ => writeln!(

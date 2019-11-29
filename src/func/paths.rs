@@ -446,16 +446,16 @@ impl fmt::Display for Paths {
 
 impl BoolRepr for Paths {
     fn into_repr(self) -> Repr {
-        Repr::PRIMES(self)
+        Repr::PRIMES(Rc::new(self))
     }
 }
 
 impl FromBoolRepr for Paths {
-    fn convert(repr: &Repr) -> Self {
+    fn convert(repr: &Repr) -> Rc<Self> {
         match repr {
             Repr::PRIMES(p) => p.clone(),
-            Repr::GEN(g) => g.to_expr().prime_implicants(),
-            Repr::EXPR(e) => e.prime_implicants(),
+            Repr::GEN(g) => Rc::new(g.to_expr().prime_implicants()),
+            Repr::EXPR(e) => Rc::new(e.prime_implicants()),
         }
     }
 
@@ -464,5 +464,9 @@ impl FromBoolRepr for Paths {
             Repr::PRIMES(_) => true,
             _ => false,
         }
+    }
+
+    fn rc_to_repr(rc: Rc<Self>) -> Repr {
+        Repr::PRIMES(rc)
     }
 }

@@ -1,6 +1,7 @@
 //! Generate canonical functions based on the list of signed regulators
 
 use std::collections::HashMap;
+use std::rc::Rc;
 use std::fmt;
 
 use crate::func;
@@ -36,7 +37,7 @@ impl Generator {
 
 impl BoolRepr for Generator {
     fn into_repr(self) -> Repr {
-        Repr::GEN(self)
+        Repr::GEN(Rc::new(self))
     }
 }
 

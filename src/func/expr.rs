@@ -66,16 +66,16 @@ impl Expr {
 
 impl BoolRepr for Expr {
     fn into_repr(self) -> Repr {
-        Repr::EXPR(self)
+        Repr::EXPR(Rc::new(self))
     }
 }
 
 impl FromBoolRepr for Expr {
-    fn convert(repr: &Repr) -> Self {
+    fn convert(repr: &Repr) -> Rc<Self> {
         match repr {
             Repr::EXPR(e) => e.clone(),
-            Repr::GEN(g) => g.to_expr(),
-            Repr::PRIMES(p) => p.to_expr(),
+            Repr::GEN(g) => Rc::new(g.to_expr()),
+            Repr::PRIMES(p) => Rc::new(p.to_expr()),
         }
     }
 
@@ -84,6 +84,10 @@ impl FromBoolRepr for Expr {
             Repr::EXPR(_) => true,
             _ => false,
         }
+    }
+
+    fn rc_to_repr(rc: Rc<Self>) -> Repr {
+        Repr::EXPR(rc)
     }
 }
 

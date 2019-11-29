@@ -9,6 +9,7 @@ use crate::solver;
 use crate::func::paths::LiteralSet;
 use crate::solver::SolverMode;
 use itertools::Itertools;
+use std::rc::Rc;
 
 lazy_static! {
     pub static ref PARAMETERS: Vec<ArgumentDescr> = vec! {
@@ -104,7 +105,7 @@ impl ActionBuilder for FixedBuilder<'_> {
         for (uid, var) in self.model.variables() {
             let cpt = self.model.get_component(var.component);
             let cur = Expr::ATOM(uid);
-            let e: Expr = cpt.as_func(var.value);
+            let e: Rc<Expr> = cpt.as_func(var.value);
                 for p in cur.not().and(&e).prime_implicants().items() {
                 solver.restrict(p);
             }
