@@ -5,6 +5,7 @@ use crate::model::actions::CLIAction;
 use crate::model::QModel;
 
 use crate::solver;
+use crate::solver::Solver;
 
 use crate::func::paths::LiteralSet;
 use crate::solver::SolverMode;
@@ -118,7 +119,7 @@ impl ActionBuilder for FixedBuilder<'_> {
             }
         }
 
-        let results = solver.solve();
+        let results = solver.solve_clingo();
         match &self.displayed {
             None => {
                 let s = self

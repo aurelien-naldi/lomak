@@ -1,4 +1,6 @@
-use crate::func::expr::Expr;
+use crate::func::paths::LiteralSet;
+
+use std::fmt;
 
 pub mod clingo;
 
@@ -9,12 +11,38 @@ pub enum SolverMode {
     ALL,
 }
 
+pub struct SolverSolution {
+    number: u64,
+    pattern: LiteralSet,
+}
+
 pub fn get_solver(mode: SolverMode) -> clingo::ClingoProblem {
     clingo::ClingoProblem::new(mode)
 }
 
 pub trait Solver {
-    fn add_constraint(&mut self, e: &Expr);
+    fn restrict(&mut self, p: &LiteralSet);
 
-    fn solve(&self);
+    fn add(&mut self, instruct: &str);
+
+    fn solve<'a>(&'a mut self) -> Box<dyn SolverResults +'a>;
+}
+
+pub trait SolverResults<'a> {
+    fn set_halved(&mut self);
+}
+
+impl SolverSolution {
+    pub fn filter(mut self, filter: &Option<Vec<usize>>) -> SolverSolution {
+        if let Some(uids) = filter {
+            self.pattern = self.pattern.filter_map(uids);
+        }
+        self
+    }
+}
+
+impl fmt::Display for SolverSolution {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:4}: {}", self.number, self.pattern)
+    }
 }

@@ -3,17 +3,14 @@ use itertools::Itertools;
 use regex::Regex;
 
 use crate::func::paths::LiteralSet;
-use crate::solver::SolverMode;
+use crate::solver::{SolverMode, Solver, SolverSolution, SolverResults};
 use std::num::ParseIntError;
-
-use std::fmt;
 
 lazy_static! {
     static ref RE_VAR: Regex = Regex::new(r"v[0-9]+").unwrap();
 }
 
 pub struct ClingoProblem {
-    minsolutions: bool,
     ctl: Control,
 }
 
@@ -22,10 +19,29 @@ pub struct ClingoResults<'a> {
     halved: bool,
 }
 
-pub struct ClingoResultModel {
-    number: u64,
-    model_type: ModelType,
-    pattern: LiteralSet,
+impl Solver for ClingoProblem {
+
+    fn restrict(&mut self, p: &LiteralSet) {
+        let s = p
+            .positive()
+            .iter()
+            .map(|u| format!("v{}", u))
+            .chain(p.negative().iter().map(|u| format!("not v{}", u)))
+            .join(",");
+
+        self.add(&format!(":- {}.", s));
+    }
+
+    fn add(&mut self, instruct: &str) {
+        self.ctl
+            .add("base", &[], instruct)
+            .expect("Failed creating Control.");
+    }
+
+    fn solve<'a>(&'a mut self) -> Box<dyn SolverResults + 'a> {
+        Box::new( self.solve_clingo() )
+    }
+
 }
 
 impl ClingoProblem {
@@ -50,35 +66,12 @@ impl ClingoProblem {
         }
 
         ClingoProblem {
-            minsolutions: false,
             ctl: Control::new(args.into_iter().map(String::from).collect())
                 .expect("Failed creating Control."),
         }
     }
 
-    pub fn minsolution(mut self, b: bool) -> Self {
-        self.minsolutions = b;
-        self
-    }
-
-    pub fn add(&mut self, instruct: &str) {
-        self.ctl
-            .add("base", &[], instruct)
-            .expect("Failed creating Control.");
-    }
-
-    pub fn restrict(&mut self, p: &LiteralSet) {
-        let s = p
-            .positive()
-            .iter()
-            .map(|u| format!("v{}", u))
-            .chain(p.negative().iter().map(|u| format!("not v{}", u)))
-            .join(",");
-
-        self.add(&format!(":- {}.", s));
-    }
-
-    pub fn solve(&mut self) -> ClingoResults {
+    pub fn solve_clingo<'a>(&'a mut self) -> ClingoResults<'a> {
         // ground the base part
         let parts = vec![Part::new("base", &[]).unwrap()];
         self.ctl
@@ -98,8 +91,8 @@ impl ClingoProblem {
     }
 }
 
-impl ClingoResults<'_> {
-    pub fn set_halved(&mut self) {
+impl<'a> SolverResults<'a> for ClingoResults<'a> {
+    fn set_halved(&mut self) {
         self.halved = true;
     }
 }
@@ -119,15 +112,14 @@ impl Drop for ClingoResults<'_> {
 }
 
 impl Iterator for ClingoResults<'_> {
-    type Item = ClingoResultModel;
+    type Item = SolverSolution;
 
-    fn next(&mut self) -> Option<ClingoResultModel> {
+    fn next(&mut self) -> Option<SolverSolution> {
         if let Some(handle) = self.handle.as_mut() {
             handle.resume().expect("Failed resume on solve handle.");
             if let Ok(Some(model)) = handle.model() {
-                return Some(ClingoResultModel {
+                return Some(SolverSolution {
                     number: model.number().unwrap(),
-                    model_type: model.model_type().unwrap(),
                     pattern: model_as_pattern(model, self.halved),
                 });
             }
@@ -136,26 +128,6 @@ impl Iterator for ClingoResults<'_> {
     }
 }
 
-impl ClingoResultModel {
-    pub fn filter(mut self, filter: &Option<Vec<usize>>) -> ClingoResultModel {
-        if let Some(uids) = filter {
-            self.pattern = self.pattern.filter_map(uids);
-        }
-        self
-    }
-}
-
-impl fmt::Display for ClingoResultModel {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let type_string = match self.model_type {
-            ModelType::StableModel => "Stable",
-            ModelType::BraveConsequences => "Brave",
-            ModelType::CautiousConsequences => "Cautious",
-        };
-
-        write!(f, "{} {:4}: {}", type_string, self.number, self.pattern)
-    }
-}
 
 fn model_as_pattern(model: &Model, halved: bool) -> LiteralSet {
     if halved {

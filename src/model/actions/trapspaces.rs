@@ -5,9 +5,11 @@ use crate::model::actions::CLIAction;
 use crate::model::QModel;
 
 use crate::solver;
+use crate::solver::Solver;
 
 use crate::solver::clingo::ClingoProblem;
 use crate::solver::SolverMode;
+use crate::solver::SolverResults;
 use itertools::Itertools;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -150,7 +152,7 @@ impl ActionBuilder for TrapspacesBuilder<'_> {
             }
         }
 
-        let mut results = solver.solve();
+        let mut results = solver.solve_clingo();
         results.set_halved();
         for r in results {
             println!("{}", r);
