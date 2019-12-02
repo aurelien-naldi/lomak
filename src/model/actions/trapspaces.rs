@@ -130,12 +130,12 @@ impl ActionBuilder for TrapspacesBuilder<'_> {
         for (uid, var) in self.model.variables() {
             let e: Rc<Expr> = self.model.get_component(var.component).as_func(var.value);
             let ne = e.not();
-            restrict(&mut solver, &e, 2 * uid + 1);
-            restrict(&mut solver, &ne, 2 * uid);
+            restrict(&mut *solver, &e, 2 * uid + 1);
+            restrict(&mut *solver, &ne, 2 * uid);
 
             if self.percolate {
-                enforce(&mut solver, &e, 2 * uid);
-                enforce(&mut solver, &ne, 2 * uid + 1);
+                enforce(&mut *solver, &e, 2 * uid);
+                enforce(&mut *solver, &ne, 2 * uid + 1);
             }
 
             // Remove the full state space from the solutions when computing elementary trapspaces

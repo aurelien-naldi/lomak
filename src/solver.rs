@@ -2,7 +2,7 @@ use crate::func::paths::LiteralSet;
 
 use std::fmt;
 
-pub mod clingo;
+mod clingo;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum SolverMode {
@@ -16,8 +16,8 @@ pub struct SolverSolution {
     pattern: LiteralSet,
 }
 
-pub fn get_solver(mode: SolverMode) -> clingo::ClingoProblem {
-    clingo::ClingoProblem::new(mode)
+pub fn get_solver(mode: SolverMode) -> Box<dyn Solver> {
+    Box::new( clingo::ClingoProblem::new(mode))
 }
 
 pub trait Solver {

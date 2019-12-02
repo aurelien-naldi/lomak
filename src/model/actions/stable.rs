@@ -5,7 +5,6 @@ use crate::model::actions::CLIAction;
 use crate::model::QModel;
 
 use crate::solver;
-use crate::solver::Solver;
 
 use crate::func::paths::LiteralSet;
 use crate::solver::SolverMode;
