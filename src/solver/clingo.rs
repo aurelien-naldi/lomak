@@ -69,7 +69,7 @@ impl ClingoProblem {
         }
     }
 
-    pub fn solve_clingo<'a>(&'a mut self) -> ClingoResults<'a> {
+    pub fn solve_clingo(&mut self) -> ClingoResults {
         // ground the base part
         let parts = vec![Part::new("base", &[]).unwrap()];
         self.ctl

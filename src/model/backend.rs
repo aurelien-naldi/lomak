@@ -116,7 +116,7 @@ impl QModel for LQModel {
         Box::new(self.components.iter())
     }
 
-    fn get_component<'a>(&'a self, uid: usize) -> &'a Component {
+    fn get_component(&self, uid: usize) -> &Component {
         self.components.get(uid).unwrap()
     }
 
