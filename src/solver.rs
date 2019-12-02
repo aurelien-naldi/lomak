@@ -28,7 +28,8 @@ pub trait Solver {
     fn solve<'a>(&'a mut self) -> Box<dyn SolverResults +'a>;
 }
 
-pub trait SolverResults<'a> {
+pub trait SolverResults<'a>: Iterator<Item=SolverSolution> {
+
     fn set_halved(&mut self);
 }
 

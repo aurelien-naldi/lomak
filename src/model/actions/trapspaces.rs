@@ -7,9 +7,7 @@ use crate::model::QModel;
 use crate::solver;
 use crate::solver::Solver;
 
-use crate::solver::clingo::ClingoProblem;
 use crate::solver::SolverMode;
-use crate::solver::SolverResults;
 use itertools::Itertools;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -152,7 +150,7 @@ impl ActionBuilder for TrapspacesBuilder<'_> {
             }
         }
 
-        let mut results = solver.solve_clingo();
+        let mut results = solver.solve();
         results.set_halved();
         for r in results {
             println!("{}", r);
@@ -160,7 +158,7 @@ impl ActionBuilder for TrapspacesBuilder<'_> {
     }
 }
 
-fn restrict(solver: &mut ClingoProblem, e: &Expr, u: usize) {
+fn restrict(solver: &mut dyn Solver, e: &Expr, u: usize) {
     for p in e.prime_implicants().items() {
         let s = p
             .positive()
@@ -177,7 +175,7 @@ fn restrict(solver: &mut ClingoProblem, e: &Expr, u: usize) {
     }
 }
 
-fn enforce(solver: &mut ClingoProblem, e: &Expr, u: usize) {
+fn enforce(solver: &mut dyn Solver, e: &Expr, u: usize) {
     for p in e.prime_implicants().items() {
         let s = p
             .positive()

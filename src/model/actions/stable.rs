@@ -119,7 +119,7 @@ impl ActionBuilder for FixedBuilder<'_> {
             }
         }
 
-        let results = solver.solve_clingo();
+        let results = solver.solve();
         match &self.displayed {
             None => {
                 let s = self
