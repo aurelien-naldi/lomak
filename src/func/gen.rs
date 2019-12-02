@@ -1,8 +1,8 @@
 //! Generate canonical functions based on the list of signed regulators
 
 use std::collections::HashMap;
-use std::rc::Rc;
 use std::fmt;
+use std::rc::Rc;
 
 use crate::func;
 use crate::func::expr::Expr;

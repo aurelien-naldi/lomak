@@ -3,7 +3,7 @@ use itertools::Itertools;
 use regex::Regex;
 
 use crate::func::paths::LiteralSet;
-use crate::solver::{SolverMode, Solver, SolverSolution, SolverResults};
+use crate::solver::{Solver, SolverMode, SolverResults, SolverSolution};
 use std::num::ParseIntError;
 
 lazy_static! {
@@ -20,7 +20,6 @@ pub struct ClingoResults<'a> {
 }
 
 impl Solver for ClingoProblem {
-
     fn restrict(&mut self, p: &LiteralSet) {
         let s = p
             .positive()
@@ -39,9 +38,8 @@ impl Solver for ClingoProblem {
     }
 
     fn solve<'a>(&'a mut self) -> Box<dyn SolverResults + 'a> {
-        Box::new( self.solve_clingo() )
+        Box::new(self.solve_clingo())
     }
-
 }
 
 impl ClingoProblem {
@@ -127,7 +125,6 @@ impl Iterator for ClingoResults<'_> {
         None
     }
 }
-
 
 fn model_as_pattern(model: &Model, halved: bool) -> LiteralSet {
     if halved {

@@ -607,7 +607,6 @@ mod tests {
         let expr = a.or(&b).not();
         assert_eq!(expr.simplify(), None);
 
-
         let c_expr = Expr::FALSE.or(&expr);
         let s_expr = c_expr.simplify();
         assert_ne!(s_expr, None);

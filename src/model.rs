@@ -1,8 +1,8 @@
 //! Logical model: collections of components, with associated variables and functions
 
+use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
-use std::cell::RefCell;
 
 use regex::Regex;
 
@@ -157,7 +157,7 @@ impl Component {
         }
 
         let expr = self.build_variable_formula(value);
-        let f = Rc::new( Formula::from(expr) );
+        let f = Rc::new(Formula::from(expr));
         self.cached_rules.borrow_mut().insert(value, Rc::clone(&f));
 
         f
@@ -174,21 +174,20 @@ impl Component {
             }
         }
 
-
-        match self.variables.get( &(value+1)) {
+        match self.variables.get(&(value + 1)) {
             None => (),
             Some(next_var) => {
-                let cur_var = self.variables.get( &value).unwrap();
+                let cur_var = self.variables.get(&value).unwrap();
                 let cur_active = Expr::ATOM(*cur_var);
                 let next_active = Expr::ATOM(*next_var);
-                expr = expr.or( &cur_active.and(&next_active));
+                expr = expr.or(&cur_active.and(&next_active));
             }
         }
 
         if value > 1 {
-            let prev_var = self.variables.get( &(value-1)).unwrap();
+            let prev_var = self.variables.get(&(value - 1)).unwrap();
             let prev_active = Expr::ATOM(*prev_var);
-            expr = expr.and( &prev_active);
+            expr = expr.and(&prev_active);
         }
 
         expr.simplify().unwrap_or(expr)

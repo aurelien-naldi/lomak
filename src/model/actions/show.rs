@@ -1,9 +1,9 @@
 use crate::model::actions::ActionBuilder;
 use crate::model::actions::ArgumentDescr;
 
+use crate::func::expr::Expr;
 use crate::model::actions::CLIAction;
 use crate::model::QModel;
-use crate::func::expr::Expr;
 
 use std::rc::Rc;
 
@@ -50,7 +50,10 @@ pub struct ShowBuilder<'a> {
 
 impl<'a> ShowBuilder<'a> {
     pub fn new(model: &'a dyn QModel) -> ShowBuilder<'a> {
-        ShowBuilder { model, booleanized: false }
+        ShowBuilder {
+            model,
+            booleanized: false,
+        }
     }
 }
 

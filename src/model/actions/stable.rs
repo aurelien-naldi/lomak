@@ -106,7 +106,7 @@ impl ActionBuilder for FixedBuilder<'_> {
             let cpt = self.model.get_component(var.component);
             let cur = Expr::ATOM(uid);
             let e: Rc<Expr> = cpt.as_func(var.value);
-                for p in cur.not().and(&e).prime_implicants().items() {
+            for p in cur.not().and(&e).prime_implicants().items() {
                 solver.restrict(p);
             }
             for p in cur.and(&e.not()).prime_implicants().items() {

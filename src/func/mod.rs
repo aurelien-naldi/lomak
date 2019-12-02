@@ -10,8 +10,8 @@ use self::gen::Generator;
 use self::paths::Paths;
 
 use std::cell::RefCell;
-use std::rc::Rc;
 use std::fmt;
+use std::rc::Rc;
 
 pub trait VariableNamer {
     /// Write the name corresponding to the given UID

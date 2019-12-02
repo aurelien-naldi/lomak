@@ -17,7 +17,7 @@ pub struct SolverSolution {
 }
 
 pub fn get_solver(mode: SolverMode) -> Box<dyn Solver> {
-    Box::new( clingo::ClingoProblem::new(mode))
+    Box::new(clingo::ClingoProblem::new(mode))
 }
 
 pub trait Solver {
@@ -25,11 +25,10 @@ pub trait Solver {
 
     fn add(&mut self, instruct: &str);
 
-    fn solve<'a>(&'a mut self) -> Box<dyn SolverResults +'a>;
+    fn solve<'a>(&'a mut self) -> Box<dyn SolverResults + 'a>;
 }
 
-pub trait SolverResults<'a>: Iterator<Item=SolverSolution> {
-
+pub trait SolverResults<'a>: Iterator<Item = SolverSolution> {
     fn set_halved(&mut self);
 }
 
