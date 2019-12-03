@@ -5,6 +5,7 @@ use std::vec::Vec;
 use crate::func::expr::Expr;
 use crate::func::VariableNamer;
 use crate::func::*;
+use crate::func::state::State;
 
 #[derive(Clone, PartialEq, Eq, Default)]
 pub struct LiteralSet {
@@ -409,6 +410,23 @@ impl LiteralSet {
         }
         result
     }
+
+    /// Test if the pattern contains a specific state
+    ///
+    /// All variables fixed as positive in the pattern must
+    /// be active in the state.
+    /// All variables fixed as negative in the pattern must
+    /// be inactive in the state.
+    pub fn contains_state(&self, state: &State) -> bool {
+        if state.is_superset(&self.positive) {
+            let mut conflicts = state.clone();
+            conflicts.intersect_with(&self.negative);
+            if conflicts.is_empty() {
+                return true;
+            }
+        }
+        false
+    }
 }
 
 impl fmt::Display for LiteralSet {
@@ -447,6 +465,15 @@ impl fmt::Display for Paths {
 impl BoolRepr for Paths {
     fn into_repr(self) -> Repr {
         Repr::PRIMES(Rc::new(self))
+    }
+
+    fn eval(&self, state: &State) -> bool {
+        for p in self.paths.iter() {
+            if p.contains_state(state) {
+                return true;
+            }
+        }
+        false
     }
 }
 

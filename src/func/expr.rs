@@ -9,6 +9,7 @@ use core::ops::Not;
 use crate::func;
 use crate::func::paths::LiteralSet;
 use crate::func::*;
+use crate::func::state::State;
 
 /* ************************************************************************************* */
 /* ************************ Data structures and basic operations *********************** */
@@ -67,6 +68,16 @@ impl Expr {
 impl BoolRepr for Expr {
     fn into_repr(self) -> Repr {
         Repr::EXPR(Rc::new(self))
+    }
+
+    fn eval(&self, state: &State) -> bool {
+        match self {
+            Expr::TRUE => true,
+            Expr::FALSE => false,
+            Expr::ATOM(u) => state.contains(*u),
+            Expr::NATOM(u) => !state.contains(*u),
+            Expr::OPER(op,children) => op.eval(children, state),
+        }
     }
 }
 
@@ -166,6 +177,29 @@ impl Operator {
             Operator::OR => true,
             Operator::NAND => false,
             Operator::NOR => true,
+        }
+    }
+
+    fn eval(self, children: &Children, state: &State) -> bool {
+        match self {
+            Operator::AND => {
+                for c in children.data.iter() {
+                    if !c.eval(state) {
+                        return false;
+                    }
+                }
+                true
+            },
+            Operator::OR => {
+                for c in children.data.iter() {
+                    if c.eval(state) {
+                        return true;
+                    }
+                }
+                false
+            },
+            Operator::NAND => !Operator::AND.eval(children, state),
+            Operator::NOR => !Operator::OR.eval(children, state),
         }
     }
 }

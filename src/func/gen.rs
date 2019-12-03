@@ -7,6 +7,7 @@ use std::rc::Rc;
 use crate::func;
 use crate::func::expr::Expr;
 use crate::func::{BoolRepr, Repr};
+use crate::func::state::State;
 
 #[derive(Clone)]
 pub enum Sign {
@@ -27,7 +28,7 @@ impl Generator {
         for &k in self.map.keys() {
             match self.map.get(&k) {
                 None => (),
-                Some(Sign::POSITIVE) => expr = expr.and(&Expr::ATOM(k)),
+                Some(Sign::POSITIVE) => expr = expr.or(&Expr::ATOM(k)),
                 Some(Sign::NEGATIVE) => nexpr = nexpr.and(&Expr::NATOM(k)),
             }
         }
@@ -38,6 +39,20 @@ impl Generator {
 impl BoolRepr for Generator {
     fn into_repr(self) -> Repr {
         Repr::GEN(Rc::new(self))
+    }
+
+    fn eval(&self, state: &State) -> bool {
+        let mut has_activator = false;
+        for &k in self.map.keys() {
+            if state.contains(k) {
+                match self.map.get(&k) {
+                    None => (),
+                    Some(Sign::POSITIVE) => has_activator = true,
+                    Some(Sign::NEGATIVE) => return false,
+                }
+            }
+        }
+        has_activator
     }
 }
 

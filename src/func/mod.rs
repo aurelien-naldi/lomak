@@ -4,6 +4,7 @@ pub mod convert;
 pub mod expr;
 pub mod gen;
 pub mod paths;
+pub mod state;
 
 use self::expr::Expr;
 use self::gen::Generator;
@@ -12,6 +13,7 @@ use self::paths::Paths;
 use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
+use crate::func::state::State;
 
 pub trait VariableNamer {
     /// Write the name corresponding to the given UID
@@ -75,6 +77,8 @@ pub enum Repr {
 pub trait BoolRepr {
     /// Wrap this function into a Boolean repr
     fn into_repr(self) -> Repr;
+
+    fn eval(&self, state: &State) -> bool;
 }
 
 pub trait FromBoolRepr: BoolRepr {
@@ -86,6 +90,14 @@ pub trait FromBoolRepr: BoolRepr {
 impl BoolRepr for Repr {
     fn into_repr(self) -> Repr {
         self
+    }
+
+    fn eval(&self, state: &State) -> bool {
+        match self {
+            Repr::EXPR(e) => e.eval(state),
+            Repr::PRIMES(p) => p.eval(state),
+            Repr::GEN(g) => g.eval(state),
+        }
     }
 }
 
