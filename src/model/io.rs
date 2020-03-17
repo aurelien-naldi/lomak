@@ -10,6 +10,7 @@ use std::path::Path;
 
 mod bnet;
 mod mnet;
+mod boolsim;
 
 /// A Format may provide import and export filters
 pub trait Format: TrySaving + TryParsing {}
@@ -83,6 +84,7 @@ pub fn get_format(fmt: &str) -> Result<Box<dyn Format>, io::Error> {
     match fmt.to_lowercase().trim() {
         "mnet" => Result::Ok(Box::new(mnet::MNETFormat::new())),
         "bnet" => Result::Ok(Box::new(bnet::BNETFormat::new())),
+        "bsim" => Result::Ok(Box::new(boolsim::BoolSimFormat::new())),
         _ => Err(io::Error::new(ErrorKind::NotFound, "No matching format")),
     }
 }
