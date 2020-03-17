@@ -618,6 +618,7 @@ impl<'a> BitOr<&'a Expr> for &'a Expr {
 mod tests {
     use super::*;
     use crate::func::*;
+    use crate::func::paths::Paths;
 
     #[test]
     fn conj_extension() {
@@ -649,5 +650,28 @@ mod tests {
 
         let n_expr = a.not().and(&b.not());
         assert_eq!(c_expr.nnf().unwrap(), n_expr);
+    }
+
+    #[test]
+    fn evaluation() {
+        let a = Expr::ATOM(1);
+        let b = Expr::ATOM(2);
+        let c = Expr::ATOM(3);
+
+        let expr = a.or(&b).not().and(&c.not()).or(&a);
+        let path: Rc<Paths> = expr.clone().into_repr().convert_as();
+
+        let mut state = State::new();
+        assert_eq!( expr.eval(&state), true );
+        assert_eq!( path.eval(&state), true );
+        state.insert(2);
+        assert_eq!( expr.eval(&state), false );
+        assert_eq!( path.eval(&state), false );
+        state.insert(3);
+        assert_eq!( expr.eval(&state), false );
+        assert_eq!( path.eval(&state), false );
+        state.insert(1);
+        assert_eq!( expr.eval(&state), true );
+        assert_eq!( path.eval(&state), true );
     }
 }

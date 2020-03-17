@@ -158,6 +158,10 @@ impl Formula {
         self.cache_repr(r);
         e
     }
+
+    pub fn eval(&self, state: &State) -> bool {
+        self.repr.eval(state)
+    }
 }
 
 impl fmt::Display for Formula {

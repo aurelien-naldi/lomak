@@ -10,6 +10,7 @@ use crate::func::expr::*;
 use crate::func::*;
 use std::collections::HashMap;
 use std::fmt::Display;
+use crate::func::state::State;
 
 pub mod actions;
 pub mod io;
@@ -113,6 +114,19 @@ pub trait QModel: VariableNamer {
     fn get_component(&self, uid: usize) -> &Component;
 
     fn for_display(&self) -> &dyn Display;
+
+    /// Compute the target state (synchronous image) of a given model state.
+    /// Evaluates every Boolean function in the model using the default representation.
+    fn get_target_state(&self, state: &State) -> State {
+        let mut target = State::new();
+        for (uid, var) in self.variables() {
+            let cmp = self.get_component(var.component);
+            if cmp.get_formula(var.value).eval(state) {
+                target.insert(uid);
+            }
+        }
+        target
+    }
 }
 
 pub type LQModelRef = Box<dyn QModel>;
