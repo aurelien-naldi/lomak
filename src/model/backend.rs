@@ -128,6 +128,10 @@ impl QModel for LQModel {
         true
     }
 
+    fn get_variable(&self, var: usize) -> Variable {
+        *self.variables.get(var).unwrap()
+    }
+
     fn variables<'a>(&'a self) -> Box<dyn Iterator<Item = (usize, &'a Variable)> + 'a> {
         Box::new(self.variables.iter())
     }

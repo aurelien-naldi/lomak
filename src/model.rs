@@ -67,6 +67,23 @@ pub trait QModel: VariableNamer {
     /// Find or create a component with a given name
     fn ensure_component(&mut self, name: &str) -> usize;
 
+    /// Find or create a component with a given name
+    fn add_component(&mut self, pattern: &str) -> usize {
+        if self.component_by_name(pattern).is_none() {
+            return self.ensure_component(pattern);
+        };
+
+        let mut inc = 1;
+        loop {
+            let name = format!("{}_{}", pattern, inc);
+            if self.component_by_name(&name).is_none() {
+                return self.ensure_component(&name);
+            };
+        }
+
+        panic!("Should have found an available name");
+    }
+
     /// Find or create a variable with a given component name and threshold value
     ///
     /// Equivalent to ensure_variable_with_threshold(name, 1)
@@ -114,6 +131,12 @@ pub trait QModel: VariableNamer {
 
     fn components<'a>(&'a self) -> Box<dyn Iterator<Item = (usize, &'a SharedComponent)> + 'a>;
 
+    fn get_variable(&self, var: usize) -> Variable;
+
+    fn components_copy(&self) -> Vec<(usize, SharedComponent)> {
+        self.components().map(|(u, c)| (u, c.clone())).collect()
+    }
+
     fn get_component_ref(&self, uid: usize) -> SharedComponent;
 
     fn for_display(&self) -> &dyn Display;
@@ -139,6 +162,7 @@ pub fn new_model() -> LQModelRef {
 }
 
 /// A Boolean variable associated to a qualitative threshold of one of the components
+#[derive(Copy, Clone)]
 pub struct Variable {
     component: usize,
     value: usize,
@@ -174,7 +198,10 @@ impl SharedComponent {
         self.rc.as_ref().borrow()
     }
 
-    pub fn borrow_mut(&mut self) -> RefMut<Component> {
+    /// Borrow a mutable version of this shared component.
+    ///
+    /// TODO: should this require a mutable ref?
+    pub fn borrow_mut(&self) -> RefMut<Component> {
         self.rc.as_ref().borrow_mut()
     }
 }

@@ -3,6 +3,7 @@ use crate::model::LQModelRef;
 use clap::{App, ArgMatches};
 use std::collections::HashMap;
 
+pub mod buffer;
 pub mod perturbation;
 pub mod rename;
 
@@ -28,6 +29,7 @@ impl ModifierManager {
         }
         .modifier(perturbation::cli_modifier())
         .modifier(rename::cli_modifier())
+        .modifier(buffer::cli_modifier())
     }
 
     fn modifier(mut self, modifier: Box<dyn CLIModifier>) -> Self {

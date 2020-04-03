@@ -37,6 +37,10 @@ pub struct Children {
     pub data: Rc<Vec<Expr>>,
 }
 
+pub trait AtomReplacer {
+    fn ask_buffer(&mut self, var: usize, value: bool) -> Option<Expr>;
+}
+
 impl Expr {
     pub fn from_bool(b: bool) -> Self {
         if b {
@@ -229,15 +233,12 @@ impl Expr {
     /// The replacer parameter provides the replacement subfunctions for individual variables.
     ///
     /// Returns Some(result) if at least one variable was changed, None otherwise
-    pub fn replace_variables(
-        &self,
-        replacer: &impl Fn(usize, bool) -> Option<Expr>,
-    ) -> Option<Self> {
+    pub fn replace_variables(&self, replacer: &mut impl AtomReplacer) -> Option<Self> {
         match self {
             Expr::TRUE => None,
             Expr::FALSE => None,
-            Expr::ATOM(u) => replacer(*u, true),
-            Expr::NATOM(u) => replacer(*u, false),
+            Expr::ATOM(u) => replacer.ask_buffer(*u, true),
+            Expr::NATOM(u) => replacer.ask_buffer(*u, false),
             Expr::OPER(o, c) => {
                 let mut has_changed = false;
                 let mut new_children: Vec<Expr> = Vec::new();
