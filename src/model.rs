@@ -1,6 +1,6 @@
 //! Logical model: collections of components, with associated variables and functions
 
-use std::cell::RefCell;
+use std::cell::{RefCell, Ref, RefMut};
 use std::fmt;
 use std::rc::Rc;
 
@@ -93,7 +93,10 @@ pub trait QModel: VariableNamer {
         self.set_rule(uid, Formula::from_bool(value));
     }
 
-    fn get_name(&self, uid: usize) -> &str;
+    fn get_name(&self, uid: usize) -> String {
+        let cpt = self.get_component_ref(uid);
+        format!("{}", cpt.borrow().name)
+    }
 
     fn set_component_name(&mut self, uid: usize, name: String) -> bool;
 
@@ -109,9 +112,9 @@ pub trait QModel: VariableNamer {
 
     fn variables<'a>(&'a self) -> Box<dyn Iterator<Item = (usize, &'a Variable)> + 'a>;
 
-    fn components<'a>(&'a self) -> Box<dyn Iterator<Item = (usize, &'a Component)> + 'a>;
+    fn components<'a>(&'a self) -> Box<dyn Iterator<Item = (usize, &'a SharedComponent)> + 'a>;
 
-    fn get_component(&self, uid: usize) -> &Component;
+    fn get_component_ref(&self, uid: usize) -> SharedComponent;
 
     fn for_display(&self) -> &dyn Display;
 
@@ -120,7 +123,8 @@ pub trait QModel: VariableNamer {
     fn get_target_state(&self, state: &State) -> State {
         let mut target = State::new();
         for (uid, var) in self.variables() {
-            let cmp = self.get_component(var.component);
+            let cmp = self.get_component_ref(var.component);
+            let cmp = cmp.borrow();
             if cmp.get_formula(var.value).eval(state) {
                 target.insert(uid);
             }
@@ -140,8 +144,12 @@ pub struct Variable {
     value: usize,
 }
 
-/// The component of a model provide the name, a list of
-/// available variables and the dynamic rule.
+/// A formula associated with a target value
+pub struct Assign {
+    pub target: usize,
+    pub formula: Formula,
+}
+
 pub struct Component {
     name: String,
     variables: HashMap<usize, usize>,
@@ -149,12 +157,30 @@ pub struct Component {
     cached_rules: RefCell<HashMap<usize, Rc<Formula>>>,
 }
 
-/// A formula associated with a target value
-pub struct Assign {
-    pub target: usize,
-    pub formula: Formula,
+/// A sharable reference to a component
+#[derive(Clone)]
+pub struct SharedComponent {
+    rc: Rc<RefCell<Component>>
 }
 
+impl SharedComponent {
+    pub fn from(mut component: Component) -> Self {
+        SharedComponent {
+            rc: Rc::new( RefCell::new(component))
+        }
+    }
+
+    pub fn borrow(&self) -> Ref<Component> {
+        self.rc.as_ref().borrow()
+    }
+
+    pub fn borrow_mut(&mut self) -> RefMut<Component> {
+        self.rc.as_ref().borrow_mut()
+    }
+}
+
+/// The component of a model provide the name, a list of
+/// available variables and the dynamic rule.
 impl Component {
     fn new(name: String) -> Self {
         Component {
@@ -165,16 +191,8 @@ impl Component {
         }
     }
 
-    fn get_formula(&self, value: usize) -> Rc<Formula> {
-        if let Some(f) = self.cached_rules.borrow().get(&value) {
-            return Rc::clone(f);
-        }
-
-        let expr = self.build_variable_formula(value);
-        let f = Rc::new(Formula::from(expr));
-        self.cached_rules.borrow_mut().insert(value, Rc::clone(&f));
-
-        f
+    pub fn into_shared(mut self) -> SharedComponent {
+        SharedComponent::from(self)
     }
 
     fn build_variable_formula(&self, value: usize) -> Expr {
@@ -207,8 +225,17 @@ impl Component {
         expr.simplify().unwrap_or(expr)
     }
 
-    pub fn extend<T: BoolRepr>(&mut self, value: usize, condition: T) {
-        self.extend_formula(value, Formula::from(condition));
+
+    fn get_formula(&self, value: usize) -> Rc<Formula> {
+        if let Some(f) = self.cached_rules.borrow().get(&value) {
+            return Rc::clone(f);
+        }
+
+        let expr = self.build_variable_formula(value);
+        let f = Rc::new(Formula::from(expr));
+        self.cached_rules.borrow_mut().insert(value, Rc::clone(&f));
+
+        f
     }
 
     pub fn extend_formula(&mut self, value: usize, condition: Formula) {
@@ -223,14 +250,25 @@ impl Component {
         })
     }
 
-    fn set_formula(&mut self, f: Formula, v: usize) {
+    pub fn set_formula(&mut self, f: Formula, v: usize) {
         self.assignments.clear();
         self.extend_formula(v, f);
     }
 
-    pub fn as_func<T: FromBoolRepr>(&self, value: usize) -> Rc<T> {
-        let f = self.get_formula(value);
-        f.convert_as()
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn set_name(&mut self, name: String) {
+        self.name = name;
+    }
+
+    pub fn assignments<'a>(&'a self) -> Box<dyn Iterator<Item = &Assign> + 'a> {
+        Box::new( self.assignments.iter())
+    }
+
+    pub fn variables<'a>(&'a self) -> &HashMap<usize, usize> {
+        &self.variables
     }
 }
 

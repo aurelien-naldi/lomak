@@ -222,6 +222,44 @@ impl Children {
 }
 
 /* ************************************************************************************* */
+/*                              Replace parts of the function                            */
+/* ************************************************************************************* */
+impl Expr {
+
+    /// Replace some variables with new sub-functions when needed.
+    /// The replacer parameter provides the replacement subfunctions for individual variables.
+    ///
+    /// Returns Some(result) if at least one variable was changed, None otherwise
+    pub fn replace_variables(&self, replacer: & impl Fn(usize, bool) -> Option<Expr>) -> Option<Self> {
+        match self {
+            Expr::TRUE => None,
+            Expr::FALSE => None,
+            Expr::ATOM(u) => replacer(*u, true),
+            Expr::NATOM(u) => replacer(*u, false),
+            Expr::OPER(o, c) => {
+                let mut has_changed = false;
+                let mut new_children: Vec<Expr> = Vec::new();
+                for child in c.data.iter() {
+                    match child.replace_variables(replacer) {
+                        None => new_children.push(child.clone()),
+                        Some(c) => {
+                            new_children.push(c);
+                            has_changed = true;
+                        }
+                    }
+                }
+
+                if has_changed {
+                    return Some(Expr::OPER(o.clone(), Children{data: Rc::new(new_children)}));
+                }
+                None
+            },
+        }
+    }
+
+}
+
+/* ************************************************************************************* */
 /*                                  Simplification and NNF                               */
 /* ************************************************************************************* */
 impl Expr {

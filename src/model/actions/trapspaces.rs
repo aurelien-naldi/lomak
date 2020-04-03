@@ -128,7 +128,8 @@ impl ActionBuilder for TrapspacesBuilder<'_> {
         }
 
         for (uid, var) in self.model.variables() {
-            let e: Rc<Expr> = self.model.get_component(var.component).as_func(var.value);
+            let cpt = self.model.get_component_ref(var.component);
+            let e: Rc<Expr> = cpt.borrow().get_formula(var.value).convert_as();
             let ne = e.not();
             restrict(&mut *solver, &e, 2 * uid + 1);
             restrict(&mut *solver, &ne, 2 * uid);

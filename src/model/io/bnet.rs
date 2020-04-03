@@ -112,7 +112,7 @@ impl io::SavingFormat for BNETFormat {
             if var.value != 1 {
                 panic!("Multivalued models are not yet fully supported");
             }
-            let func: Rc<Expr> = model.get_component(var.component).as_func(var.value);
+            let func: Rc<Expr> = model.get_component_ref(var.component).borrow().get_formula(var.value).convert_as();
             write!(out, "{}, ", model.get_name(var.component))?;
             match *func {
                 Expr::TRUE => writeln!(out, "1")?,

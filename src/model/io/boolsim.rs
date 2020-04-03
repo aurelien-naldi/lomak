@@ -104,7 +104,7 @@ impl io::SavingFormat for BoolSimFormat {
             if var.value != 1 {
                 panic!("Multivalued models are not yet fully supported");
             }
-            let paths: Rc<Paths> = model.get_component(var.component).as_func(var.value);
+            let paths: Rc<Paths> = model.get_component_ref(var.component).borrow().get_formula(var.value).convert_as();
             for func in paths.items() {
                 // FIXME: write boolsim
 

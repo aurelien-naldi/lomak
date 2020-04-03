@@ -5,9 +5,14 @@ use std::fmt;
 
 use slab;
 
-use crate::func::{Grouped, VariableNamer};
+use crate::func::{Grouped, VariableNamer, Formula};
 use crate::model::*;
 use std::fmt::Display;
+use std::rc::Rc;
+use std::borrow::{BorrowMut, Borrow};
+use std::cell::{RefCell, Ref, RefMut};
+use std::ops::{Deref, DerefMut};
+use crate::func::expr::Expr;
 
 pub fn new_model() -> impl QModel {
     LQModel {
@@ -18,9 +23,17 @@ pub fn new_model() -> impl QModel {
 }
 
 struct LQModel {
-    components: slab::Slab<Component>,
+    components: slab::Slab<SharedComponent>,
     variables: slab::Slab<Variable>,
     name2uid: HashMap<String, usize>,
+}
+
+
+impl LQModel {
+
+    fn component_mut<'a>(&'a mut self, cid: usize) -> SharedComponent {
+        self.components[cid].clone()
+    }
 }
 
 impl QModel for LQModel {
@@ -37,7 +50,7 @@ impl QModel for LQModel {
             return self.associated_variable(cid);
         }
 
-        if let Some(vid) = self.components[cid].variables.get(&value) {
+        if let Some(vid) = self.get_component_ref(cid).borrow().variables().get(&value) {
             return Some(*vid);
         }
         None
@@ -51,7 +64,7 @@ impl QModel for LQModel {
         // Create a new component
         // TODO: maintain a list of components?
         let n = name.to_owned();
-        let cid = self.components.insert(Component::new(n.clone()));
+        let cid = self.components.insert(Component::new(n.clone()).into_shared());
         self.name2uid.insert(n, cid);
         cid
     }
@@ -68,25 +81,26 @@ impl QModel for LQModel {
         }
 
         // Create a new variable and add it to the component
-        let component = &mut self.components[cid];
+        let component = self.component_mut(cid);
         let vid = self.variables.insert(Variable::new(cid, value));
-        component.variables.insert(value, vid);
-
+        component.rc.as_ref().borrow_mut().variables.insert(value, vid);
         vid
     }
 
     fn set_rule(&mut self, target: usize, rule: Formula) {
         let var = &self.variables[target];
-        self.components[var.component].set_formula(rule, var.value);
+        let cid = var.component;
+        let val = var.value;
+        let mut cpt = self.component_mut(cid);
+        cpt.borrow_mut().set_formula(rule, val);
     }
 
     fn extend_rule(&mut self, target: usize, rule: Formula) {
         let var = &self.variables[target];
-        self.components[var.component].extend_formula(var.value, rule);
-    }
-
-    fn get_name(&self, uid: usize) -> &str {
-        &self.components[uid].name
+        let cid = var.component;
+        let val = var.value;
+        let mut cpt = self.component_mut(cid);
+        cpt.borrow_mut().extend_formula(val, rule);
     }
 
     fn set_component_name(&mut self, uid: usize, name: String) -> bool {
@@ -104,7 +118,8 @@ impl QModel for LQModel {
         self.name2uid.remove(&old_name);
         self.name2uid.insert(name.clone(), uid);
 
-        self.components[uid].name = name;
+        let mut cpt = self.component_mut(uid);
+        cpt.borrow_mut().set_name(name);
         true
     }
 
@@ -112,12 +127,12 @@ impl QModel for LQModel {
         Box::new(self.variables.iter())
     }
 
-    fn components<'a>(&'a self) -> Box<dyn Iterator<Item = (usize, &'a Component)> + 'a> {
+    fn components<'a>(&'a self) -> Box<dyn Iterator<Item = (usize, &'a SharedComponent)> + 'a> {
         Box::new(self.components.iter())
     }
 
-    fn get_component(&self, uid: usize) -> &Component {
-        self.components.get(uid).unwrap()
+    fn get_component_ref(&self, uid: usize) -> SharedComponent {
+        self.components[uid].clone()
     }
 
     fn for_display(&self) -> &dyn Display {
@@ -130,7 +145,8 @@ impl LQModel {}
 impl VariableNamer for LQModel {
     fn format_name(&self, f: &mut fmt::Formatter, uid: usize) -> fmt::Result {
         let var = &self.variables[uid];
-        let cmp = &self.components[var.component];
+        let cmp = self.get_component_ref(var.component);
+        let cmp = cmp.borrow();
         if var.value != 1 {
             write!(f, "{}:{}", cmp.name, var.value)
         } else {
@@ -147,8 +163,9 @@ impl fmt::Display for LQModel {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let namer = self.as_namer();
 
-        for (_, component) in &self.components {
-            for a in &component.assignments {
+        for (_, component) in self.components() {
+            let component = component.borrow();
+            for a in component.assignments() {
                 write!(f, "{}", component.name)?;
                 if a.target != 1 {
                     write!(f, ":{}", a.target)?;
@@ -164,9 +181,10 @@ impl fmt::Display for LQModel {
 
 impl fmt::Debug for LQModel {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for (u, c) in &self.components {
+        for (u, c) in self.components() {
+            let c = c.borrow();
             write!(f, "{} ({}):", u, c.name)?;
-            for v in c.variables.keys() {
+            for v in c.variables().keys() {
                 write!(f, "  {}", v)?;
             }
             writeln!(f)?;

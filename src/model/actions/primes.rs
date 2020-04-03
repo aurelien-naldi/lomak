@@ -67,7 +67,7 @@ impl ActionBuilder for PrimeBuilder<'_> {
 
         for (uid, var) in self.model.variables() {
             let primes: Rc<paths::Paths> =
-                self.model.get_component(var.component).as_func(var.value);
+                self.model.get_component_ref(var.component).borrow().get_formula(var.value).convert_as();
             println!("PI {}:\n{}", self.model.name(uid), primes);
         }
     }
@@ -84,11 +84,14 @@ impl<'a> PrimeBuilder<'a> {
             } else {
                 println!(",");
             }
-            let cpt = self.model.get_component(var.component);
-            let name = self.model.get_name(uid);
-            let pos_primes: Rc<paths::Paths> = cpt.as_func(var.value);
+            let cpt = self.model.get_component_ref(var.component);
+            let cpt = cpt.borrow();
+            // FIXME: should it be the name of the variable instead of the component?
+            let name = &cpt.name;
+            let pos_primes: Rc<paths::Paths> = cpt.get_formula(var.value).convert_as();
             let neg_primes = cpt
-                .as_func::<expr::Expr>(var.value)
+                .get_formula(var.value)
+                .convert_as::<expr::Expr>()
                 .not()
                 .prime_implicants();
             println!("\"{}\":[", name);

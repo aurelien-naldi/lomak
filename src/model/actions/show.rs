@@ -68,8 +68,9 @@ impl ActionBuilder for ShowBuilder<'_> {
     fn call(&self) {
         if self.booleanized {
             for (uid, var) in self.model.variables() {
-                let cpt = self.model.get_component(var.component);
-                let e: Rc<Expr> = cpt.as_func(var.value);
+                let cpt = self.model.get_component_ref(var.component);
+                let cpt = cpt.borrow();
+                let e: Rc<Expr> = cpt.get_formula(var.value).convert_as();
 
                 println!("{}: {},{} => {}", uid, cpt.name, var.value, e);
             }
