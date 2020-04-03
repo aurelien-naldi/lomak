@@ -10,10 +10,10 @@ use self::expr::Expr;
 use self::gen::Generator;
 use self::paths::Paths;
 
+use crate::func::state::State;
 use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
-use crate::func::state::State;
 
 pub trait VariableNamer {
     /// Write the name corresponding to the given UID

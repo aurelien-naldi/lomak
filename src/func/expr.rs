@@ -8,8 +8,8 @@ use core::ops::Not;
 
 use crate::func;
 use crate::func::paths::LiteralSet;
-use crate::func::*;
 use crate::func::state::State;
+use crate::func::*;
 
 /* ************************************************************************************* */
 /* ************************ Data structures and basic operations *********************** */
@@ -76,7 +76,7 @@ impl BoolRepr for Expr {
             Expr::FALSE => false,
             Expr::ATOM(u) => state.contains(*u),
             Expr::NATOM(u) => !state.contains(*u),
-            Expr::OPER(op,children) => op.eval(children, state),
+            Expr::OPER(op, children) => op.eval(children, state),
         }
     }
 }
@@ -189,7 +189,7 @@ impl Operator {
                     }
                 }
                 true
-            },
+            }
             Operator::OR => {
                 for c in children.data.iter() {
                     if c.eval(state) {
@@ -197,7 +197,7 @@ impl Operator {
                     }
                 }
                 false
-            },
+            }
             Operator::NAND => !Operator::AND.eval(children, state),
             Operator::NOR => !Operator::OR.eval(children, state),
         }
@@ -225,12 +225,14 @@ impl Children {
 /*                              Replace parts of the function                            */
 /* ************************************************************************************* */
 impl Expr {
-
     /// Replace some variables with new sub-functions when needed.
     /// The replacer parameter provides the replacement subfunctions for individual variables.
     ///
     /// Returns Some(result) if at least one variable was changed, None otherwise
-    pub fn replace_variables(&self, replacer: & impl Fn(usize, bool) -> Option<Expr>) -> Option<Self> {
+    pub fn replace_variables(
+        &self,
+        replacer: &impl Fn(usize, bool) -> Option<Expr>,
+    ) -> Option<Self> {
         match self {
             Expr::TRUE => None,
             Expr::FALSE => None,
@@ -250,13 +252,17 @@ impl Expr {
                 }
 
                 if has_changed {
-                    return Some(Expr::OPER(o.clone(), Children{data: Rc::new(new_children)}));
+                    return Some(Expr::OPER(
+                        o.clone(),
+                        Children {
+                            data: Rc::new(new_children),
+                        },
+                    ));
                 }
                 None
-            },
+            }
         }
     }
-
 }
 
 /* ************************************************************************************* */
@@ -655,8 +661,8 @@ impl<'a> BitOr<&'a Expr> for &'a Expr {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::func::*;
     use crate::func::paths::Paths;
+    use crate::func::*;
 
     #[test]
     fn conj_extension() {
@@ -700,16 +706,16 @@ mod tests {
         let path: Rc<Paths> = expr.clone().into_repr().convert_as();
 
         let mut state = State::new();
-        assert_eq!( expr.eval(&state), true );
-        assert_eq!( path.eval(&state), true );
+        assert_eq!(expr.eval(&state), true);
+        assert_eq!(path.eval(&state), true);
         state.insert(2);
-        assert_eq!( expr.eval(&state), false );
-        assert_eq!( path.eval(&state), false );
+        assert_eq!(expr.eval(&state), false);
+        assert_eq!(path.eval(&state), false);
         state.insert(3);
-        assert_eq!( expr.eval(&state), false );
-        assert_eq!( path.eval(&state), false );
+        assert_eq!(expr.eval(&state), false);
+        assert_eq!(path.eval(&state), false);
         state.insert(1);
-        assert_eq!( expr.eval(&state), true );
-        assert_eq!( path.eval(&state), true );
+        assert_eq!(expr.eval(&state), true);
+        assert_eq!(path.eval(&state), true);
     }
 }

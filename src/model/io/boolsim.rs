@@ -6,9 +6,9 @@ use std::io::{Error, Write};
 use std::rc::Rc;
 
 use crate::func::expr::{Expr, Operator};
+use crate::func::paths::Paths;
 use crate::func::Formula;
 use crate::model::QModel;
-use crate::func::paths::Paths;
 
 #[derive(Parser)]
 #[grammar_inline = r####"
@@ -99,12 +99,16 @@ impl io::ParsingFormat for BoolSimFormat {
 
 impl io::SavingFormat for BoolSimFormat {
     fn write_rules(&self, model: &dyn QModel, out: &mut dyn Write) -> Result<(), Error> {
-//        let namer = model.as_namer();
+        //        let namer = model.as_namer();
         for (_uid, var) in model.variables() {
             if var.value != 1 {
                 panic!("Multivalued models are not yet fully supported");
             }
-            let paths: Rc<Paths> = model.get_component_ref(var.component).borrow().get_formula(var.value).convert_as();
+            let paths: Rc<Paths> = model
+                .get_component_ref(var.component)
+                .borrow()
+                .get_formula(var.value)
+                .convert_as();
             for func in paths.items() {
                 // FIXME: write boolsim
 

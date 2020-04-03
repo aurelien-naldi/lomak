@@ -9,8 +9,8 @@ use std::io::{BufWriter, Read, Write};
 use std::path::Path;
 
 mod bnet;
-mod mnet;
 mod boolsim;
+mod mnet;
 
 /// A Format may provide import and export filters
 pub trait Format: TrySaving + TryParsing {}

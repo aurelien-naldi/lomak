@@ -5,14 +5,14 @@ use std::fmt;
 
 use slab;
 
-use crate::func::{Grouped, VariableNamer, Formula};
-use crate::model::*;
-use std::fmt::Display;
-use std::rc::Rc;
-use std::borrow::{BorrowMut, Borrow};
-use std::cell::{RefCell, Ref, RefMut};
-use std::ops::{Deref, DerefMut};
 use crate::func::expr::Expr;
+use crate::func::{Formula, Grouped, VariableNamer};
+use crate::model::*;
+use std::borrow::{Borrow, BorrowMut};
+use std::cell::{Ref, RefCell, RefMut};
+use std::fmt::Display;
+use std::ops::{Deref, DerefMut};
+use std::rc::Rc;
 
 pub fn new_model() -> impl QModel {
     LQModel {
@@ -28,9 +28,7 @@ struct LQModel {
     name2uid: HashMap<String, usize>,
 }
 
-
 impl LQModel {
-
     fn component_mut<'a>(&'a mut self, cid: usize) -> SharedComponent {
         self.components[cid].clone()
     }
@@ -64,7 +62,9 @@ impl QModel for LQModel {
         // Create a new component
         // TODO: maintain a list of components?
         let n = name.to_owned();
-        let cid = self.components.insert(Component::new(n.clone()).into_shared());
+        let cid = self
+            .components
+            .insert(Component::new(n.clone()).into_shared());
         self.name2uid.insert(n, cid);
         cid
     }
@@ -83,7 +83,12 @@ impl QModel for LQModel {
         // Create a new variable and add it to the component
         let component = self.component_mut(cid);
         let vid = self.variables.insert(Variable::new(cid, value));
-        component.rc.as_ref().borrow_mut().variables.insert(value, vid);
+        component
+            .rc
+            .as_ref()
+            .borrow_mut()
+            .variables
+            .insert(value, vid);
         vid
     }
 

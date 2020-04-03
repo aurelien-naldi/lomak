@@ -1,16 +1,16 @@
 //! Logical model: collections of components, with associated variables and functions
 
-use std::cell::{RefCell, Ref, RefMut};
+use std::cell::{Ref, RefCell, RefMut};
 use std::fmt;
 use std::rc::Rc;
 
 use regex::Regex;
 
 use crate::func::expr::*;
+use crate::func::state::State;
 use crate::func::*;
 use std::collections::HashMap;
 use std::fmt::Display;
-use crate::func::state::State;
 
 pub mod actions;
 pub mod io;
@@ -160,13 +160,13 @@ pub struct Component {
 /// A sharable reference to a component
 #[derive(Clone)]
 pub struct SharedComponent {
-    rc: Rc<RefCell<Component>>
+    rc: Rc<RefCell<Component>>,
 }
 
 impl SharedComponent {
     pub fn from(mut component: Component) -> Self {
         SharedComponent {
-            rc: Rc::new( RefCell::new(component))
+            rc: Rc::new(RefCell::new(component)),
         }
     }
 
@@ -225,7 +225,6 @@ impl Component {
         expr.simplify().unwrap_or(expr)
     }
 
-
     fn get_formula(&self, value: usize) -> Rc<Formula> {
         if let Some(f) = self.cached_rules.borrow().get(&value) {
             return Rc::clone(f);
@@ -264,7 +263,7 @@ impl Component {
     }
 
     pub fn assignments<'a>(&'a self) -> Box<dyn Iterator<Item = &Assign> + 'a> {
-        Box::new( self.assignments.iter())
+        Box::new(self.assignments.iter())
     }
 
     pub fn variables<'a>(&'a self) -> &HashMap<usize, usize> {

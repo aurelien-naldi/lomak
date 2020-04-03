@@ -6,8 +6,8 @@ use std::rc::Rc;
 
 use crate::func;
 use crate::func::expr::Expr;
-use crate::func::{BoolRepr, Repr};
 use crate::func::state::State;
+use crate::func::{BoolRepr, Repr};
 
 #[derive(Clone)]
 pub enum Sign {

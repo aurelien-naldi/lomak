@@ -66,8 +66,12 @@ impl ActionBuilder for PrimeBuilder<'_> {
         }
 
         for (uid, var) in self.model.variables() {
-            let primes: Rc<paths::Paths> =
-                self.model.get_component_ref(var.component).borrow().get_formula(var.value).convert_as();
+            let primes: Rc<paths::Paths> = self
+                .model
+                .get_component_ref(var.component)
+                .borrow()
+                .get_formula(var.value)
+                .convert_as();
             println!("PI {}:\n{}", self.model.name(uid), primes);
         }
     }

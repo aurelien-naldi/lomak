@@ -3,9 +3,9 @@ use std::fmt;
 use std::vec::Vec;
 
 use crate::func::expr::Expr;
+use crate::func::state::State;
 use crate::func::VariableNamer;
 use crate::func::*;
-use crate::func::state::State;
 
 #[derive(Clone, PartialEq, Eq, Default)]
 pub struct LiteralSet {
