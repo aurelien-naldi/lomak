@@ -1,87 +1,60 @@
-use crate::model::actions::ActionBuilder;
-
-use crate::model::actions::ArgumentDescr;
-use crate::model::actions::CLIAction;
+use crate::command::{CLICommand, CommandContext};
 use crate::model::io;
 use crate::model::QModel;
 
-lazy_static! {
-    pub static ref PARAMETERS: Vec<ArgumentDescr> = vec! {
-        ArgumentDescr::new("output")
-            .help("Set the output file")
-            .has_value(true)
-            .required(true),
-        ArgumentDescr::new("format")
-            .help("Enforce the output format")
-            .long("format")
-            .short("F")
-            .has_value(true),
-    };
+use std::borrow::Borrow;
+use std::ffi::OsString;
+use std::sync::Arc;
+use structopt::StructOpt;
+
+static NAME: &str = "export";
+static ABOUT: &str = "Save the current model";
+
+#[derive(Debug, StructOpt)]
+#[structopt(name=NAME, about=ABOUT)]
+struct ExportConfig {
+    /// Set the output file
+    output: String,
+
+    /// Enforce the output format
+    #[structopt(short = "F", long)]
+    format: Option<String>,
 }
 
-pub fn cli_action() -> Box<dyn CLIAction> {
-    Box::new(CLIExport {})
+pub fn cli_action() -> Arc<dyn CLICommand> {
+    Arc::new(CLIExport {})
 }
 
 struct CLIExport;
-impl CLIAction for CLIExport {
+
+impl CLICommand for CLIExport {
     fn name(&self) -> &'static str {
-        "export"
+        NAME
     }
 
     fn about(&self) -> &'static str {
-        "Save the current model"
+        ABOUT
     }
 
-    fn arguments(&self) -> &'static [ArgumentDescr] {
-        &PARAMETERS
+    fn help(&self) {
+        ExportConfig::clap().print_help();
     }
 
     fn aliases(&self) -> &'static [&'static str] {
         &["save", "convert"]
     }
 
-    fn builder<'a>(&self, model: &'a dyn QModel) -> Box<dyn ActionBuilder + 'a> {
-        Box::new(ExportBuilder::new(model))
-    }
-}
+    fn run(&self, context: CommandContext, args: &[OsString]) -> CommandContext {
+        let model = match &context {
+            CommandContext::Model(m) => m,
+            _ => panic!("invalid context"),
+        };
 
-pub struct ExportBuilder<'a> {
-    model: &'a dyn QModel,
-    output: Option<String>,
-    format: Option<String>,
-}
+        let config: ExportConfig = ExportConfig::from_iter(args);
 
-impl<'a> ExportBuilder<'a> {
-    pub fn new(model: &'a dyn QModel) -> ExportBuilder<'a> {
-        ExportBuilder {
-            model,
-            output: None,
-            format: None,
-        }
-    }
-}
+        io::save_model(model.borrow(), &config.output, config.format.as_deref());
 
-impl ActionBuilder for ExportBuilder<'_> {
-    fn set_value(&mut self, key: &str, value: &str) {
-        match key {
-            "output" => self.output = Some(value.to_string()),
-            "format" => self.format = Some(value.to_string()),
-            _ => (),
-        }
-    }
-
-    fn call(&self) {
-        if self.output.is_none() {
-            eprintln!("No output file specified");
-            return;
-        }
-
-        io::save_model(
-            self.model,
-            &self.output.as_ref().unwrap(),
-            self.format.as_ref().map(|s| &**s),
-        )
-        .unwrap();
+        // TODO: should it return the model or an empty context?
+        context
     }
 }

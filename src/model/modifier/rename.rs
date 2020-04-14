@@ -1,36 +1,53 @@
-use crate::model::actions::ArgumentDescr;
-use crate::model::modifier::CLIModifier;
+use crate::command::{CLICommand, CommandContext};
 use crate::model::LQModelRef;
 
-lazy_static! {
-    pub static ref ARGUMENT: ArgumentDescr = ArgumentDescr::new("mv")
-        .long("mv")
-        .short("m")
-        .has_value(true)
-        .multiple(true)
-        .help("Rename one or several components");
+use std::ffi::OsString;
+use std::sync::Arc;
+use structopt::StructOpt;
+
+static NAME: &str = "rename";
+static ABOUT: &str = "Rename one or several components";
+
+#[derive(Debug, StructOpt)]
+#[structopt(name=NAME, about=ABOUT)]
+struct RenameConfig {
+    /// The original name
+    source: String,
+
+    /// The target name
+    target: String,
 }
 
 pub struct CLIRename;
 
-pub fn cli_modifier() -> Box<dyn CLIModifier> {
-    Box::new(CLIRename {})
+pub fn cli_modifier() -> Arc<dyn CLICommand> {
+    Arc::new(CLIRename {})
 }
 
-impl CLIModifier for CLIRename {
-    fn argument(&self) -> &'static ArgumentDescr {
-        &ARGUMENT
+impl CLICommand for CLIRename {
+    fn name(&self) -> &'static str {
+        NAME
     }
 
-    fn modify(&self, mut model: LQModelRef, parameters: &[&str]) -> LQModelRef {
-        for arg in parameters {
-            let split: Vec<&str> = arg.split(':').collect();
-            if split.len() != 2 {
-                println!("invalid rename pattern");
-                continue;
-            }
-            model.rename(split[0], split[1].to_string());
-        }
-        model
+    fn about(&self) -> &'static str {
+        ABOUT
+    }
+
+    fn help(&self) {
+        RenameConfig::clap().print_help();
+    }
+
+    fn run(&self, mut context: CommandContext, args: &[OsString]) -> CommandContext {
+        let mut model = match &mut context {
+            CommandContext::Model(m) => m,
+            _ => panic!("invalid context"),
+        };
+
+        let config: RenameConfig = RenameConfig::from_iter(args);
+
+        // TODO: multiple rename actions ?
+        model.rename(&config.source, config.target);
+
+        context
     }
 }

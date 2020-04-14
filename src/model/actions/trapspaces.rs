@@ -1,38 +1,39 @@
 use crate::func::expr::Expr;
-use crate::model::actions::ActionBuilder;
-use crate::model::actions::ArgumentDescr;
-use crate::model::actions::CLIAction;
 use crate::model::QModel;
 
 use crate::solver;
 use crate::solver::Solver;
 
+use crate::command::{CLICommand, CommandContext};
 use crate::solver::SolverMode;
 use itertools::Itertools;
 use std::collections::HashMap;
+use std::ffi::OsString;
 use std::rc::Rc;
+use std::sync::Arc;
+use structopt::StructOpt;
 
-lazy_static! {
-    pub static ref PARAMETERS: Vec<ArgumentDescr> = vec! {
-        ArgumentDescr::new("filter")
-            .help("Filter the results")
-            .long("filter")
-            .short("f")
-            .multiple(true)
-            .has_value(true),
-        ArgumentDescr::new("percolate")
-            .help("Percolate (propagate) fixed components")
-            .long("percolate")
-            .short("p"),
-        ArgumentDescr::new("elementary")
-            .help("Show only elementary trapspaces, i.e. minimal stable motifs")
-            .long("elementary")
-            .short("e"),
-        ArgumentDescr::new("all")
-            .help("All trapspaces instead of only the terminal ones")
-            .long("all")
-            .short("a"),
-    };
+static NAME: &str = "trapspaces";
+static ABOUT: &str = "Compute the trapspaces (stable patterns) of the model";
+
+#[derive(Debug, StructOpt)]
+#[structopt(name=NAME, about=ABOUT)]
+struct Config {
+    /// Filter the results
+    #[structopt(short, long)]
+    filter: Option<Vec<String>>,
+
+    /// Percolate (propagate) fixed components
+    #[structopt(short, long)]
+    percolate: bool,
+
+    /// Show only elementary trapspaces, i.e. minimal stable motifs
+    #[structopt(short, long)]
+    elementary: bool,
+
+    /// All trapspaces instead of only the terminal ones
+    #[structopt(short, long)]
+    all: bool,
 }
 
 impl dyn QModel {
@@ -41,25 +42,37 @@ impl dyn QModel {
     }
 }
 
-pub fn cli_action() -> Box<dyn CLIAction> {
-    Box::new(CLIFixed {})
+pub fn cli_action() -> Arc<dyn CLICommand> {
+    Arc::new(CLIFixed {})
 }
 
 struct CLIFixed;
-impl CLIAction for CLIFixed {
+impl CLICommand for CLIFixed {
     fn name(&self) -> &'static str {
-        "trapspaces"
+        NAME
     }
     fn about(&self) -> &'static str {
-        "Compute the trapspaces (stable patterns) of the model"
+        ABOUT
     }
 
-    fn arguments(&self) -> &'static [ArgumentDescr] {
-        &PARAMETERS
+    fn help(&self) {
+        Config::clap().print_help();
     }
 
-    fn builder<'a>(&self, model: &'a dyn QModel) -> Box<dyn ActionBuilder + 'a> {
-        Box::new(TrapspacesBuilder::new(model))
+    fn run(&self, context: CommandContext, args: &[OsString]) -> CommandContext {
+        let model = match &context {
+            CommandContext::Model(m) => m,
+            _ => panic!("invalid context"),
+        };
+
+        let config: Config = Config::from_iter(args);
+
+        let builder = TrapspacesBuilder::new(model.as_ref());
+        // FIXME: configure it
+        builder.call();
+
+        // TODO: should it return the model or an empty context?
+        context
     }
 }
 
@@ -83,9 +96,7 @@ impl<'a> TrapspacesBuilder<'a> {
     pub fn filter(&mut self, uid: usize, b: bool) {
         self.filters.insert(uid, b);
     }
-}
 
-impl TrapspacesBuilder<'_> {
     pub fn percolate(&mut self) -> &mut Self {
         self.percolate = true;
         self
@@ -97,17 +108,6 @@ impl TrapspacesBuilder<'_> {
     pub fn show_elementary(&mut self) -> &mut Self {
         self.mode = SolverMode::MIN;
         self
-    }
-}
-
-impl ActionBuilder for TrapspacesBuilder<'_> {
-    fn set_flag(&mut self, flag: &str) {
-        match flag {
-            "percolate" => self.percolate(),
-            "all" => self.show_all(),
-            "elementary" => self.show_elementary(),
-            _ => self,
-        };
     }
 
     fn call(&self) {

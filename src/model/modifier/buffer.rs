@@ -1,20 +1,30 @@
+use crate::command::{CLICommand, CommandContext};
 use crate::func::expr::{AtomReplacer, Expr};
 use crate::func::Formula;
-use crate::model::actions::ArgumentDescr;
-use crate::model::modifier::CLIModifier;
 use crate::model::QModel;
 use crate::model::{LQModelRef, SharedComponent};
 use std::borrow::{Borrow, BorrowMut};
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::ffi::OsString;
 use std::rc::Rc;
+use std::sync::Arc;
+use structopt::StructOpt;
 
-lazy_static! {
-    pub static ref ARGUMENT: ArgumentDescr = ArgumentDescr::new("buffer")
-        .long("buffer")
-        .has_value(true)
-        .multiple(true)
-        .help("Add buffer components to delay interactions");
+static NAME: &str = "buffer";
+static ABOUT: &str = "Add buffer components to delay interactions";
+
+#[derive(Debug, StructOpt)]
+#[structopt(name=NAME, about=ABOUT)]
+struct BufferCLIConfig {
+    /// The buffering strategy
+    strategy: String,
+}
+
+pub struct CLIBuffer;
+
+pub fn cli_modifier() -> Arc<dyn CLICommand> {
+    Arc::new(CLIBuffer {})
 }
 
 #[derive(PartialEq, Clone, Copy)]
@@ -36,8 +46,6 @@ enum BufferRef {
 struct BufferSelection {
     data: Rc<RefCell<Option<usize>>>,
 }
-
-pub struct CLIBuffer;
 
 pub struct BufferConfig<'a> {
     strategy: BufferingStrategy,
@@ -62,15 +70,25 @@ impl BufferSelection {
     }
 }
 
-pub fn cli_modifier() -> Box<dyn CLIModifier> {
-    Box::new(CLIBuffer {})
-}
-
-impl CLIModifier for CLIBuffer {
-    fn argument(&self) -> &'static ArgumentDescr {
-        &ARGUMENT
+impl CLICommand for CLIBuffer {
+    fn name(&self) -> &'static str {
+        NAME
     }
 
+    fn about(&self) -> &'static str {
+        ABOUT
+    }
+
+    fn help(&self) {
+        BufferCLIConfig::clap().print_help();
+    }
+
+    fn run(&self, mut context: CommandContext, args: &[OsString]) -> CommandContext {
+        context
+    }
+}
+
+impl CLIBuffer {
     fn modify(&self, mut model: LQModelRef, parameters: &[&str]) -> LQModelRef {
         let strategy = match parameters {
             ["buffer"] => BufferingStrategy::ALLBUFFERS,

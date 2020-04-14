@@ -1,24 +1,25 @@
 use crate::func::expr::Expr;
-use crate::model::actions::ActionBuilder;
-use crate::model::actions::ArgumentDescr;
-use crate::model::actions::CLIAction;
 use crate::model::QModel;
 
 use crate::solver;
 
+use crate::command::{CLICommand, CommandContext};
 use crate::func::paths::LiteralSet;
 use crate::solver::SolverMode;
 use itertools::Itertools;
+use std::ffi::OsString;
 use std::rc::Rc;
+use std::sync::Arc;
+use structopt::StructOpt;
 
-lazy_static! {
-    pub static ref PARAMETERS: Vec<ArgumentDescr> = vec! {
-        ArgumentDescr::new("displayed")
-            .help("Select output components (comma-separated)")
-            .long("displayed")
-            .short("d")
-            .has_value(true),
-    };
+static NAME: &str = "fixedpoints";
+static ABOUT: &str = "Compute the fixed points of the model";
+
+#[derive(Debug, StructOpt)]
+#[structopt(name=NAME, about=ABOUT)]
+struct FixedConfig {
+    /// Select output components
+    displayed: Vec<String>,
 }
 
 impl dyn QModel {
@@ -27,29 +28,41 @@ impl dyn QModel {
     }
 }
 
-pub fn cli_action() -> Box<dyn CLIAction> {
-    Box::new(CLIFixed {})
+pub fn cli_action() -> Arc<dyn CLICommand> {
+    Arc::new(CLIFixed {})
 }
 
 struct CLIFixed;
-impl CLIAction for CLIFixed {
+impl CLICommand for CLIFixed {
     fn name(&self) -> &'static str {
-        "fixpoints"
+        NAME
     }
     fn about(&self) -> &'static str {
-        "Compute the fixed points of the model"
+        ABOUT
+    }
+
+    fn help(&self) {
+        FixedConfig::clap().print_help();
     }
 
     fn aliases(&self) -> &'static [&'static str] {
         &["fixed", "stable", "fp"]
     }
 
-    fn arguments(&self) -> &'static [ArgumentDescr] {
-        &PARAMETERS
-    }
+    fn run(&self, context: CommandContext, args: &[OsString]) -> CommandContext {
+        let model = match &context {
+            CommandContext::Model(m) => m,
+            _ => panic!("invalid context"),
+        };
 
-    fn builder<'a>(&self, model: &'a dyn QModel) -> Box<dyn ActionBuilder + 'a> {
-        Box::new(FixedBuilder::new(model))
+        let config: FixedConfig = FixedConfig::from_iter(args);
+
+        let builder = FixedBuilder::new(model.as_ref());
+        // FIXME: apply configuration
+        builder.call();
+
+        // TODO: should it return the model or an empty context?
+        context
     }
 }
 
@@ -80,15 +93,6 @@ impl<'a> FixedBuilder<'a> {
                 Some(uid) => displayed.push(*uid),
                 None => println!("Selected display component not found: {}", name),
             }
-        }
-    }
-}
-
-impl ActionBuilder for FixedBuilder<'_> {
-    fn set_value(&mut self, key: &str, value: &str) {
-        match key {
-            "displayed" => self.set_displayed_names(value.split(',').collect()),
-            _ => eprintln!("This action has no value ({} = {})", key, value),
         }
     }
 

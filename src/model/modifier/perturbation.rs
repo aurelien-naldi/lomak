@@ -1,35 +1,66 @@
 use regex::Regex;
 
-use crate::model::actions::ArgumentDescr;
-use crate::model::modifier::CLIModifier;
-use crate::model::{LQModelRef, QModel};
+use crate::command::{CLICommand, CommandContext};
+use crate::model::LQModelRef;
+
 use std::borrow::BorrowMut;
+use std::ffi::OsString;
+use std::sync::Arc;
+use structopt::StructOpt;
+
+static NAME: &str = "perturbation";
+static ABOUT: &str = "Apply a perturbation to one or several components";
 
 lazy_static! {
     static ref RE_PRT: Regex = Regex::new(r"([a-zA-Z][a-zA-Z01-9_]*)%([01])").unwrap();
-    pub static ref ARGUMENT: ArgumentDescr = ArgumentDescr::new("prt")
-        .long("perturbation")
-        .short("p")
-        .has_value(true)
-        .multiple(true)
-        .help("Apply a perturbation to one or several components");
+}
+
+#[derive(Debug, StructOpt)]
+#[structopt(name=NAME, about=ABOUT)]
+struct PerturbationConfig {
+    // Components to knock-out (fix level to 0)
+    #[structopt(short, long)]
+    ko: Vec<String>,
+
+    /// perturbations: component%0
+    perturbations: Vec<String>,
 }
 
 pub struct CLIPerturbation;
 
-pub fn cli_modifier() -> Box<dyn CLIModifier> {
-    Box::new(CLIPerturbation {})
+pub fn cli_modifier() -> Arc<dyn CLICommand> {
+    Arc::new(CLIPerturbation {})
 }
 
-impl CLIModifier for CLIPerturbation {
-    fn argument(&self) -> &'static ArgumentDescr {
-        &ARGUMENT
+impl CLICommand for CLIPerturbation {
+    fn name(&self) -> &'static str {
+        NAME
     }
 
-    fn modify(&self, mut rmodel: LQModelRef, parameters: &[&str]) -> LQModelRef {
-        let model: &mut dyn QModel = rmodel.borrow_mut();
-        for arg in parameters {
-            match RE_PRT.captures(arg) {
+    fn about(&self) -> &'static str {
+        ABOUT
+    }
+
+    fn help(&self) {
+        PerturbationConfig::clap().print_help();
+    }
+
+    fn run(&self, mut context: CommandContext, args: &[OsString]) -> CommandContext {
+        let mut model = match &mut context {
+            CommandContext::Model(m) => m,
+            _ => panic!("invalid context"),
+        };
+
+        let config: PerturbationConfig = PerturbationConfig::from_iter(args);
+
+        for sid in &config.ko {
+            if let Some(uid) = model.component_by_name(sid) {
+                model.lock(uid, false);
+            }
+        }
+
+        for arg in config.perturbations {
+            match RE_PRT.captures(&arg) {
                 None => println!("Invalid perturbation parameter: {}", arg),
                 Some(cap) => {
                     if let Some(uid) = model.component_by_name(&cap[1]) {
@@ -42,6 +73,7 @@ impl CLIModifier for CLIPerturbation {
                 }
             }
         }
-        rmodel
+
+        context
     }
 }

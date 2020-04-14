@@ -1,82 +1,67 @@
-use crate::model::actions::ActionBuilder;
-use crate::model::actions::ArgumentDescr;
-
 use crate::func::expr::Expr;
-use crate::model::actions::CLIAction;
 use crate::model::QModel;
 
+use crate::command::{CLICommand, CommandContext};
+use clap::App;
+use std::ffi::OsString;
 use std::rc::Rc;
+use std::sync::Arc;
+use structopt::StructOpt;
 
-lazy_static! {
-    pub static ref PARAMETERS: Vec<ArgumentDescr> = vec! {
-        ArgumentDescr::new("booleanized")
-            .help("Show Booleanized functions")
-            .long("bool")
-            .short("b")
-    };
+static NAME: &str = "show";
+static ABOUT: &str = "Display the current model";
+
+#[derive(Debug, StructOpt)]
+#[structopt(name=NAME, about=ABOUT)]
+struct ShowConfig {
+    #[structopt(short, long)]
+    booleanized: bool,
 }
 
 struct CLIShow;
 
-pub fn cli_action() -> Box<dyn CLIAction> {
-    Box::new(CLIShow {})
+pub fn cli_action() -> Arc<dyn CLICommand> {
+    Arc::new(CLIShow {})
 }
 
-impl CLIAction for CLIShow {
+impl CLICommand for CLIShow {
     fn name(&self) -> &'static str {
-        "show"
+        NAME
     }
     fn about(&self) -> &'static str {
-        "Show the current model"
+        ABOUT
+    }
+
+    fn help(&self) {
+        ShowConfig::clap().print_help();
     }
 
     fn aliases(&self) -> &'static [&'static str] {
         &["display", "print"]
     }
 
-    fn arguments(&self) -> &'static [ArgumentDescr] {
-        &PARAMETERS
-    }
+    fn run(&self, context: CommandContext, args: &[OsString]) -> CommandContext {
+        let model = match &context {
+            CommandContext::Model(m) => m,
+            _ => panic!("invalid context"),
+        };
 
-    fn builder<'a>(&self, model: &'a dyn QModel) -> Box<dyn ActionBuilder + 'a> {
-        Box::new(ShowBuilder::new(model))
-    }
-}
+        let config: ShowConfig = ShowConfig::from_iter(args);
 
-pub struct ShowBuilder<'a> {
-    model: &'a dyn QModel,
-    booleanized: bool,
-}
-
-impl<'a> ShowBuilder<'a> {
-    pub fn new(model: &'a dyn QModel) -> ShowBuilder<'a> {
-        ShowBuilder {
-            model,
-            booleanized: false,
-        }
-    }
-}
-
-impl ActionBuilder for ShowBuilder<'_> {
-    fn set_flag(&mut self, flag: &str) {
-        match flag {
-            "booleanized" => self.booleanized = true,
-            _ => eprintln!("This action has no flag '{}'", flag),
-        }
-    }
-
-    fn call(&self) {
-        if self.booleanized {
-            for (uid, var) in self.model.variables() {
-                let cpt = self.model.get_component_ref(var.component);
+        if config.booleanized {
+            for (uid, var) in model.variables() {
+                let cpt = model.get_component_ref(var.component);
                 let cpt = cpt.borrow();
                 let e: Rc<Expr> = cpt.get_formula(var.value).convert_as();
 
                 println!("{}: {},{} => {}", uid, cpt.name, var.value, e);
             }
         } else {
-            println!("{}", self.model.for_display());
+            println!("{}", model.for_display());
         }
         println!();
+
+        // TODO: should it return the model or an empty context?
+        context
     }
 }

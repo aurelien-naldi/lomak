@@ -1,17 +1,23 @@
 #[macro_use]
 extern crate clap;
 
+use command::SelectedArgs;
 use lomak::*;
 use model::actions;
 use model::io;
 use model::modifier;
 
-use clap::AppSettings;
+use clap::{App, AppSettings, ArgMatches};
+use lomak::command::CommandContext;
+use lomak::model::LQModelRef;
+use std::env::ArgsOs;
+use std::ffi::OsString;
 
 fn main() {
     let mut app = app_from_crate!()
         .setting(AppSettings::UnifiedHelpMessage)
         .setting(AppSettings::ColoredHelp)
+        .setting(AppSettings::VersionlessSubcommands)
         .arg(
             clap::Arg::with_name("INPUT")
                 .help("Sets the input file to use")
@@ -23,20 +29,13 @@ fn main() {
                 .long("format")
                 .help("[TODO] Specify the input format")
                 .takes_value(true),
-        )
-        .arg(
-            clap::Arg::with_name("DONE")
-                .short("d")
-                .long("done")
-                .help("Silent: close multiple arguments before the command"),
         );
 
-    // register available modifiers and commands
-    app = modifier::register_modifiers(app);
-    app = actions::register_commands(app);
+    // Extract slices of arguments for each sub-command
+    let mut args_wrapper = SelectedArgs::new();
 
-    let matches = app.get_matches();
-
+    // Load the selected model
+    let matches = app.get_matches_from(args_wrapper.scan());
     let filename = matches.value_of("INPUT").unwrap();
     let format = matches.value_of("fmt");
 
@@ -48,12 +47,9 @@ fn main() {
         Ok(m) => m,
     };
 
-    // Apply the selected modifiers
-    let model = modifier::modify(model, &matches);
-
-    // Call the selected command with its parameters
-    let (s_cmd, subcmd) = matches.subcommand();
-    if let Some(s) = subcmd {
-        actions::run_command(s_cmd, s, model.as_ref());
+    // Apply all modifiers and actions
+    let mut context = CommandContext::Model(model);
+    while args_wrapper.has_next() {
+        context = args_wrapper.parse_next(context);
     }
 }
