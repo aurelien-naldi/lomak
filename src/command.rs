@@ -72,7 +72,7 @@ pub trait CLICommand: Sync + Send {
     fn about(&self) -> &'static str;
     fn help(&self);
 
-    fn aliases(&self) -> &'static [&'static str] {
+    fn aliases(&self) -> &[&'static str] {
         &[]
     }
 

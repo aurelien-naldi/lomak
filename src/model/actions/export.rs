@@ -1,11 +1,12 @@
 use crate::command::{CLICommand, CommandContext};
-use crate::model::io;
+use crate::model::{io, LQModelRef};
 use crate::model::QModel;
 
 use std::borrow::Borrow;
 use std::ffi::OsString;
 use std::sync::Arc;
 use structopt::StructOpt;
+use crate::model::actions::CLIAction;
 
 static NAME: &str = "export";
 static ABOUT: &str = "Save the current model";
@@ -27,7 +28,9 @@ pub fn cli_action() -> Arc<dyn CLICommand> {
 
 struct CLIExport;
 
-impl CLICommand for CLIExport {
+impl CLIAction for CLIExport {
+    type Config = ExportConfig;
+
     fn name(&self) -> &'static str {
         NAME
     }
@@ -36,25 +39,11 @@ impl CLICommand for CLIExport {
         ABOUT
     }
 
-    fn help(&self) {
-        ExportConfig::clap().print_help();
-    }
-
-    fn aliases(&self) -> &'static [&'static str] {
+    fn aliases(&self) -> &[&'static str] {
         &["save", "convert"]
     }
 
-    fn run(&self, context: CommandContext, args: &[OsString]) -> CommandContext {
-        let model = match &context {
-            CommandContext::Model(m) => m,
-            _ => panic!("invalid context"),
-        };
-
-        let config: ExportConfig = ExportConfig::from_iter(args);
-
+    fn run_model(&self, model: &LQModelRef, config: ExportConfig) {
         io::save_model(model.borrow(), &config.output, config.format.as_deref());
-
-        // TODO: should it return the model or an empty context?
-        context
     }
 }

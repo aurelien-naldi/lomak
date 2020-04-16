@@ -1,17 +1,17 @@
 use crate::func::expr::Expr;
-use crate::model::QModel;
+use crate::model::{QModel, LQModelRef};
 
 use crate::solver;
 use crate::solver::Solver;
 
-use crate::command::{CLICommand, CommandContext};
+use crate::command::CLICommand;
 use crate::solver::SolverMode;
 use itertools::Itertools;
 use std::collections::HashMap;
-use std::ffi::OsString;
 use std::rc::Rc;
 use std::sync::Arc;
 use structopt::StructOpt;
+use crate::model::actions::CLIAction;
 
 static NAME: &str = "trapspaces";
 static ABOUT: &str = "Compute the trapspaces (stable patterns) of the model";
@@ -47,7 +47,8 @@ pub fn cli_action() -> Arc<dyn CLICommand> {
 }
 
 struct CLIFixed;
-impl CLICommand for CLIFixed {
+impl CLIAction for CLIFixed {
+    type Config = Config;
     fn name(&self) -> &'static str {
         NAME
     }
@@ -55,24 +56,10 @@ impl CLICommand for CLIFixed {
         ABOUT
     }
 
-    fn help(&self) {
-        Config::clap().print_help();
-    }
-
-    fn run(&self, context: CommandContext, args: &[OsString]) -> CommandContext {
-        let model = match &context {
-            CommandContext::Model(m) => m,
-            _ => panic!("invalid context"),
-        };
-
-        let config: Config = Config::from_iter(args);
-
-        let builder = TrapspacesBuilder::new(model.as_ref());
-        // FIXME: configure it
+    fn run_model(&self, model: &LQModelRef, config: Self::Config) {
+        let builder = TrapspacesBuilder::new(model.as_ref())
+            .config(config);
         builder.call();
-
-        // TODO: should it return the model or an empty context?
-        context
     }
 }
 
@@ -91,6 +78,18 @@ impl<'a> TrapspacesBuilder<'a> {
             percolate: false,
             mode: SolverMode::MAX,
         }
+    }
+
+    fn config(mut self, config: Config) -> Self {
+
+        self.percolate = config.percolate;
+        if config.elementary {
+            self.show_elementary();
+        }
+        if config.all {
+            self.show_all();
+        }
+        self
     }
 
     pub fn filter(&mut self, uid: usize, b: bool) {

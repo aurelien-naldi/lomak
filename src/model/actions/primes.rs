@@ -2,11 +2,11 @@ use crate::func::expr;
 use crate::func::paths;
 use crate::model::{LQModelRef, QModel};
 
-use crate::command::{CLICommand, CommandContext};
-use std::ffi::OsString;
+use crate::command::CLICommand;
 use std::rc::Rc;
 use std::sync::Arc;
 use structopt::StructOpt;
+use crate::model::actions::CLIAction;
 
 static NAME: &str = "primes";
 static ABOUT: &str = "Compute the prime implicants of the model's functions";
@@ -24,30 +24,21 @@ pub fn cli_action() -> Arc<dyn CLICommand> {
 }
 
 struct CLIPrimes;
-impl CLICommand for CLIPrimes {
+impl CLIAction for CLIPrimes {
+    type Config = PrimeConfig;
+
     fn name(&self) -> &'static str {
-        "primes"
+        NAME
     }
     fn about(&self) -> &'static str {
-        "Compute the prime implicants of the model's functions"
+        let t = PrimeConfig{json:false};
+        ABOUT
     }
-
-    fn help(&self) {
-        PrimeConfig::clap().print_help();
-    }
-
-    fn aliases(&self) -> &'static [&'static str] {
+    fn aliases(&self) -> &[&'static str] {
         &["pi", "implicants"]
     }
 
-    fn run(&self, context: CommandContext, args: &[OsString]) -> CommandContext {
-        let model = match &context {
-            CommandContext::Model(m) => m,
-            _ => panic!("invalid context"),
-        };
-
-        let config: PrimeConfig = PrimeConfig::from_iter(args);
-
+    fn run_model(&self, model: &LQModelRef, config: Self::Config) {
         if config.json {
             json(model);
         } else {
@@ -60,9 +51,6 @@ impl CLICommand for CLIPrimes {
                 println!("PI {}:\n{}", model.name(uid), primes);
             }
         }
-
-        // TODO: should it return the model or an empty context?
-        context
     }
 }
 

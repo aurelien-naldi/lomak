@@ -1,16 +1,16 @@
 use crate::func::expr::Expr;
-use crate::model::QModel;
+use crate::model::{QModel, LQModelRef};
 
 use crate::solver;
 
-use crate::command::{CLICommand, CommandContext};
+use crate::command::CLICommand;
 use crate::func::paths::LiteralSet;
 use crate::solver::SolverMode;
 use itertools::Itertools;
-use std::ffi::OsString;
 use std::rc::Rc;
 use std::sync::Arc;
 use structopt::StructOpt;
+use crate::model::actions::CLIAction;
 
 static NAME: &str = "fixedpoints";
 static ABOUT: &str = "Compute the fixed points of the model";
@@ -33,7 +33,9 @@ pub fn cli_action() -> Arc<dyn CLICommand> {
 }
 
 struct CLIFixed;
-impl CLICommand for CLIFixed {
+impl CLIAction for CLIFixed {
+    type Config = FixedConfig;
+
     fn name(&self) -> &'static str {
         NAME
     }
@@ -41,28 +43,14 @@ impl CLICommand for CLIFixed {
         ABOUT
     }
 
-    fn help(&self) {
-        FixedConfig::clap().print_help();
-    }
-
-    fn aliases(&self) -> &'static [&'static str] {
+    fn aliases(&self) -> &[&'static str] {
         &["fixed", "stable", "fp"]
     }
 
-    fn run(&self, context: CommandContext, args: &[OsString]) -> CommandContext {
-        let model = match &context {
-            CommandContext::Model(m) => m,
-            _ => panic!("invalid context"),
-        };
-
-        let config: FixedConfig = FixedConfig::from_iter(args);
-
-        let builder = FixedBuilder::new(model.as_ref());
-        // FIXME: apply configuration
+    fn run_model(&self, model: &LQModelRef, config: FixedConfig) {
+        let builder = FixedBuilder::new(model.as_ref())
+            .config(config);
         builder.call();
-
-        // TODO: should it return the model or an empty context?
-        context
     }
 }
 
@@ -79,6 +67,11 @@ impl<'a> FixedBuilder<'a> {
             restriction: None,
             displayed: None,
         }
+    }
+
+    fn config(mut self, config: FixedConfig) -> Self {
+        self.set_displayed_names(config.displayed.iter().map(|s|s.as_str()).collect());
+        self
     }
 
     pub fn set_displayed_names(&mut self, names: Vec<&str>) {

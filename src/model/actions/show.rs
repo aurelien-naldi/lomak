@@ -1,12 +1,11 @@
 use crate::func::expr::Expr;
-use crate::model::QModel;
+use crate::model::{QModel, LQModelRef};
 
-use crate::command::{CLICommand, CommandContext};
-use clap::App;
-use std::ffi::OsString;
+use crate::command::CLICommand;
 use std::rc::Rc;
 use std::sync::Arc;
 use structopt::StructOpt;
+use crate::model::actions::CLIAction;
 
 static NAME: &str = "show";
 static ABOUT: &str = "Display the current model";
@@ -24,7 +23,9 @@ pub fn cli_action() -> Arc<dyn CLICommand> {
     Arc::new(CLIShow {})
 }
 
-impl CLICommand for CLIShow {
+impl CLIAction for CLIShow {
+    type Config = ShowConfig;
+
     fn name(&self) -> &'static str {
         NAME
     }
@@ -32,22 +33,11 @@ impl CLICommand for CLIShow {
         ABOUT
     }
 
-    fn help(&self) {
-        ShowConfig::clap().print_help();
-    }
-
-    fn aliases(&self) -> &'static [&'static str] {
+    fn aliases(&self) -> &[&'static str] {
         &["display", "print"]
     }
 
-    fn run(&self, context: CommandContext, args: &[OsString]) -> CommandContext {
-        let model = match &context {
-            CommandContext::Model(m) => m,
-            _ => panic!("invalid context"),
-        };
-
-        let config: ShowConfig = ShowConfig::from_iter(args);
-
+    fn run_model(&self, model: &LQModelRef, config: ShowConfig) {
         if config.booleanized {
             for (uid, var) in model.variables() {
                 let cpt = model.get_component_ref(var.component);
@@ -60,8 +50,5 @@ impl CLICommand for CLIShow {
             println!("{}", model.for_display());
         }
         println!();
-
-        // TODO: should it return the model or an empty context?
-        context
     }
 }
