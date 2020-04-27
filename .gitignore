@@ -4,5 +4,4 @@ build
 .buildconfig
 .idea
 **/*.rs.bk
-Cargo.lock
 *.so
