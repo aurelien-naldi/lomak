@@ -6,6 +6,7 @@ use crate::model::LQModelRef;
 use std::borrow::BorrowMut;
 use std::ffi::OsString;
 use std::sync::Arc;
+use clap::App;
 use structopt::StructOpt;
 
 static NAME: &str = "perturbation";
@@ -17,7 +18,7 @@ lazy_static! {
 
 #[derive(Debug, StructOpt)]
 #[structopt(name=NAME, about=ABOUT)]
-struct PerturbationConfig {
+struct Config {
     // Components to knock-out (fix level to 0)
     #[structopt(short, long)]
     ko: Vec<String>,
@@ -41,17 +42,13 @@ impl CLICommand for CLIPerturbation {
         ABOUT
     }
 
-    fn help(&self) {
-        PerturbationConfig::clap().print_help();
+    fn clap(&self) -> App {
+        Config::clap()
     }
 
     fn run(&self, mut context: CommandContext, args: &[OsString]) -> CommandContext {
-        let mut model = match &mut context {
-            CommandContext::Model(m) => m,
-            _ => panic!("invalid context"),
-        };
-
-        let config: PerturbationConfig = PerturbationConfig::from_iter(args);
+        let mut model = context.as_model();
+        let config: Config = Config::from_iter(args);
 
         for sid in &config.ko {
             if let Some(uid) = model.component_by_name(sid) {
@@ -74,6 +71,6 @@ impl CLICommand for CLIPerturbation {
             }
         }
 
-        context
+        CommandContext::Model(model)
     }
 }

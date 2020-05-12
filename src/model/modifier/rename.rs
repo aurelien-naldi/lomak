@@ -3,6 +3,7 @@ use crate::model::LQModelRef;
 
 use std::ffi::OsString;
 use std::sync::Arc;
+use clap::App;
 use structopt::StructOpt;
 
 static NAME: &str = "rename";
@@ -10,7 +11,7 @@ static ABOUT: &str = "Rename one or several components";
 
 #[derive(Debug, StructOpt)]
 #[structopt(name=NAME, about=ABOUT)]
-struct RenameConfig {
+struct Config {
     /// The original name
     source: String,
 
@@ -33,21 +34,17 @@ impl CLICommand for CLIRename {
         ABOUT
     }
 
-    fn help(&self) {
-        RenameConfig::clap().print_help();
+    fn clap(&self) -> App {
+        Config::clap()
     }
 
     fn run(&self, mut context: CommandContext, args: &[OsString]) -> CommandContext {
-        let mut model = match &mut context {
-            CommandContext::Model(m) => m,
-            _ => panic!("invalid context"),
-        };
-
-        let config: RenameConfig = RenameConfig::from_iter(args);
+        let mut model = context.as_model();
+        let config: Config = Config::from_iter(args);
 
         // TODO: multiple rename actions ?
         model.rename(&config.source, config.target);
 
-        context
+        CommandContext::Model(model)
     }
 }

@@ -1,19 +1,20 @@
 use crate::func::expr;
 use crate::func::paths;
 use crate::model::{LQModelRef, QModel};
+use crate::command::{CLICommand,CommandContext};
 
-use crate::command::CLICommand;
+use std::ffi::OsString;
 use std::rc::Rc;
 use std::sync::Arc;
+use clap::App;
 use structopt::StructOpt;
-use crate::model::actions::CLIAction;
 
 static NAME: &str = "primes";
 static ABOUT: &str = "Compute the prime implicants of the model's functions";
 
 #[derive(Debug, StructOpt)]
 #[structopt(name=NAME, about=ABOUT)]
-struct PrimeConfig {
+struct Config {
     /// Output prime implicants as JSON
     #[structopt(short, long)]
     json: bool,
@@ -24,22 +25,35 @@ pub fn cli_action() -> Arc<dyn CLICommand> {
 }
 
 struct CLIPrimes;
-impl CLIAction for CLIPrimes {
-    type Config = PrimeConfig;
-
+impl CLICommand for CLIPrimes {
     fn name(&self) -> &'static str {
         NAME
     }
     fn about(&self) -> &'static str {
-        let t = PrimeConfig{json:false};
         ABOUT
     }
+
+    fn clap(&self) -> App {
+        Config::clap()
+    }
+
     fn aliases(&self) -> &[&'static str] {
         &["pi", "implicants"]
     }
 
-    fn run_model(&self, model: &LQModelRef, config: Self::Config) {
-        if config.json {
+    fn run(&self, mut context: CommandContext, args: &[OsString]) -> CommandContext {
+        let mut model = context.as_model();
+        let config: Config = Config::from_iter(args);
+
+        config.show_primes(&model);
+
+        CommandContext::Model( model )
+    }
+}
+
+impl Config {
+    fn show_primes(&self, model: &LQModelRef) {
+        if self.json {
             json(model);
         } else {
             for (uid, var) in model.variables() {

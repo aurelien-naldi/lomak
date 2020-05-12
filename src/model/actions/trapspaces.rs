@@ -1,17 +1,17 @@
 use crate::func::expr::Expr;
 use crate::model::{QModel, LQModelRef};
-
 use crate::solver;
 use crate::solver::Solver;
-
-use crate::command::CLICommand;
+use crate::command::{CLICommand, CommandContext};
 use crate::solver::SolverMode;
+
+use std::ffi::OsString;
 use itertools::Itertools;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::Arc;
+use clap::App;
 use structopt::StructOpt;
-use crate::model::actions::CLIAction;
 
 static NAME: &str = "trapspaces";
 static ABOUT: &str = "Compute the trapspaces (stable patterns) of the model";
@@ -47,19 +47,32 @@ pub fn cli_action() -> Arc<dyn CLICommand> {
 }
 
 struct CLIFixed;
-impl CLIAction for CLIFixed {
-    type Config = Config;
+impl CLICommand for CLIFixed {
+
     fn name(&self) -> &'static str {
         NAME
     }
+
     fn about(&self) -> &'static str {
         ABOUT
     }
 
-    fn run_model(&self, model: &LQModelRef, config: Self::Config) {
-        let builder = TrapspacesBuilder::new(model.as_ref())
-            .config(config);
+    fn clap(&self) -> App {
+        Config::clap()
+    }
+
+    fn aliases(&self) -> &[&'static str] {
+        &["fixed-patterns"]
+    }
+
+    fn run(&self, mut context: CommandContext, args: &[OsString]) -> CommandContext {
+        let mut model = context.as_model();
+        let config: Config = Config::from_iter(args);
+
+        let builder = TrapspacesBuilder::new(model.as_ref()).config(&config);
         builder.call();
+
+        CommandContext::Model( model )
     }
 }
 
@@ -80,7 +93,7 @@ impl<'a> TrapspacesBuilder<'a> {
         }
     }
 
-    fn config(mut self, config: Config) -> Self {
+    fn config(mut self, config: &Config) -> Self {
 
         self.percolate = config.percolate;
         if config.elementary {

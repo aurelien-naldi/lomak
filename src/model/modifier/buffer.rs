@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::ffi::OsString;
 use std::rc::Rc;
 use std::sync::Arc;
+use clap::App;
 use structopt::StructOpt;
 
 static NAME: &str = "buffer";
@@ -16,7 +17,7 @@ static ABOUT: &str = "Add buffer components to delay interactions";
 
 #[derive(Debug, StructOpt)]
 #[structopt(name=NAME, about=ABOUT)]
-struct BufferCLIConfig {
+struct Config {
     /// The buffering strategy
     strategy: String,
 }
@@ -79,8 +80,8 @@ impl CLICommand for CLIBuffer {
         ABOUT
     }
 
-    fn help(&self) {
-        BufferCLIConfig::clap().print_help();
+    fn clap(&self) -> App {
+        Config::clap()
     }
 
     fn run(&self, mut context: CommandContext, args: &[OsString]) -> CommandContext {

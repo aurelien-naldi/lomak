@@ -1,23 +1,23 @@
 use crate::func::expr::Expr;
 use crate::model::{QModel, LQModelRef};
-
 use crate::solver;
-
-use crate::command::CLICommand;
+use crate::command::{CLICommand, CommandContext};
 use crate::func::paths::LiteralSet;
 use crate::solver::SolverMode;
+
+use std::ffi::OsString;
 use itertools::Itertools;
 use std::rc::Rc;
 use std::sync::Arc;
+use clap::App;
 use structopt::StructOpt;
-use crate::model::actions::CLIAction;
 
 static NAME: &str = "fixedpoints";
 static ABOUT: &str = "Compute the fixed points of the model";
 
 #[derive(Debug, StructOpt)]
 #[structopt(name=NAME, about=ABOUT)]
-struct FixedConfig {
+struct Config {
     /// Select output components
     displayed: Vec<String>,
 }
@@ -33,25 +33,33 @@ pub fn cli_action() -> Arc<dyn CLICommand> {
 }
 
 struct CLIFixed;
-impl CLIAction for CLIFixed {
-    type Config = FixedConfig;
-
+impl CLICommand for CLIFixed {
     fn name(&self) -> &'static str {
         NAME
     }
+
     fn about(&self) -> &'static str {
         ABOUT
+    }
+
+    fn clap(&self) -> App {
+        Config::clap()
     }
 
     fn aliases(&self) -> &[&'static str] {
         &["fixed", "stable", "fp"]
     }
 
-    fn run_model(&self, model: &LQModelRef, config: FixedConfig) {
-        let builder = FixedBuilder::new(model.as_ref())
-            .config(config);
+    fn run(&self, mut context: CommandContext, args: &[OsString]) -> CommandContext {
+        let mut model = context.as_model();
+        let config: Config = Config::from_iter(args);
+
+        let builder = FixedBuilder::new(model.as_ref()).config(&config);
         builder.call();
+
+        CommandContext::Model( model )
     }
+
 }
 
 pub struct FixedBuilder<'a> {
@@ -69,7 +77,7 @@ impl<'a> FixedBuilder<'a> {
         }
     }
 
-    fn config(mut self, config: FixedConfig) -> Self {
+    fn config(mut self, config: &Config) -> Self {
         self.set_displayed_names(config.displayed.iter().map(|s|s.as_str()).collect());
         self
     }

@@ -67,10 +67,26 @@ pub enum CommandContext {
     Model(LQModelRef),
 }
 
+impl CommandContext {
+
+    pub fn as_model(self) -> LQModelRef {
+        match (self) {
+            CommandContext::Model(m) => m,
+            _ => panic!("No model in the context"),
+        }
+    }
+}
+
 pub trait CLICommand: Sync + Send {
     fn name(&self) -> &'static str;
+
     fn about(&self) -> &'static str;
-    fn help(&self);
+
+    fn clap(&self) -> App;
+
+    fn help(&self) {
+        self.clap().print_help();
+    }
 
     fn aliases(&self) -> &[&'static str] {
         &[]
@@ -95,7 +111,7 @@ impl SelectedArgs {
 
     pub fn parse_next<'a>(&mut self, context: CommandContext) -> CommandContext {
         match self.next_type {
-            CommandType::Start => panic!("Should not run here"),
+            CommandType::Start => self.run_next_command(context, &io::LOADERS),
             CommandType::Modifier => self.run_next_command(context, &modifier::MODIFIERS),
             CommandType::Action => self.run_next_command(context, &actions::ACTIONS),
             CommandType::Done => context,
@@ -126,6 +142,11 @@ impl SelectedArgs {
         self.next_type = CommandType::Done;
         for i in start + 1..end {
             let cur = self.all_args[i].to_str().unwrap();
+            if io::LOADERS.contains(cur) {
+                self.next_type = CommandType::Start;
+                end = i;
+                break;
+            }
             if modifier::MODIFIERS.contains(cur) {
                 self.next_type = CommandType::Modifier;
                 end = i;

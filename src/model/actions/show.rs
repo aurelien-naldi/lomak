@@ -1,18 +1,19 @@
 use crate::func::expr::Expr;
 use crate::model::{QModel, LQModelRef};
 
-use crate::command::CLICommand;
+use crate::command::{CLICommand, CommandContext};
+use std::ffi::OsString;
 use std::rc::Rc;
 use std::sync::Arc;
+use clap::App;
 use structopt::StructOpt;
-use crate::model::actions::CLIAction;
 
 static NAME: &str = "show";
 static ABOUT: &str = "Display the current model";
 
 #[derive(Debug, StructOpt)]
 #[structopt(name=NAME, about=ABOUT)]
-struct ShowConfig {
+struct Config {
     #[structopt(short, long)]
     booleanized: bool,
 }
@@ -23,9 +24,7 @@ pub fn cli_action() -> Arc<dyn CLICommand> {
     Arc::new(CLIShow {})
 }
 
-impl CLIAction for CLIShow {
-    type Config = ShowConfig;
-
+impl CLICommand for CLIShow {
     fn name(&self) -> &'static str {
         NAME
     }
@@ -33,11 +32,19 @@ impl CLIAction for CLIShow {
         ABOUT
     }
 
+    fn clap(&self) -> App {
+        Config::clap()
+    }
+
     fn aliases(&self) -> &[&'static str] {
         &["display", "print"]
     }
 
-    fn run_model(&self, model: &LQModelRef, config: ShowConfig) {
+    fn run(&self, mut context: CommandContext, args: &[OsString]) -> CommandContext {
+        let mut model = context.as_model();
+        let config: Config = Config::from_iter(args);
+
+        // Save the model
         if config.booleanized {
             for (uid, var) in model.variables() {
                 let cpt = model.get_component_ref(var.component);
@@ -50,5 +57,7 @@ impl CLIAction for CLIShow {
             println!("{}", model.for_display());
         }
         println!();
+
+        CommandContext::Model(model)
     }
 }

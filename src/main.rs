@@ -14,41 +14,19 @@ use std::env::ArgsOs;
 use std::ffi::OsString;
 
 fn main() {
+
     let mut app = app_from_crate!()
         .setting(AppSettings::UnifiedHelpMessage)
-        .setting(AppSettings::ColoredHelp)
-        .setting(AppSettings::VersionlessSubcommands)
-        .arg(
-            clap::Arg::with_name("INPUT")
-                .help("Sets the input file to use")
-                .required(true),
-        )
-        .arg(
-            clap::Arg::with_name("fmt")
-                .short("F")
-                .long("format")
-                .help("[TODO] Specify the input format")
-                .takes_value(true),
-        );
+        .setting(AppSettings::ColoredHelp);
 
     // Extract slices of arguments for each sub-command
     let mut args_wrapper = SelectedArgs::new();
 
-    // Load the selected model
-    let matches = app.get_matches_from(args_wrapper.scan());
-    let filename = matches.value_of("INPUT").unwrap();
-    let format = matches.value_of("fmt");
+    // Main CLI parser to handle help messages
+    app.get_matches_from(args_wrapper.scan());
 
-    let model = match io::load_model(filename, format) {
-        Err(e) => {
-            println!("ERROR loading \"{}\": {}", filename, e);
-            return;
-        }
-        Ok(m) => m,
-    };
-
-    // Apply all modifiers and actions
-    let mut context = CommandContext::Model(model);
+    // Apply all commands: loader, modifiers and actions
+    let mut context = CommandContext::Empty;
     while args_wrapper.has_next() {
         context = args_wrapper.parse_next(context);
     }
