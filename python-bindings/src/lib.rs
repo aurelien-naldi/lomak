@@ -29,18 +29,12 @@ pub struct Expr {
     expr: func::expr::Expr,
 }
 
-/// Wrap any model action as a Python object
-#[pyclass]
-struct ModelAction {
-    m: Box<dyn model::actions::ActionBuilder>
-}
-
 
 #[pymethods]
 impl Model {
 
     #[new]
-    fn new(obj: &PyRawObject, filename: Option<&str>) {
+    fn new(filename: Option<&str>) -> Self {
         let model = match filename {
             None => model::new_model(),
             Some(filename) => {
@@ -51,9 +45,7 @@ impl Model {
             }
         };
 
-        obj.init({
-            Model { m: model }
-        });
+        Model { m: model }
     }
 
     /// Save a model to file
@@ -77,19 +69,22 @@ impl Model {
         model.rename(old_name, new_name.to_owned())
     }
 
+    /// TODO: compute prime implicants
     fn primes(&self) {
-        let builder = model::actions::primes::PrimeBuilder::new(self.m.as_ref());
-        builder.call();
+//        let builder = model::actions::primes::PrimeBuilder::new(self.m.as_ref());
+//        builder.call();
     }
 
+    /// TODO: compute fixed points
     fn fixpoints(&self) {
-        let builder = self.m.as_ref().fixpoints();
-        builder.call();
+//        let builder = self.m.as_ref().fixpoints();
+//        builder.call();
     }
 
+    /// TODO: compute trapspaces
     fn trapspaces(&self) {
-        let builder = self.m.as_ref().trapspaces();
-        builder.call();
+//        let builder = self.m.as_ref().trapspaces();
+//        builder.call();
     }
 
     fn expr(&mut self, repr: &str) {

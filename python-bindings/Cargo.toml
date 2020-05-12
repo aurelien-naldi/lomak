@@ -10,9 +10,9 @@ name = "lomak"
 crate-type = ["cdylib"]
 
 [dependencies]
-lomak = { path = "../.." }
+lomak = { path = ".." }
 
 [dependencies.pyo3]
-version = "0.8"
+version = "0.9"
 features = ["extension-module"]
 
