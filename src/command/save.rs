@@ -4,11 +4,10 @@ use crate::model::QModel;
 
 use std::borrow::Borrow;
 use std::ffi::OsString;
-use std::sync::Arc;
 use clap::App;
 use structopt::StructOpt;
 
-static NAME: &str = "export";
+static NAME: &str = "save";
 static ABOUT: &str = "Save the current model";
 
 #[derive(Debug, StructOpt)]
@@ -22,13 +21,8 @@ struct Config {
     format: Option<String>,
 }
 
-pub fn cli_action() -> Arc<dyn CLICommand> {
-    Arc::new(CLIExport {})
-}
-
-struct CLIExport;
-
-impl CLICommand for CLIExport {
+pub struct CLI;
+impl CLICommand for CLI {
 
     fn name(&self) -> &'static str {
         NAME
@@ -38,19 +32,15 @@ impl CLICommand for CLIExport {
         ABOUT
     }
 
-    fn clap(&self) -> App {
-        Config::clap()
-    }
-
     fn aliases(&self) -> &[&'static str] {
-        &["save", "convert"]
+        &["export", "convert"]
     }
 
     fn run(&self, mut context: CommandContext, args: &[OsString]) -> CommandContext {
-        let mut model = context.as_model();
         let config: Config = Config::from_iter(args);
 
         // Save the model
+        let mut model = context.as_model();
         io::save_model(model.borrow(), &config.output, config.format.as_deref());
 
         CommandContext::Model(model)

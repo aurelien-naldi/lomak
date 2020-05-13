@@ -19,12 +19,6 @@ mod bnet;
 mod boolsim;
 mod mnet;
 
-lazy_static! {
-    pub static ref LOADERS: CommandManager = CommandManager::new()
-        .register(load_action());
-}
-
-
 /// A Format may provide import and export filters
 pub trait Format: TrySaving + TryParsing {}
 
@@ -151,46 +145,3 @@ pub fn parse_expr(model: &mut dyn QModel, expr: &str) -> Result<Expr, String> {
     parser.parse_formula(model, expr)
 }
 
-
-static NAME: &str = "load";
-static ABOUT: &str = "Load a model from a file";
-
-#[derive(Debug, StructOpt)]
-#[structopt(name=NAME, about=ABOUT)]
-struct Config {
-    #[structopt(short="F", long)]
-    format: Option<String>,
-    filename: String
-}
-
-struct CLILoad;
-
-fn load_action() -> Arc<dyn CLICommand> {
-    Arc::new(CLILoad {})
-}
-
-impl CLICommand for CLILoad {
-    fn name(&self) -> &'static str {
-        NAME
-    }
-    fn about(&self) -> &'static str {
-        ABOUT
-    }
-
-    fn clap(&self) -> App {
-        Config::clap()
-    }
-
-    fn run(&self, mut context: CommandContext, args: &[OsString]) -> CommandContext {
-        let config: Config = Config::from_iter(args);
-        let model = match load_model(&config.filename, config.format.as_deref()) {
-            Err(e) => {
-                println!("ERROR loading \"{}\": {}", &config.filename, e);
-                return CommandContext::Empty;
-            }
-            Ok(m) => m,
-        };
-
-        CommandContext::Model(model)
-    }
-}

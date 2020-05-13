@@ -11,17 +11,44 @@ use crate::model::LQModelRef;
 use std::collections::HashMap;
 use std::sync::Arc;
 
+mod help;
+mod load;
+
+mod perturbation;
+mod rename;
+mod buffer;
+
+mod show;
+mod save;
+mod primes;
+mod fixpoints;
+mod trapspaces;
+
+lazy_static! {
+    pub static ref COMMANDS: CommandManager = CommandManager::new()
+        // Help: show commands
+        .register( Arc::new( help::CLI{} ))
+
+        // Load a new model
+        .register( Arc::new( load::CLI{} ))
+
+        // Model modifiers
+        .register( Arc::new( perturbation::CLI{} ))
+        .register( Arc::new( rename::CLI{} ))
+        .register( Arc::new( buffer::CLI{} ))
+
+        // Actions
+        .register( Arc::new( show::CLI{} ))
+        .register( Arc::new( save::CLI{} ))
+        .register( Arc::new( primes::CLI{} ))
+        .register( Arc::new( fixpoints::CLI{} ))
+        .register( Arc::new( trapspaces::CLI{} ))
+        ;
+}
+
 pub struct SelectedArgs {
     all_args: Vec<OsString>,
     next_slice: usize,
-    next_type: CommandType,
-}
-
-enum CommandType {
-    Start,
-    Modifier,
-    Action,
-    Done,
 }
 
 pub struct CommandManager {
@@ -60,6 +87,13 @@ impl CommandManager {
             .get(self.unroll_alias(name))
             .map(|c| Arc::clone(c))
     }
+
+    pub fn print_commands(&self) {
+        println!("Available commands:");
+        for srv in self.services.iter() {
+            println!("  {:20} {}", srv.0, srv.1.about());
+        }
+    }
 }
 
 pub enum CommandContext {
@@ -82,12 +116,6 @@ pub trait CLICommand: Sync + Send {
 
     fn about(&self) -> &'static str;
 
-    fn clap(&self) -> App;
-
-    fn help(&self) {
-        self.clap().print_help();
-    }
-
     fn aliases(&self) -> &[&'static str] {
         &[]
     }
@@ -101,7 +129,6 @@ impl SelectedArgs {
         SelectedArgs {
             all_args: argsos.collect(),
             next_slice: 0,
-            next_type: CommandType::Start,
         }
     }
 
@@ -110,12 +137,7 @@ impl SelectedArgs {
     }
 
     pub fn parse_next<'a>(&mut self, context: CommandContext) -> CommandContext {
-        match self.next_type {
-            CommandType::Start => self.run_next_command(context, &io::LOADERS),
-            CommandType::Modifier => self.run_next_command(context, &modifier::MODIFIERS),
-            CommandType::Action => self.run_next_command(context, &actions::ACTIONS),
-            CommandType::Done => context,
-        }
+        self.run_next_command(context, &COMMANDS)
     }
 
     fn run_next_command(
@@ -139,21 +161,9 @@ impl SelectedArgs {
 
         // Find the end of the next slice!
         let mut end = self.all_args.len();
-        self.next_type = CommandType::Done;
         for i in start + 1..end {
             let cur = self.all_args[i].to_str().unwrap();
-            if io::LOADERS.contains(cur) {
-                self.next_type = CommandType::Start;
-                end = i;
-                break;
-            }
-            if modifier::MODIFIERS.contains(cur) {
-                self.next_type = CommandType::Modifier;
-                end = i;
-                break;
-            }
-            if actions::ACTIONS.contains(cur) {
-                self.next_type = CommandType::Action;
+            if COMMANDS.contains(cur) {
                 end = i;
                 break;
             }

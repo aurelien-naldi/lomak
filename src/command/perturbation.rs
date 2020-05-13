@@ -5,7 +5,6 @@ use crate::model::LQModelRef;
 
 use std::borrow::BorrowMut;
 use std::ffi::OsString;
-use std::sync::Arc;
 use clap::App;
 use structopt::StructOpt;
 
@@ -27,13 +26,8 @@ struct Config {
     perturbations: Vec<String>,
 }
 
-pub struct CLIPerturbation;
-
-pub fn cli_modifier() -> Arc<dyn CLICommand> {
-    Arc::new(CLIPerturbation {})
-}
-
-impl CLICommand for CLIPerturbation {
+pub struct CLI;
+impl CLICommand for CLI {
     fn name(&self) -> &'static str {
         NAME
     }
@@ -42,14 +36,11 @@ impl CLICommand for CLIPerturbation {
         ABOUT
     }
 
-    fn clap(&self) -> App {
-        Config::clap()
-    }
-
     fn run(&self, mut context: CommandContext, args: &[OsString]) -> CommandContext {
-        let mut model = context.as_model();
+        // Start by parsing arguments to handle help without any context
         let config: Config = Config::from_iter(args);
 
+        let mut model = context.as_model();
         for sid in &config.ko {
             if let Some(uid) = model.component_by_name(sid) {
                 model.lock(uid, false);

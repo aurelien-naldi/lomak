@@ -13,66 +13,9 @@ use std::sync::Arc;
 use clap::App;
 use structopt::StructOpt;
 
-static NAME: &str = "trapspaces";
-static ABOUT: &str = "Compute the trapspaces (stable patterns) of the model";
-
-#[derive(Debug, StructOpt)]
-#[structopt(name=NAME, about=ABOUT)]
-struct Config {
-    /// Filter the results
-    #[structopt(short, long)]
-    filter: Option<Vec<String>>,
-
-    /// Percolate (propagate) fixed components
-    #[structopt(short, long)]
-    percolate: bool,
-
-    /// Show only elementary trapspaces, i.e. minimal stable motifs
-    #[structopt(short, long)]
-    elementary: bool,
-
-    /// All trapspaces instead of only the terminal ones
-    #[structopt(short, long)]
-    all: bool,
-}
-
 impl dyn QModel {
     pub fn trapspaces(&'_ self) -> TrapspacesBuilder<'_> {
         TrapspacesBuilder::new(self)
-    }
-}
-
-pub fn cli_action() -> Arc<dyn CLICommand> {
-    Arc::new(CLIFixed {})
-}
-
-struct CLIFixed;
-impl CLICommand for CLIFixed {
-
-    fn name(&self) -> &'static str {
-        NAME
-    }
-
-    fn about(&self) -> &'static str {
-        ABOUT
-    }
-
-    fn clap(&self) -> App {
-        Config::clap()
-    }
-
-    fn aliases(&self) -> &[&'static str] {
-        &["fixed-patterns"]
-    }
-
-    fn run(&self, mut context: CommandContext, args: &[OsString]) -> CommandContext {
-        let mut model = context.as_model();
-        let config: Config = Config::from_iter(args);
-
-        let builder = TrapspacesBuilder::new(model.as_ref()).config(&config);
-        builder.call();
-
-        CommandContext::Model( model )
     }
 }
 
@@ -93,26 +36,18 @@ impl<'a> TrapspacesBuilder<'a> {
         }
     }
 
-    fn config(mut self, config: &Config) -> Self {
-
-        self.percolate = config.percolate;
-        if config.elementary {
-            self.show_elementary();
-        }
-        if config.all {
-            self.show_all();
-        }
-        self
-    }
-
     pub fn filter(&mut self, uid: usize, b: bool) {
         self.filters.insert(uid, b);
     }
 
-    pub fn percolate(&mut self) -> &mut Self {
-        self.percolate = true;
+    pub fn set_percolate(&mut self, b: bool) -> &mut Self {
+        self.percolate = b;
         self
     }
+    pub fn percolate(&mut self) -> &mut Self {
+        self.set_percolate(true)
+    }
+
     pub fn show_all(&mut self) -> &mut Self {
         self.mode = SolverMode::ALL;
         self

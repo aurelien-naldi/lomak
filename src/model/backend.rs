@@ -143,10 +143,6 @@ impl QModel for LQModel {
     fn get_component_ref(&self, uid: usize) -> SharedComponent {
         self.components[uid].clone()
     }
-
-    fn for_display(&self) -> &dyn Display {
-        self
-    }
 }
 
 impl LQModel {}

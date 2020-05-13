@@ -1,4 +1,3 @@
-use crate::command::{CLICommand, CommandContext};
 use crate::func::expr::{AtomReplacer, Expr};
 use crate::func::Formula;
 use crate::model::QModel;
@@ -6,27 +5,7 @@ use crate::model::{LQModelRef, SharedComponent};
 use std::borrow::{Borrow, BorrowMut};
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::ffi::OsString;
 use std::rc::Rc;
-use std::sync::Arc;
-use clap::App;
-use structopt::StructOpt;
-
-static NAME: &str = "buffer";
-static ABOUT: &str = "Add buffer components to delay interactions";
-
-#[derive(Debug, StructOpt)]
-#[structopt(name=NAME, about=ABOUT)]
-struct Config {
-    /// The buffering strategy
-    strategy: String,
-}
-
-pub struct CLIBuffer;
-
-pub fn cli_modifier() -> Arc<dyn CLICommand> {
-    Arc::new(CLIBuffer {})
-}
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum BufferingStrategy {
@@ -71,58 +50,8 @@ impl BufferSelection {
     }
 }
 
-impl CLICommand for CLIBuffer {
-    fn name(&self) -> &'static str {
-        NAME
-    }
-
-    fn about(&self) -> &'static str {
-        ABOUT
-    }
-
-    fn clap(&self) -> App {
-        Config::clap()
-    }
-
-    fn run(&self, mut context: CommandContext, args: &[OsString]) -> CommandContext {
-        context
-    }
-}
-
-impl CLIBuffer {
-    fn modify(&self, mut model: LQModelRef, parameters: &[&str]) -> LQModelRef {
-        let strategy = match parameters {
-            ["buffer"] => BufferingStrategy::ALLBUFFERS,
-            ["delay"] => BufferingStrategy::DELAY,
-            ["separate"] => BufferingStrategy::SEPARATING,
-            _ => BufferingStrategy::CUSTOM,
-        };
-        let mut config = BufferConfig::new(model.as_mut(), strategy);
-
-        if strategy == BufferingStrategy::CUSTOM {
-            for arg in parameters {
-                let split: Vec<&str> = arg.split(':').collect();
-                if split.len() != 2 {
-                    println!("invalid buffering pattern");
-                    continue;
-                }
-
-                if split[1] == "*" {
-                    config.add_delay_by_name(split[0]);
-                    continue;
-                }
-
-                // TODO: handle multiple targets
-                config.add_single_buffer_by_name(split[0], split[1]);
-            }
-        }
-
-        model
-    }
-}
-
 impl<'a> BufferConfig<'a> {
-    fn new(model: &'a mut dyn QModel, strategy: BufferingStrategy) -> Self {
+    pub fn new(model: &'a mut dyn QModel, strategy: BufferingStrategy) -> Self {
         BufferConfig {
             model: model,
             strategy: strategy,
@@ -130,7 +59,7 @@ impl<'a> BufferConfig<'a> {
         }
     }
 
-    fn add_single_buffer_by_name(&mut self, source: &str, target: &str) {
+    pub fn add_single_buffer_by_name(&mut self, source: &str, target: &str) {
         let usrc = self.model.component_by_name(source);
         if usrc.is_none() {
             println!("unknown buffering source: {}", source);
@@ -145,21 +74,21 @@ impl<'a> BufferConfig<'a> {
         self.add_single_buffer(usrc.unwrap(), utgt.unwrap());
     }
 
-    fn add_single_buffer(&mut self, source: usize, target: usize) {
+    pub fn add_single_buffer(&mut self, source: usize, target: usize) {
         if self.strategy != BufferingStrategy::CUSTOM {
             panic!("Only custom bufferings allow to add buffers manually")
         }
         unimplemented!()
     }
 
-    fn add_multiple_buffers(&mut self, source: usize, targets: &[usize]) {
+    pub fn add_multiple_buffers(&mut self, source: usize, targets: &[usize]) {
         if self.strategy != BufferingStrategy::CUSTOM {
             panic!("Only custom bufferings allow to add buffers manually")
         }
         unimplemented!()
     }
 
-    fn add_delay_by_name(&mut self, source: &str) {
+    pub fn add_delay_by_name(&mut self, source: &str) {
         let usrc = self.model.component_by_name(source);
         if usrc.is_none() {
             println!("unknown buffering source: {}", source);
@@ -168,14 +97,14 @@ impl<'a> BufferConfig<'a> {
         self.add_delay(usrc.unwrap());
     }
 
-    fn add_delay(&mut self, source: usize) {
+    pub fn add_delay(&mut self, source: usize) {
         if self.strategy != BufferingStrategy::CUSTOM {
             panic!("Only custom bufferings allow to add buffers manually")
         }
         unimplemented!()
     }
 
-    fn apply(&mut self) {
+    pub fn apply(&mut self) {
         let components: Vec<(usize, SharedComponent)> = self.model.components_copy();
         for (cid, component) in components {
             let mut cpt = component.borrow_mut();

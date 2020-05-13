@@ -30,7 +30,7 @@ lazy_static! {
 ///
 /// Finally, each component is associated to a list of Boolean functions defining
 /// the conditions required for the activation of each threshold.
-pub trait QModel: VariableNamer {
+pub trait QModel: VariableNamer + Display {
     /// Find a component by name if it exists
     /// Components are NOT valid variables: they carry the name and
     /// the list of proper Boolean variables for each threshold.
@@ -139,8 +139,6 @@ pub trait QModel: VariableNamer {
 
     fn get_component_ref(&self, uid: usize) -> SharedComponent;
 
-    fn for_display(&self) -> &dyn Display;
-
     /// Compute the target state (synchronous image) of a given model state.
     /// Evaluates every Boolean function in the model using the default representation.
     fn get_target_state(&self, state: &State) -> State {
@@ -164,8 +162,8 @@ pub fn new_model() -> LQModelRef {
 /// A Boolean variable associated to a qualitative threshold of one of the components
 #[derive(Copy, Clone)]
 pub struct Variable {
-    component: usize,
-    value: usize,
+    pub component: usize,
+    pub value: usize,
 }
 
 /// A formula associated with a target value
@@ -252,7 +250,7 @@ impl Component {
         expr.simplify().unwrap_or(expr)
     }
 
-    fn get_formula(&self, value: usize) -> Rc<Formula> {
+    pub fn get_formula(&self, value: usize) -> Rc<Formula> {
         if let Some(f) = self.cached_rules.borrow().get(&value) {
             return Rc::clone(f);
         }
@@ -313,5 +311,11 @@ impl Assign {
 impl fmt::Display for Assign {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{} <- {}", self.target, self.formula)
+    }
+}
+
+impl fmt::Display for Component {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.name)
     }
 }

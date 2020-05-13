@@ -5,7 +5,6 @@ use crate::command::{CLICommand,CommandContext};
 
 use std::ffi::OsString;
 use std::rc::Rc;
-use std::sync::Arc;
 use clap::App;
 use structopt::StructOpt;
 
@@ -20,21 +19,13 @@ struct Config {
     json: bool,
 }
 
-pub fn cli_action() -> Arc<dyn CLICommand> {
-    Arc::new(CLIPrimes {})
-}
-
-struct CLIPrimes;
-impl CLICommand for CLIPrimes {
+pub struct CLI;
+impl CLICommand for CLI {
     fn name(&self) -> &'static str {
         NAME
     }
     fn about(&self) -> &'static str {
         ABOUT
-    }
-
-    fn clap(&self) -> App {
-        Config::clap()
     }
 
     fn aliases(&self) -> &[&'static str] {
@@ -50,6 +41,7 @@ impl CLICommand for CLIPrimes {
         CommandContext::Model( model )
     }
 }
+
 
 impl Config {
     fn show_primes(&self, model: &LQModelRef) {
@@ -81,7 +73,7 @@ pub fn json(model: &LQModelRef) {
         let cpt = model.get_component_ref(var.component);
         let cpt = cpt.borrow();
         // FIXME: should it be the name of the variable instead of the component?
-        let name = &cpt.name;
+        let name = &cpt.name();
         let pos_primes: Rc<paths::Paths> = cpt.get_formula(var.value).convert_as();
         let neg_primes = cpt
             .get_formula(var.value)
