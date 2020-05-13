@@ -97,7 +97,7 @@ impl<'a> FixedBuilder<'a> {
         }
     }
 
-    fn call(&self) {
+    pub fn call(&self) {
         let mut solver = solver::get_solver(SolverMode::ALL);
         let s = self
             .model

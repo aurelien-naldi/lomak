@@ -122,7 +122,7 @@ impl<'a> TrapspacesBuilder<'a> {
         self
     }
 
-    fn call(&self) {
+    pub fn call(&self) {
         let mut solver = solver::get_solver(self.mode);
 
         // Add all variables
