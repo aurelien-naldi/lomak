@@ -1,10 +1,9 @@
-use crate::command::{CLICommand, CommandContext};
-use crate::model::LQModelRef;
-use crate::model::io;
-
 use std::ffi::OsString;
-use clap::App;
+
 use structopt::StructOpt;
+
+use crate::command::{CLICommand, CommandContext};
+use crate::model::io;
 
 static NAME: &str = "load";
 static ABOUT: &str = "Load a model from a file";
@@ -12,9 +11,9 @@ static ABOUT: &str = "Load a model from a file";
 #[derive(Debug, StructOpt)]
 #[structopt(name=NAME, about=ABOUT)]
 struct Config {
-    #[structopt(short="F", long)]
+    #[structopt(short = "F", long)]
     format: Option<String>,
-    filename: String
+    filename: String,
 }
 
 pub struct CLI;
@@ -26,7 +25,7 @@ impl CLICommand for CLI {
         ABOUT
     }
 
-    fn run(&self, mut context: CommandContext, args: &[OsString]) -> CommandContext {
+    fn run(&self, _context: CommandContext, args: &[OsString]) -> CommandContext {
         // Start by parsing arguments to handle help without any context
         let config: Config = Config::from_iter(args);
 

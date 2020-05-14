@@ -1,7 +1,9 @@
 //! Logical model: collections of components, with associated variables and functions
 
 use std::cell::{Ref, RefCell, RefMut};
+use std::collections::HashMap;
 use std::fmt;
+use std::fmt::Display;
 use std::rc::Rc;
 
 use regex::Regex;
@@ -9,8 +11,6 @@ use regex::Regex;
 use crate::func::expr::*;
 use crate::func::state::State;
 use crate::func::*;
-use std::collections::HashMap;
-use std::fmt::Display;
 
 pub mod actions;
 pub mod io;
@@ -73,15 +73,13 @@ pub trait QModel: VariableNamer + Display {
             return self.ensure_component(pattern);
         };
 
-        let mut inc = 1;
+        let inc = 1;
         loop {
             let name = format!("{}_{}", pattern, inc);
             if self.component_by_name(&name).is_none() {
                 return self.ensure_component(&name);
             };
         }
-
-        panic!("Should have found an available name");
     }
 
     /// Find or create a variable with a given component name and threshold value
@@ -186,7 +184,7 @@ pub struct SharedComponent {
 }
 
 impl SharedComponent {
-    pub fn from(mut component: Component) -> Self {
+    pub fn from(component: Component) -> Self {
         SharedComponent {
             rc: Rc::new(RefCell::new(component)),
         }
@@ -216,7 +214,7 @@ impl Component {
         }
     }
 
-    pub fn into_shared(mut self) -> SharedComponent {
+    pub fn into_shared(self) -> SharedComponent {
         SharedComponent::from(self)
     }
 

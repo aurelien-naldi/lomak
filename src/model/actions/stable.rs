@@ -1,13 +1,12 @@
-use crate::func::expr::Expr;
-use crate::model::{QModel, LQModelRef};
-use crate::solver;
-use crate::command::{CLICommand, CommandContext};
-use crate::func::paths::LiteralSet;
-use crate::solver::SolverMode;
-
-use std::ffi::OsString;
-use itertools::Itertools;
 use std::rc::Rc;
+
+use itertools::Itertools;
+
+use crate::func::expr::Expr;
+use crate::func::paths::LiteralSet;
+use crate::model::QModel;
+use crate::solver;
+use crate::solver::SolverMode;
 
 impl dyn QModel {
     pub fn fixpoints(&'_ self) -> FixedBuilder<'_> {

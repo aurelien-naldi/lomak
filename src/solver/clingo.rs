@@ -1,10 +1,11 @@
+use std::num::ParseIntError;
+
 use clingo::*;
 use itertools::Itertools;
 use regex::Regex;
 
 use crate::func::paths::LiteralSet;
 use crate::solver::{Solver, SolverMode, SolverResults, SolverSolution};
-use std::num::ParseIntError;
 
 lazy_static! {
     static ref RE_VAR: Regex = Regex::new(r"v[0-9]+").unwrap();

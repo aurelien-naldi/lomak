@@ -1,11 +1,10 @@
-use crate::func::expr::Expr;
-use crate::model::{QModel, LQModelRef};
-
-use crate::command::{CLICommand, CommandContext};
 use std::ffi::OsString;
 use std::rc::Rc;
-use clap::App;
+
 use structopt::StructOpt;
+
+use crate::command::{CLICommand, CommandContext};
+use crate::func::expr::Expr;
 
 static NAME: &str = "show";
 static ABOUT: &str = "Display the current model";
@@ -30,10 +29,10 @@ impl CLICommand for CLI {
         &["display", "print"]
     }
 
-    fn run(&self, mut context: CommandContext, args: &[OsString]) -> CommandContext {
+    fn run(&self, context: CommandContext, args: &[OsString]) -> CommandContext {
         let config: Config = Config::from_iter(args);
 
-        let mut model = context.as_model();
+        let model = context.as_model();
 
         if config.booleanized {
             for (uid, var) in model.variables() {

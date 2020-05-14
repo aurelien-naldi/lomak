@@ -1,12 +1,12 @@
-use crate::func::expr;
-use crate::func::paths;
-use crate::model::{LQModelRef, QModel};
-use crate::command::{CLICommand,CommandContext};
-
 use std::ffi::OsString;
 use std::rc::Rc;
-use clap::App;
+
 use structopt::StructOpt;
+
+use crate::command::{CLICommand, CommandContext};
+use crate::func::expr;
+use crate::func::paths;
+use crate::model::LQModelRef;
 
 static NAME: &str = "primes";
 static ABOUT: &str = "Compute the prime implicants of the model's functions";
@@ -32,16 +32,15 @@ impl CLICommand for CLI {
         &["pi", "implicants"]
     }
 
-    fn run(&self, mut context: CommandContext, args: &[OsString]) -> CommandContext {
-        let mut model = context.as_model();
+    fn run(&self, context: CommandContext, args: &[OsString]) -> CommandContext {
+        let model = context.as_model();
         let config: Config = Config::from_iter(args);
 
         config.show_primes(&model);
 
-        CommandContext::Model( model )
+        CommandContext::Model(model)
     }
 }
-
 
 impl Config {
     fn show_primes(&self, model: &LQModelRef) {
@@ -64,7 +63,7 @@ pub fn json(model: &LQModelRef) {
     println!("{{");
     let mut first = true;
     let namer = model.as_namer();
-    for (uid, var) in model.variables() {
+    for (_, var) in model.variables() {
         if first {
             first = false;
         } else {

@@ -1,6 +1,6 @@
-use crate::func::paths::LiteralSet;
-
 use std::fmt;
+
+use crate::func::paths::LiteralSet;
 
 mod clingo;
 

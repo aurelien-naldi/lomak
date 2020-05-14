@@ -1,9 +1,8 @@
-use crate::command::{CLICommand, CommandContext};
-use crate::model::LQModelRef;
-
 use std::ffi::OsString;
-use clap::App;
+
 use structopt::StructOpt;
+
+use crate::command::{CLICommand, CommandContext};
 
 static NAME: &str = "rename";
 static ABOUT: &str = "Rename one or several components";
@@ -29,7 +28,7 @@ impl CLICommand for CLI {
         ABOUT
     }
 
-    fn run(&self, mut context: CommandContext, args: &[OsString]) -> CommandContext {
+    fn run(&self, context: CommandContext, args: &[OsString]) -> CommandContext {
         // Start by parsing arguments to handle help without any context
         let config: Config = Config::from_iter(args);
 

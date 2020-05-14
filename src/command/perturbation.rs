@@ -1,12 +1,9 @@
+use std::ffi::OsString;
+
 use regex::Regex;
+use structopt::StructOpt;
 
 use crate::command::{CLICommand, CommandContext};
-use crate::model::LQModelRef;
-
-use std::borrow::BorrowMut;
-use std::ffi::OsString;
-use clap::App;
-use structopt::StructOpt;
 
 static NAME: &str = "perturbation";
 static ABOUT: &str = "Apply a perturbation to one or several components";
@@ -36,7 +33,7 @@ impl CLICommand for CLI {
         ABOUT
     }
 
-    fn run(&self, mut context: CommandContext, args: &[OsString]) -> CommandContext {
+    fn run(&self, context: CommandContext, args: &[OsString]) -> CommandContext {
         // Start by parsing arguments to handle help without any context
         let config: Config = Config::from_iter(args);
 

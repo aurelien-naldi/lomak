@@ -1,12 +1,10 @@
-use crate::model::{QModel, LQModelRef};
+use std::ffi::OsString;
+
+use structopt::StructOpt;
 
 use crate::command::{CLICommand, CommandContext};
-use std::ffi::OsString;
-use std::rc::Rc;
-use clap::App;
-use structopt::StructOpt;
-use crate::model::modifier::buffer::{BufferingStrategy, BufferConfig};
-
+use crate::model::modifier::buffer::{BufferConfig, BufferingStrategy};
+use crate::model::LQModelRef;
 
 static NAME: &str = "buffer";
 static ABOUT: &str = "TODO: Add buffer components to delay interactions";
@@ -29,9 +27,8 @@ impl CLICommand for CLI {
         ABOUT
     }
 
-    fn run(&self, mut context: CommandContext, args: &[OsString]) -> CommandContext {
-
-        let config: Config = Config::from_iter(args);
+    fn run(&self, context: CommandContext, args: &[OsString]) -> CommandContext {
+        let _config: Config = Config::from_iter(args);
 
         // TODO: call the buffering tool
 

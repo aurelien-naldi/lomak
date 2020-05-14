@@ -1,10 +1,9 @@
-use std::fmt;
-use std::iter::Iterator;
-use std::rc::Rc;
-
 use core::ops::BitAnd;
 use core::ops::BitOr;
 use core::ops::Not;
+use std::fmt;
+use std::iter::Iterator;
+use std::rc::Rc;
 
 use crate::func;
 use crate::func::paths::LiteralSet;
@@ -661,9 +660,10 @@ impl<'a> BitOr<&'a Expr> for &'a Expr {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::func::paths::Paths;
     use crate::func::*;
+
+    use super::*;
 
     #[test]
     fn conj_extension() {

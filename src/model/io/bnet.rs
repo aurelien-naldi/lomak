@@ -1,12 +1,12 @@
-use crate::model::io;
-
-use pest::iterators::*;
-use pest::Parser;
 use std::io::{Error, Write};
 use std::rc::Rc;
 
+use pest::iterators::*;
+use pest::Parser;
+
 use crate::func::expr::{Expr, NamedExpr, Operator};
 use crate::func::Formula;
+use crate::model::io;
 use crate::model::QModel;
 
 #[derive(Parser)]

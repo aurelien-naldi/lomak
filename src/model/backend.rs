@@ -5,14 +5,8 @@ use std::fmt;
 
 use slab;
 
-use crate::func::expr::Expr;
 use crate::func::{Formula, Grouped, VariableNamer};
 use crate::model::*;
-use std::borrow::{Borrow, BorrowMut};
-use std::cell::{Ref, RefCell, RefMut};
-use std::fmt::Display;
-use std::ops::{Deref, DerefMut};
-use std::rc::Rc;
 
 pub fn new_model() -> impl QModel {
     LQModel {
@@ -96,7 +90,7 @@ impl QModel for LQModel {
         let var = &self.variables[target];
         let cid = var.component;
         let val = var.value;
-        let mut cpt = self.component_mut(cid);
+        let cpt = self.component_mut(cid);
         cpt.borrow_mut().set_formula(rule, val);
     }
 
@@ -104,7 +98,7 @@ impl QModel for LQModel {
         let var = &self.variables[target];
         let cid = var.component;
         let val = var.value;
-        let mut cpt = self.component_mut(cid);
+        let cpt = self.component_mut(cid);
         cpt.borrow_mut().extend_formula(val, rule);
     }
 
@@ -123,7 +117,7 @@ impl QModel for LQModel {
         self.name2uid.remove(&old_name);
         self.name2uid.insert(name.clone(), uid);
 
-        let mut cpt = self.component_mut(uid);
+        let cpt = self.component_mut(uid);
         cpt.borrow_mut().set_name(name);
         true
     }

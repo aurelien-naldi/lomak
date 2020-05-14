@@ -1,11 +1,11 @@
-use crate::func::expr::{AtomReplacer, Expr};
-use crate::func::Formula;
-use crate::model::QModel;
-use crate::model::{LQModelRef, SharedComponent};
-use std::borrow::{Borrow, BorrowMut};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+
+use crate::func::expr::{AtomReplacer, Expr};
+use crate::func::Formula;
+use crate::model::QModel;
+use crate::model::SharedComponent;
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum BufferingStrategy {

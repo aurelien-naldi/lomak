@@ -1,21 +1,14 @@
 #[macro_use]
 extern crate clap;
 
-use command::SelectedArgs;
-use lomak::*;
-use model::actions;
-use model::io;
-use model::modifier;
+use clap::AppSettings;
 
-use clap::{App, AppSettings, ArgMatches};
+use command::SelectedArgs;
 use lomak::command::CommandContext;
-use lomak::model::LQModelRef;
-use std::env::ArgsOs;
-use std::ffi::OsString;
+use lomak::*;
 
 fn main() {
-
-    let mut app = app_from_crate!()
+    let app = app_from_crate!()
         .setting(AppSettings::UnifiedHelpMessage)
         .setting(AppSettings::ColoredHelp);
 

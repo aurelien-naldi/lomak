@@ -1,27 +1,21 @@
-use clap::{App, AppSettings, Arg, ArgMatches};
-
-use std::env;
-use std::env::ArgsOs;
-use std::ffi::OsString;
-
-use crate::model::actions;
-use crate::model::io;
-use crate::model::modifier;
-use crate::model::LQModelRef;
 use std::collections::HashMap;
+use std::env;
+use std::ffi::OsString;
 use std::sync::Arc;
+
+use crate::model::LQModelRef;
 
 mod help;
 mod load;
 
+mod buffer;
 mod perturbation;
 mod rename;
-mod buffer;
 
-mod show;
-mod save;
-mod primes;
 mod fixpoints;
+mod primes;
+mod save;
+mod show;
 mod trapspaces;
 
 lazy_static! {
@@ -65,7 +59,7 @@ impl CommandManager {
         }
     }
 
-    pub fn register(mut self, action: Arc<CLICommand>) -> Self {
+    pub fn register(mut self, action: Arc<dyn CLICommand>) -> Self {
         let name = action.name();
         for alias in action.aliases().iter() {
             self.aliases.insert(alias, name);
@@ -102,9 +96,8 @@ pub enum CommandContext {
 }
 
 impl CommandContext {
-
     pub fn as_model(self) -> LQModelRef {
-        match (self) {
+        match self {
             CommandContext::Model(m) => m,
             _ => panic!("No model in the context"),
         }

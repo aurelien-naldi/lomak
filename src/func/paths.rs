@@ -1,6 +1,7 @@
-use bit_set::BitSet;
 use std::fmt;
 use std::vec::Vec;
+
+use bit_set::BitSet;
 
 use crate::func::expr::Expr;
 use crate::func::state::State;

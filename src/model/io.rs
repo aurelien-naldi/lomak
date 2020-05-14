@@ -1,7 +1,3 @@
-use crate::func::expr::Expr;
-use crate::model::{new_model, LQModelRef, QModel};
-use crate::command::{CLICommand, CommandContext, CommandManager};
-
 use std::borrow::BorrowMut;
 use std::ffi::OsStr;
 use std::fs::File;
@@ -10,10 +6,8 @@ use std::io::ErrorKind;
 use std::io::{BufWriter, Read, Write};
 use std::path::Path;
 
-use std::sync::Arc;
-use std::ffi::OsString;
-use clap::App;
-use structopt::StructOpt;
+use crate::func::expr::Expr;
+use crate::model::{new_model, LQModelRef, QModel};
 
 mod bnet;
 mod boolsim;
@@ -144,4 +138,3 @@ pub fn parse_expr(model: &mut dyn QModel, expr: &str) -> Result<Expr, String> {
     let parser = mnet::MNETFormat::new();
     parser.parse_formula(model, expr)
 }
-

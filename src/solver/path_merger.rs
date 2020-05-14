@@ -1,7 +1,6 @@
+use crate::func::expr::Expr;
 use crate::func::paths::LiteralSet;
 use crate::func::paths::Paths;
-use crate::func::expr::Expr;
-
 
 pub struct PathsMerger {
     solvable: bool,

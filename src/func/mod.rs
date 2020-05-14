@@ -1,19 +1,20 @@
 //! Represent and convert Boolean functions
 
-pub mod convert;
-pub mod expr;
-pub mod gen;
-pub mod paths;
-pub mod state;
+use std::cell::RefCell;
+use std::fmt;
+use std::rc::Rc;
+
+use crate::func::state::State;
 
 use self::expr::Expr;
 use self::gen::Generator;
 use self::paths::Paths;
 
-use crate::func::state::State;
-use std::cell::RefCell;
-use std::fmt;
-use std::rc::Rc;
+pub mod convert;
+pub mod expr;
+pub mod gen;
+pub mod paths;
+pub mod state;
 
 pub trait VariableNamer {
     /// Write the name corresponding to the given UID

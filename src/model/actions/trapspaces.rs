@@ -1,17 +1,13 @@
-use crate::func::expr::Expr;
-use crate::model::{QModel, LQModelRef};
-use crate::solver;
-use crate::solver::Solver;
-use crate::command::{CLICommand, CommandContext};
-use crate::solver::SolverMode;
-
-use std::ffi::OsString;
-use itertools::Itertools;
 use std::collections::HashMap;
 use std::rc::Rc;
-use std::sync::Arc;
-use clap::App;
-use structopt::StructOpt;
+
+use itertools::Itertools;
+
+use crate::func::expr::Expr;
+use crate::model::QModel;
+use crate::solver;
+use crate::solver::Solver;
+use crate::solver::SolverMode;
 
 impl dyn QModel {
     pub fn trapspaces(&'_ self) -> TrapspacesBuilder<'_> {
