@@ -21,8 +21,8 @@ pub struct FixedBuilder<'a> {
     restriction: Option<LiteralSet>,
 }
 
-pub struct FixedPoints<'a> {
-    model: &'a dyn QModel,
+pub struct FixedPoints {
+    names: Vec<String>,
     patterns: Vec<LiteralSet>,
     displayed: Option<Vec<usize>>,
 }
@@ -73,10 +73,15 @@ impl<'a> FixedBuilder<'a> {
     }
 }
 
-impl<'a> FixedPoints<'a> {
-    pub fn new(model: &'a dyn QModel, patterns: Vec<LiteralSet>) -> Self {
+impl FixedPoints {
+    pub fn new(model: &dyn QModel, patterns: Vec<LiteralSet>) -> Self {
+        let names = model
+            .variables()
+            .into_iter()
+            .map(|(u, _)| model.get_name(u))
+            .collect_vec();
         FixedPoints {
-            model: model,
+            names: names,
             patterns: patterns,
             displayed: None,
         }
@@ -88,7 +93,7 @@ impl<'a> FixedPoints<'a> {
             Some(names) => {
                 let selected = names
                     .iter()
-                    .filter_map(|n| self.model.variable_by_name(n))
+                    .filter_map(|n| self.names.iter().position(|name| n == name))
                     .collect_vec();
                 if selected.len() > 0 {
                     self.set_displayed(Some(selected));
@@ -102,17 +107,20 @@ impl<'a> FixedPoints<'a> {
     }
 }
 
-impl fmt::Display for FixedPoints<'_> {
+impl fmt::Display for FixedPoints {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let display = match &self.displayed {
-            None => self.model.variables().map(|(u, _)| u).collect_vec(),
+            None => self.names.iter().enumerate().map(|(u, _)| u).collect_vec(),
             Some(v) => v.clone(),
         };
-        let s = display
-            .iter()
-            .map(|uid| self.model.get_name(*uid))
-            .join(" ");
-        writeln!(f, "{}", s)?;
+        writeln!(
+            f,
+            "{}",
+            display
+                .iter()
+                .map(|uid| self.names.get(*uid).unwrap())
+                .join(" ")
+        )?;
 
         for p in self.patterns.iter() {
             p.filter_fmt(f, &display)?;
