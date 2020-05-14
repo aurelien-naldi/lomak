@@ -3,7 +3,7 @@ use std::env;
 use std::ffi::OsString;
 use std::sync::Arc;
 
-use crate::model::LQModelRef;
+use crate::model::{LQModelRef, SharedModel};
 
 mod help;
 mod load;
@@ -92,13 +92,13 @@ impl CommandManager {
 
 pub enum CommandContext {
     Empty,
-    Model(LQModelRef),
+    Model(SharedModel),
 }
 
 impl CommandContext {
-    pub fn as_model(self) -> LQModelRef {
+    pub fn get_model(&self) -> SharedModel {
         match self {
-            CommandContext::Model(m) => m,
+            CommandContext::Model(m) => m.clone(),
             _ => panic!("No model in the context"),
         }
     }

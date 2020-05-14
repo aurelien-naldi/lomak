@@ -52,9 +52,9 @@ impl CLICommand for CLI {
 
     fn run(&self, context: CommandContext, args: &[OsString]) -> CommandContext {
         let config: Config = Config::from_iter(args);
-        let model = context.as_model();
+        let smodel = context.get_model();
 
-        let mut builder = TrapspacesBuilder::new(model.as_ref());
+        let mut builder = TrapspacesBuilder::new(smodel);
         builder.set_percolate(config.percolate);
 
         if config.elementary {
@@ -70,6 +70,6 @@ impl CLICommand for CLI {
         }
         println!("{}", result);
 
-        CommandContext::Model(model)
+        context
     }
 }

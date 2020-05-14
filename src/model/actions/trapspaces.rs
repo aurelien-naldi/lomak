@@ -5,26 +5,22 @@ use itertools::Itertools;
 
 use crate::func::expr::Expr;
 use crate::model::actions::fixpoints::FixedPoints;
-use crate::model::QModel;
+use crate::model::{QModel, LQModelRef, SharedModel};
 use crate::solver;
 use crate::solver::Solver;
 use crate::solver::SolverMode;
+use std::ops::Deref;
 
-impl dyn QModel {
-    pub fn trapspaces(&'_ self) -> TrapspacesBuilder<'_> {
-        TrapspacesBuilder::new(self)
-    }
-}
 
-pub struct TrapspacesBuilder<'a> {
-    model: &'a dyn QModel,
+pub struct TrapspacesBuilder {
+    model: SharedModel,
     filters: HashMap<usize, bool>,
     percolate: bool,
     mode: SolverMode,
 }
 
-impl<'a> TrapspacesBuilder<'a> {
-    pub fn new(model: &'a dyn QModel) -> Self {
+impl TrapspacesBuilder {
+    pub fn new(model: SharedModel) -> Self {
         TrapspacesBuilder {
             model,
             filters: HashMap::new(),
@@ -57,9 +53,10 @@ impl<'a> TrapspacesBuilder<'a> {
     pub fn solve(&self, max: Option<usize>) -> FixedPoints {
         let mut solver = solver::get_solver(self.mode);
 
+        let model = self.model.borrow();
+
         // Add all variables
-        let s = self
-            .model
+        let s = model
             .variables()
             .map(|(uid, _)| format!("v{}; v{}", 2 * uid, 2 * uid + 1))
             .join("; ");
@@ -67,12 +64,12 @@ impl<'a> TrapspacesBuilder<'a> {
         solver.add(&s);
 
         // A variable can only be fixed at a specific value
-        for (uid, _) in self.model.variables() {
+        for (uid, _) in model.variables() {
             solver.add(&format!(":- v{}, v{}.\n", 2 * uid, 2 * uid + 1));
         }
 
-        for (uid, var) in self.model.variables() {
-            let cpt = self.model.get_component_ref(var.component);
+        for (uid, var) in model.variables() {
+            let cpt = model.get_component_ref(var.component);
             let e: Rc<Expr> = cpt.borrow().get_formula(var.value).convert_as();
             let ne = e.not();
             restrict(&mut *solver, &e, 2 * uid + 1);
@@ -85,8 +82,7 @@ impl<'a> TrapspacesBuilder<'a> {
 
             // Remove the full state space from the solutions when computing elementary trapspaces
             if self.mode == SolverMode::MIN {
-                let s = self
-                    .model
+                let s = model
                     .variables()
                     .map(|(uid, _)| format!("not v{}, not v{}", 2 * uid, 2 * uid + 1))
                     .join(", ");
@@ -104,7 +100,7 @@ impl<'a> TrapspacesBuilder<'a> {
             .take(max.unwrap_or(10000))
             .collect_vec();
 
-        FixedPoints::new(self.model, patterns)
+        FixedPoints::new(model.deref(), patterns)
     }
 }
 

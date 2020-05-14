@@ -5,6 +5,7 @@ use structopt::StructOpt;
 
 use crate::command::{CLICommand, CommandContext};
 use crate::model::io;
+use std::ops::Deref;
 
 static NAME: &str = "save";
 static ABOUT: &str = "Save the current model";
@@ -38,9 +39,11 @@ impl CLICommand for CLI {
         let config: Config = Config::from_iter(args);
 
         // Save the model
-        let model = context.as_model();
-        io::save_model(model.borrow(), &config.output, config.format.as_deref());
+        let smodel = context.get_model();
+        let model = smodel.borrow();
+        let m = model.deref();
+        io::save_model(m, &config.output, config.format.as_deref());
 
-        CommandContext::Model(model)
+        context
     }
 }

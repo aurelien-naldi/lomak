@@ -18,6 +18,10 @@ struct Config {
     /// Select output components
     #[structopt(short, long)]
     displayed: Option<Vec<String>>,
+
+    /// Enforce additional constraints
+    #[structopt(short, long)]
+    enforce: Option<Vec<String>>,
 }
 
 pub struct CLI;
@@ -37,15 +41,27 @@ impl CLICommand for CLI {
     fn run(&self, context: CommandContext, args: &[OsString]) -> CommandContext {
         let config: Config = Config::from_iter(args);
 
-        let model = context.as_model();
-        let builder = FixedBuilder::new(model.as_ref());
+        // Create the fixpoint builder
+        let smodel = context.get_model();
+        let mut builder = FixedBuilder::new(smodel);
+
+        // Apply extra restrictions if any
+        if let Some(enforce) = config.enforce {
+            for r in enforce {
+                // enforce a constraint by restricting the opposite
+                builder.restrict_by_name(&r, false);
+            }
+        }
+
+        // Search the fixpoints and retrieve the results
         let mut result = builder.solve(config.max);
 
+        // Select the listed variables and display the results
         if let Some(display) = config.displayed {
             result.set_displayed_names(Some(display));
         }
         println!("{}", result);
 
-        CommandContext::Model(model)
+        context
     }
 }

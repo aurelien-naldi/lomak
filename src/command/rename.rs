@@ -3,6 +3,7 @@ use std::ffi::OsString;
 use structopt::StructOpt;
 
 use crate::command::{CLICommand, CommandContext};
+use std::ops::DerefMut;
 
 static NAME: &str = "rename";
 static ABOUT: &str = "Rename one or several components";
@@ -32,11 +33,12 @@ impl CLICommand for CLI {
         // Start by parsing arguments to handle help without any context
         let config: Config = Config::from_iter(args);
 
-        let mut model = context.as_model();
+        let mut smodel = context.get_model();
 
         // TODO: multiple rename actions ?
-        model.rename(&config.source, config.target);
+        let mut model = smodel.borrow_mut();
+        model.deref_mut().rename(&config.source, config.target);
 
-        CommandContext::Model(model)
+        context
     }
 }

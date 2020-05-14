@@ -6,7 +6,8 @@ use structopt::StructOpt;
 use crate::command::{CLICommand, CommandContext};
 use crate::func::expr;
 use crate::func::paths;
-use crate::model::LQModelRef;
+use crate::model::{LQModelRef, QModel};
+use std::ops::Deref;
 
 static NAME: &str = "primes";
 static ABOUT: &str = "Compute the prime implicants of the model's functions";
@@ -33,17 +34,19 @@ impl CLICommand for CLI {
     }
 
     fn run(&self, context: CommandContext, args: &[OsString]) -> CommandContext {
-        let model = context.as_model();
         let config: Config = Config::from_iter(args);
 
-        config.show_primes(&model);
+        let smodel = context.get_model();
+        let model = smodel.borrow();
 
-        CommandContext::Model(model)
+        config.show_primes(model.deref());
+
+        context
     }
 }
 
 impl Config {
-    fn show_primes(&self, model: &LQModelRef) {
+    fn show_primes(&self, model: &dyn QModel) {
         if self.json {
             json(model);
         } else {
@@ -59,7 +62,7 @@ impl Config {
     }
 }
 
-pub fn json(model: &LQModelRef) {
+pub fn json(model: &dyn QModel) {
     println!("{{");
     let mut first = true;
     let namer = model.as_namer();

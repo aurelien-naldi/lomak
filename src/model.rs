@@ -11,6 +11,7 @@ use regex::Regex;
 use crate::func::expr::*;
 use crate::func::state::State;
 use crate::func::*;
+use std::borrow::Borrow;
 
 pub mod actions;
 pub mod io;
@@ -153,8 +154,30 @@ pub trait QModel: VariableNamer + Display {
 }
 
 pub type LQModelRef = Box<dyn QModel>;
-pub fn new_model() -> LQModelRef {
+pub fn new_model_ref() -> LQModelRef {
     Box::new(backend::new_model())
+}
+pub fn new_model() -> SharedModel {
+    SharedModel {
+        rc: Rc::new(RefCell::new(backend::new_model()))
+    }
+}
+
+/// Sharable model reference
+#[derive(Clone)]
+pub struct SharedModel {
+    rc: Rc<RefCell<dyn QModel>>,
+}
+
+impl SharedModel {
+
+    pub fn borrow(&self) -> Ref<dyn QModel> {
+        self.rc.as_ref().borrow()
+    }
+
+    pub fn borrow_mut(&self) -> RefMut<dyn QModel> {
+        self.rc.as_ref().borrow_mut()
+    }
 }
 
 /// A Boolean variable associated to a qualitative threshold of one of the components

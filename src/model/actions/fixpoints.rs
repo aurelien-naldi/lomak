@@ -5,19 +5,15 @@ use itertools::Itertools;
 
 use crate::func::expr::Expr;
 use crate::func::paths::LiteralSet;
-use crate::model::QModel;
+use crate::model::{QModel, SharedModel};
 use crate::solver;
 use crate::solver::SolverMode;
 use std::fmt::Formatter;
+use std::ops::Deref;
 
-impl dyn QModel {
-    pub fn fixpoints(&'_ self) -> FixedBuilder<'_> {
-        FixedBuilder::new(self)
-    }
-}
 
-pub struct FixedBuilder<'a> {
-    model: &'a dyn QModel,
+pub struct FixedBuilder {
+    model: SharedModel,
     restriction: Option<LiteralSet>,
 }
 
@@ -27,26 +23,45 @@ pub struct FixedPoints {
     displayed: Option<Vec<usize>>,
 }
 
-impl<'a> FixedBuilder<'a> {
-    pub fn new(model: &'a dyn QModel) -> FixedBuilder<'a> {
+impl FixedBuilder {
+    pub fn new(model: SharedModel) -> Self {
         FixedBuilder {
             model,
             restriction: None,
         }
     }
 
+    /// Apply additional restrictions to the search for fixed points
+    pub fn restrict_by_name(&mut self, name: &str, value: bool) {
+        let model = self.model.borrow();
+        let uid = model.variable_by_name(name);
+        if let Some(uid) = uid {
+            if self.restriction.is_none() {
+                self.restriction = Some( LiteralSet::new() );
+            }
+            self.restriction.as_mut().unwrap().set_literal(uid, value);
+        }
+    }
+
     pub fn solve(&self, max: Option<usize>) -> FixedPoints {
         let mut solver = solver::get_solver(SolverMode::ALL);
-        let s = self
-            .model
+
+        let model = self.model.borrow();
+
+        // Create an ASP variable matching each variable of the model
+        let s = model
             .variables()
             .map(|(uid, _)| format!("v{}", uid))
             .join("; ");
         let s = format!("{{{}}}.", s);
         solver.add(&s);
 
-        for (uid, var) in self.model.variables() {
-            let cpt = self.model.get_component_ref(var.component);
+        // For each variable:
+        //   * retrieve the Boolean formula
+        //   * derive the stability condition
+        //   * encode it in ASP
+        for (uid, var) in model.variables() {
+            let cpt = model.get_component_ref(var.component);
             let cpt = cpt.borrow();
             let cur = Expr::ATOM(uid);
             let e: Rc<Expr> = cpt.get_formula(var.value).convert_as();
@@ -56,12 +71,14 @@ impl<'a> FixedBuilder<'a> {
             for p in cur.and(&e.not()).prime_implicants().items() {
                 solver.restrict(p);
             }
-
-            if self.restriction.is_some() {
-                solver.restrict(self.restriction.as_ref().unwrap());
-            }
         }
 
+        // Add additional restrictions
+        if self.restriction.is_some() {
+            solver.restrict(self.restriction.as_ref().unwrap());
+        }
+
+        // Extract patterns from the clingo results
         let patterns = solver
             .solve()
             .into_iter()
@@ -69,7 +86,7 @@ impl<'a> FixedBuilder<'a> {
             .take(max.unwrap_or(10000))
             .collect_vec();
 
-        FixedPoints::new(self.model, patterns)
+        FixedPoints::new(model.deref(), patterns)
     }
 }
 

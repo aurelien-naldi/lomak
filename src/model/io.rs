@@ -7,7 +7,8 @@ use std::io::{BufWriter, Read, Write};
 use std::path::Path;
 
 use crate::func::expr::Expr;
-use crate::model::{new_model, LQModelRef, QModel};
+use crate::model::{new_model, LQModelRef, QModel, SharedModel};
+use std::ops::{Deref, DerefMut};
 
 mod bnet;
 mod boolsim;
@@ -54,14 +55,15 @@ impl<T: ParsingFormat> TryParsing for T {
 
 /// Trait providing the import filter for Formats.
 pub trait ParsingFormat {
-    fn parse_file(&self, filename: &str) -> Result<LQModelRef, io::Error> {
+    fn parse_file(&self, filename: &str) -> Result<SharedModel, io::Error> {
         // Load the input file into a local string
         let mut unparsed_file = String::new();
         File::open(filename)?.read_to_string(&mut unparsed_file)?;
         let mut model = new_model();
-        let m: &mut dyn QModel = model.borrow_mut();
-        self.parse_rules(m, &unparsed_file);
-        Ok(model)
+        let result = model.clone();
+        let mut m = model.borrow_mut();
+        self.parse_rules(m.deref_mut(), &unparsed_file);
+        Ok(result)
     }
 
     fn parse_rules(&self, model: &mut dyn QModel, expression: &str);
@@ -98,7 +100,7 @@ fn guess_format(filename: &str) -> Result<Box<dyn Format>, io::Error> {
         .and_then(get_format)
 }
 
-pub fn load_model(filename: &str, fmt: Option<&str>) -> Result<LQModelRef, io::Error> {
+pub fn load_model(filename: &str, fmt: Option<&str>) -> Result<SharedModel, io::Error> {
     let f = match fmt {
         None => guess_format(filename),
         Some(s) => get_format(s),

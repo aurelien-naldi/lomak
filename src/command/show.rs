@@ -32,7 +32,8 @@ impl CLICommand for CLI {
     fn run(&self, context: CommandContext, args: &[OsString]) -> CommandContext {
         let config: Config = Config::from_iter(args);
 
-        let model = context.as_model();
+        let smodel = context.get_model();
+        let model = smodel.borrow();
 
         if config.booleanized {
             for (uid, var) in model.variables() {
@@ -47,6 +48,6 @@ impl CLICommand for CLI {
         }
         println!();
 
-        CommandContext::Model(model)
+        context
     }
 }
