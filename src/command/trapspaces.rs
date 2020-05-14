@@ -26,6 +26,14 @@ struct Config {
     /// All trapspaces instead of only the terminal ones
     #[structopt(short, long)]
     all: bool,
+
+    /// Maximal number of results
+    #[structopt(short, long)]
+    max: Option<usize>,
+
+    /// Select output components
+    #[structopt(short, long)]
+    displayed: Option<Vec<String>>,
 }
 
 pub struct CLI;
@@ -56,7 +64,11 @@ impl CLICommand for CLI {
             builder.show_all();
         }
 
-        builder.call();
+        let mut result = builder.solve(config.max);
+        if let Some(display) = config.displayed {
+            result.set_displayed_names(Some(display));
+        }
+        println!("{}", result);
 
         CommandContext::Model(model)
     }

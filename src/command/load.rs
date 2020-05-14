@@ -11,8 +11,11 @@ static ABOUT: &str = "Load a model from a file";
 #[derive(Debug, StructOpt)]
 #[structopt(name=NAME, about=ABOUT)]
 struct Config {
+    /// Enforce format instead of using file extension
     #[structopt(short = "F", long)]
     format: Option<String>,
+
+    /// File containing the model
     filename: String,
 }
 

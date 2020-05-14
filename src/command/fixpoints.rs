@@ -3,7 +3,7 @@ use std::ffi::OsString;
 use structopt::StructOpt;
 
 use crate::command::{CLICommand, CommandContext};
-use crate::model::actions::stable::FixedBuilder;
+use crate::model::actions::fixpoints::FixedBuilder;
 
 static NAME: &str = "fixpoints";
 static ABOUT: &str = "Compute the fixed points of the model";
@@ -11,8 +11,13 @@ static ABOUT: &str = "Compute the fixed points of the model";
 #[derive(Debug, StructOpt)]
 #[structopt(name=NAME, about=ABOUT)]
 struct Config {
+    /// Maximal number of results
+    #[structopt(short, long)]
+    max: Option<usize>,
+
     /// Select output components
-    displayed: Vec<String>,
+    #[structopt(short, long)]
+    displayed: Option<Vec<String>>,
 }
 
 pub struct CLI;
@@ -33,10 +38,13 @@ impl CLICommand for CLI {
         let config: Config = Config::from_iter(args);
 
         let model = context.as_model();
-        let mut builder = FixedBuilder::new(model.as_ref());
+        let builder = FixedBuilder::new(model.as_ref());
+        let mut result = builder.solve(config.max);
 
-        builder.set_displayed_names(config.displayed.iter().map(|s| s.as_str()).collect());
-        builder.call();
+        if let Some(display) = config.displayed {
+            result.set_displayed_names(Some(display));
+        }
+        println!("{}", result);
 
         CommandContext::Model(model)
     }

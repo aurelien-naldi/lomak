@@ -39,6 +39,10 @@ impl SolverSolution {
         }
         self
     }
+
+    pub fn as_pattern(self) -> LiteralSet {
+        self.pattern
+    }
 }
 
 impl fmt::Display for SolverSolution {

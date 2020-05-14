@@ -454,6 +454,25 @@ impl fmt::Display for LiteralSet {
     }
 }
 
+impl LiteralSet {
+    pub fn filter_fmt(&self, f: &mut fmt::Formatter, uids: &Vec<usize>) -> fmt::Result {
+        for u in uids.iter() {
+            if self.positive.contains(*u) {
+                if self.negative.contains(*u) {
+                    write!(f, "@")?;
+                } else {
+                    write!(f, "1")?;
+                }
+            } else if self.negative.contains(*u) {
+                write!(f, "0")?;
+            } else {
+                write!(f, "-")?;
+            }
+        }
+        write!(f, "")
+    }
+}
+
 impl fmt::Display for Paths {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for i in &self.paths {

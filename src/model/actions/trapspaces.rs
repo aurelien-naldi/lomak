@@ -4,6 +4,7 @@ use std::rc::Rc;
 use itertools::Itertools;
 
 use crate::func::expr::Expr;
+use crate::model::actions::fixpoints::FixedPoints;
 use crate::model::QModel;
 use crate::solver;
 use crate::solver::Solver;
@@ -53,7 +54,7 @@ impl<'a> TrapspacesBuilder<'a> {
         self
     }
 
-    pub fn call(&self) {
+    pub fn solve(&self, max: Option<usize>) -> FixedPoints {
         let mut solver = solver::get_solver(self.mode);
 
         // Add all variables
@@ -96,9 +97,14 @@ impl<'a> TrapspacesBuilder<'a> {
 
         let mut results = solver.solve();
         results.set_halved();
-        for r in results {
-            println!("{}", r);
-        }
+
+        let patterns = results
+            .into_iter()
+            .map(|r| r.as_pattern())
+            .take(max.unwrap_or(10000))
+            .collect_vec();
+
+        FixedPoints::new(self.model, patterns)
     }
 }
 
