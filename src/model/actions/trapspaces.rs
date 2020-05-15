@@ -5,12 +5,11 @@ use itertools::Itertools;
 
 use crate::func::expr::Expr;
 use crate::model::actions::fixpoints::FixedPoints;
-use crate::model::{QModel, LQModelRef, SharedModel};
+use crate::model::SharedModel;
 use crate::solver;
 use crate::solver::Solver;
 use crate::solver::SolverMode;
 use std::ops::Deref;
-
 
 pub struct TrapspacesBuilder {
     model: SharedModel,

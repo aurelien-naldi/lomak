@@ -1,4 +1,3 @@
-use std::borrow::BorrowMut;
 use std::ffi::OsStr;
 use std::fs::File;
 use std::io;
@@ -7,8 +6,8 @@ use std::io::{BufWriter, Read, Write};
 use std::path::Path;
 
 use crate::func::expr::Expr;
-use crate::model::{new_model, LQModelRef, QModel, SharedModel};
-use std::ops::{Deref, DerefMut};
+use crate::model::{new_model, QModel, SharedModel};
+use std::ops::DerefMut;
 
 mod bnet;
 mod boolsim;
@@ -59,7 +58,7 @@ pub trait ParsingFormat {
         // Load the input file into a local string
         let mut unparsed_file = String::new();
         File::open(filename)?.read_to_string(&mut unparsed_file)?;
-        let mut model = new_model();
+        let model = new_model();
         let result = model.clone();
         let mut m = model.borrow_mut();
         self.parse_rules(m.deref_mut(), &unparsed_file);

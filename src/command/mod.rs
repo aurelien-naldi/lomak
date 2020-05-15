@@ -3,7 +3,7 @@ use std::env;
 use std::ffi::OsString;
 use std::sync::Arc;
 
-use crate::model::{LQModelRef, SharedModel};
+use crate::model::SharedModel;
 
 mod help;
 mod load;

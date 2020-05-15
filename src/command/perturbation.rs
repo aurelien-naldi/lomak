@@ -4,7 +4,6 @@ use regex::Regex;
 use structopt::StructOpt;
 
 use crate::command::{CLICommand, CommandContext};
-use std::ops::DerefMut;
 
 static NAME: &str = "perturbation";
 static ABOUT: &str = "Apply a perturbation to one or several components";
@@ -38,7 +37,7 @@ impl CLICommand for CLI {
         // Start by parsing arguments to handle help without any context
         let config: Config = Config::from_iter(args);
 
-        let mut smodel = context.get_model();
+        let smodel = context.get_model();
         let mut model = smodel.borrow_mut();
         for sid in &config.ko {
             if let Some(uid) = model.component_by_name(sid) {

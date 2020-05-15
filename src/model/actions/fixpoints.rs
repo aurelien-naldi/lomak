@@ -11,7 +11,6 @@ use crate::solver::SolverMode;
 use std::fmt::Formatter;
 use std::ops::Deref;
 
-
 pub struct FixedBuilder {
     model: SharedModel,
     restriction: Option<LiteralSet>,
@@ -37,7 +36,7 @@ impl FixedBuilder {
         let uid = model.variable_by_name(name);
         if let Some(uid) = uid {
             if self.restriction.is_none() {
-                self.restriction = Some( LiteralSet::new() );
+                self.restriction = Some(LiteralSet::new());
             }
             self.restriction.as_mut().unwrap().set_literal(uid, value);
         }

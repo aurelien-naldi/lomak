@@ -6,7 +6,7 @@ use structopt::StructOpt;
 use crate::command::{CLICommand, CommandContext};
 use crate::func::expr;
 use crate::func::paths;
-use crate::model::{LQModelRef, QModel};
+use crate::model::QModel;
 use std::ops::Deref;
 
 static NAME: &str = "primes";

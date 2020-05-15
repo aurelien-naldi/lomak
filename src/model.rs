@@ -11,7 +11,6 @@ use regex::Regex;
 use crate::func::expr::*;
 use crate::func::state::State;
 use crate::func::*;
-use std::borrow::Borrow;
 
 pub mod actions;
 pub mod io;
@@ -159,7 +158,7 @@ pub fn new_model_ref() -> LQModelRef {
 }
 pub fn new_model() -> SharedModel {
     SharedModel {
-        rc: Rc::new(RefCell::new(backend::new_model()))
+        rc: Rc::new(RefCell::new(backend::new_model())),
     }
 }
 
@@ -170,7 +169,6 @@ pub struct SharedModel {
 }
 
 impl SharedModel {
-
     pub fn borrow(&self) -> Ref<dyn QModel> {
         self.rc.as_ref().borrow()
     }

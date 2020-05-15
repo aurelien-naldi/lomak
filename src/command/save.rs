@@ -1,11 +1,9 @@
-use std::borrow::Borrow;
 use std::ffi::OsString;
-
+use std::ops::Deref;
 use structopt::StructOpt;
 
 use crate::command::{CLICommand, CommandContext};
 use crate::model::io;
-use std::ops::Deref;
 
 static NAME: &str = "save";
 static ABOUT: &str = "Save the current model";

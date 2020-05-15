@@ -33,7 +33,7 @@ impl CLICommand for CLI {
         // Start by parsing arguments to handle help without any context
         let config: Config = Config::from_iter(args);
 
-        let mut smodel = context.get_model();
+        let smodel = context.get_model();
 
         // TODO: multiple rename actions ?
         let mut model = smodel.borrow_mut();
