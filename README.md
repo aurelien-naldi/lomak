@@ -1,7 +1,12 @@
 # Logical Model Analysis Kit
 
-This project (will) provides a set of function to define, manipulate, and analyse
+This project aims to provide a set of function to define, manipulate, and analyse
 qualitative dynamical models based on logical functions.
+It is basically a playground for a more efficient implementation of [bioLQM](https://github.com/colomoto/bioLQM)
+using rust instead of java.
+
+Beyond being faster, the use of rust will enable the integration of [clean python bindings](https://github.com/aurelien-naldi/lomak-python), to improve the [CoLoMoTo notebook](colomoto.org/notebook/) (bioLQM and GINsim rely on py4j for this).
+
 
 Here are the main underlying objects.
 
