@@ -5,7 +5,7 @@ qualitative dynamical models based on logical functions.
 It is basically a playground for a more efficient implementation of [bioLQM](https://github.com/colomoto/bioLQM)
 using rust instead of java.
 
-Beyond being faster, the use of rust will enable the integration of [clean python bindings](https://github.com/aurelien-naldi/lomak-python), to improve the [CoLoMoTo notebook](colomoto.org/notebook/) (bioLQM and GINsim rely on py4j for this).
+Beyond being faster, the use of rust will enable the integration of [clean python bindings](https://github.com/aurelien-naldi/lomak-python), to improve the [CoLoMoTo notebook](http://colomoto.org/notebook/) (bioLQM and GINsim rely on py4j for this).
 
 
 Here are the main underlying objects.
