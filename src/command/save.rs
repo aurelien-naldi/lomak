@@ -1,9 +1,7 @@
 use std::ffi::OsString;
-use std::ops::Deref;
 use structopt::StructOpt;
 
 use crate::command::{CLICommand, CommandContext};
-use crate::model::io;
 
 static NAME: &str = "save";
 static ABOUT: &str = "Save the current model";
@@ -35,12 +33,13 @@ impl CLICommand for CLI {
 
     fn run(&self, context: CommandContext, args: &[OsString]) -> CommandContext {
         let config: Config = Config::from_iter(args);
-
-        // Save the model
-        let smodel = context.get_model();
-        let model = smodel.borrow();
-        let m = model.deref();
-        io::save_model(m, &config.output, config.format.as_deref());
+        match context
+            .get_model()
+            .save(&config.output, config.format.as_deref())
+        {
+            Ok(_) => (),
+            Err(e) => eprintln!("Error during save: {}", e),
+        };
 
         context
     }

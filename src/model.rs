@@ -11,6 +11,7 @@ use regex::Regex;
 use crate::func::expr::*;
 use crate::func::state::State;
 use crate::func::*;
+use std::ops::Deref;
 
 pub mod actions;
 pub mod io;
@@ -175,6 +176,22 @@ impl SharedModel {
 
     pub fn borrow_mut(&self) -> RefMut<dyn QModel> {
         self.rc.as_ref().borrow_mut()
+    }
+
+    pub fn save(&self, filename: &str, fmt: Option<&str>) -> Result<(), std::io::Error> {
+        let model = self.borrow();
+        io::save_model(model.deref(), filename, fmt)
+    }
+
+    pub fn lock<'a, I: IntoIterator<Item = (&'a str, bool)>>(&self, pairs: I) {
+        let mut model = self.borrow_mut();
+        for (name, value) in pairs {
+            let uid = model.variable_by_name(&name);
+            match uid {
+                None => eprintln!("No such variable: {}", name),
+                Some(uid) => model.lock(uid, value),
+            }
+        }
     }
 }
 
