@@ -1,15 +1,14 @@
-//! Logical model: collections of components, with associated variables and functions
+//! A logical model is a collection of components associated to Boolean variables and
+//! logical rules controlling changes of activity over time, depending on the model state.
 
 use std::cell::{Ref, RefCell, RefMut};
 use std::collections::HashMap;
 use std::fmt;
-use std::fmt::Display;
 use std::rc::Rc;
 
 use regex::Regex;
 
 use crate::func::expr::*;
-use crate::func::state::State;
 use crate::func::*;
 use std::ops::Deref;
 
@@ -17,164 +16,280 @@ pub mod actions;
 pub mod io;
 pub mod modifier;
 
-mod backend;
+/// Maximal number of variables associated to each component
+static MAXVAL: usize = 9;
 
 lazy_static! {
     static ref RE_UID: Regex = Regex::new(r"[a-zA-Z][a-zA-Z01-9_]*").unwrap();
 }
 
-/// Public API for qualitative models
-///
+/// A Boolean variable associated to a qualitative threshold of one of the components
+#[derive(Copy, Clone)]
+pub struct Variable {
+    pub component: usize,
+    pub value: usize,
+}
+
+/// A formula associated with a target value
+#[derive(Clone)]
+pub struct Assign {
+    pub target: usize,
+    pub formula: Formula,
+}
+
+/// The list of assignments define the dynamical rules for all variables associated to the same component.
+#[derive(Clone)]
+pub struct ComponentRules {
+    assignments: Vec<Assign>,
+}
+
 /// A model contains a list of named components, which are associated to
 /// one or several Boolean variables for each qualitative threshold.
 /// Components and variables are identified by unique handles (positive integers).
 ///
 /// Finally, each component is associated to a list of Boolean functions defining
 /// the conditions required for the activation of each threshold.
-pub trait QModel: VariableNamer + Display {
-    /// Find a component by name if it exists
-    /// Components are NOT valid variables: they carry the name and
-    /// the list of proper Boolean variables for each threshold.
-    fn component_by_name(&self, name: &str) -> Option<usize>;
+#[derive(Default)]
+pub struct QModel {
+    _next_cpt: usize,
+    _next_var: usize,
+    components: Vec<usize>,
+    variables: Vec<usize>,
+    name2uid: HashMap<String, usize>,
 
-    /// Find the base variable corresponding to the name of a component
-    ///
-    /// Equivalent to variable_by_name_and_threshold(name, 1)
-    ///
-    /// TODO: should it attempt to extract the threshold from the name's suffix?
-    fn variable_by_name(&self, name: &str) -> Option<usize> {
-        self.variable_by_name_and_threshold(name, 1)
-    }
+    // Connect variables and components
+    cpt_variables: HashMap<usize, Vec<usize>>,
+    var_component_values: HashMap<usize, Variable>,
 
-    /// Find a variable based on the name of the component and the threshold value
-    fn variable_by_name_and_threshold(&self, name: &str, value: usize) -> Option<usize> {
-        let base_component = self.component_by_name(name);
-        if let Some(uid) = base_component {
-            return self.associated_variable_with_threshold(uid, value);
-        }
-        None
-    }
-
-    /// Find the base variable for an existing component
-    ///
-    /// Equivalent to associated_variable_with_threshold(cid, 1)
-    fn associated_variable(&self, cid: usize) -> Option<usize> {
-        self.associated_variable_with_threshold(cid, 1)
-    }
-
-    /// Find a variable for an existing component and a threshold value
-    fn associated_variable_with_threshold(&self, cid: usize, value: usize) -> Option<usize>;
-
-    /// Find or create a component with a given name
-    fn ensure_component(&mut self, name: &str) -> usize;
-
-    /// Find or create a component with a given name
-    fn add_component(&mut self, pattern: &str) -> usize {
-        if self.component_by_name(pattern).is_none() {
-            return self.ensure_component(pattern);
-        };
-
-        let inc = 1;
-        loop {
-            let name = format!("{}_{}", pattern, inc);
-            if self.component_by_name(&name).is_none() {
-                return self.ensure_component(&name);
-            };
-        }
-    }
-
-    /// Find or create a variable with a given component name and threshold value
-    ///
-    /// Equivalent to ensure_variable_with_threshold(name, 1)
-    fn ensure_variable(&mut self, name: &str) -> usize {
-        self.ensure_variable_with_threshold(name, 1)
-    }
-
-    /// Find or create a variable with a given component name and threshold value
-    fn ensure_variable_with_threshold(&mut self, name: &str, value: usize) -> usize {
-        let cid = self.ensure_component(name);
-        self.ensure_associated_variable(cid, value)
-    }
-
-    /// Find or create a variable for an existing component and a specific threshold value
-    fn ensure_associated_variable(&mut self, cid: usize, value: usize) -> usize;
-
-    /// Assign a Boolean condition to a variable
-    fn set_rule(&mut self, variable: usize, rule: Formula);
-
-    /// Assign a Boolean condition for a specific threshold
-    fn extend_rule(&mut self, variable: usize, rule: Formula);
-
-    fn lock(&mut self, uid: usize, value: bool) {
-        self.set_rule(uid, Formula::from_bool(value));
-    }
-
-    fn get_name(&self, uid: usize) -> String {
-        let cpt = self.get_component_ref(uid);
-        format!("{}", cpt.borrow().name)
-    }
-
-    fn set_component_name(&mut self, uid: usize, name: String) -> bool;
-
-    /// Rename a component.
-    /// Returns false if the new name is invalid or already assigned
-    /// to another component
-    fn rename(&mut self, source: &str, name: String) -> bool {
-        match self.component_by_name(source) {
-            None => false,
-            Some(u) => self.set_component_name(u, name),
-        }
-    }
-
-    fn variables<'a>(&'a self) -> Box<dyn Iterator<Item = (usize, &'a Variable)> + 'a>;
-
-    fn components<'a>(&'a self) -> Box<dyn Iterator<Item = (usize, &'a SharedComponent)> + 'a>;
-
-    fn get_variable(&self, var: usize) -> Variable;
-
-    fn components_copy(&self) -> Vec<(usize, SharedComponent)> {
-        self.components().map(|(u, c)| (u, c.clone())).collect()
-    }
-
-    fn get_component_ref(&self, uid: usize) -> SharedComponent;
-
-    /// Compute the target state (synchronous image) of a given model state.
-    /// Evaluates every Boolean function in the model using the default representation.
-    fn get_target_state(&self, state: &State) -> State {
-        let mut target = State::new();
-        for (uid, var) in self.variables() {
-            let cmp = self.get_component_ref(var.component);
-            let cmp = cmp.borrow();
-            if cmp.get_formula(var.value).eval(state) {
-                target.insert(uid);
-            }
-        }
-        target
-    }
-}
-
-pub type LQModelRef = Box<dyn QModel>;
-pub fn new_model_ref() -> LQModelRef {
-    Box::new(backend::new_model())
-}
-pub fn new_model() -> SharedModel {
-    SharedModel {
-        rc: Rc::new(RefCell::new(backend::new_model())),
-    }
+    cpt_names: HashMap<usize, String>,
+    cpt_rules: HashMap<usize, ComponentRules>,
 }
 
 /// Sharable model reference
 #[derive(Clone)]
 pub struct SharedModel {
-    rc: Rc<RefCell<dyn QModel>>,
+    rc: Rc<RefCell<QModel>>,
+}
+
+/// Core API for qualitative models
+impl QModel {
+    /// Find a component by name if it exists.
+    ///
+    /// Components are associated to a group of related Boolean variables.
+    /// The variables can be then used in Boolean expressions, not components.
+    pub fn get_component(&self, name: &str) -> Option<usize> {
+        if let Some(uid) = self.name2uid.get(name) {
+            return Some(*uid);
+        }
+        None
+    }
+
+    /// Find or create a component with a given name
+    pub fn ensure_component(&mut self, name: &str) -> usize {
+        if let Some(uid) = self.get_component(name) {
+            return uid;
+        }
+
+        // Create a new component
+        let cid = self._next_cpt;
+        self._next_cpt += 1;
+        self.components.push(cid);
+        self.cpt_names.insert(cid, name.to_owned());
+        self.cpt_variables.insert(cid, vec![]);
+        self.cpt_rules.insert(cid, ComponentRules::new());
+        self.name2uid.insert(name.to_owned(), cid);
+        cid
+    }
+
+    /// Retrieve a variable for an existing component and a threshold value if it exists
+    pub fn get_cpt_variable(&self, cid: usize, value: usize) -> Option<usize> {
+        let value = check_val(value);
+        let variables = self.cpt_variables.get(&cid).unwrap();
+        if value > variables.len() {
+            return None;
+        }
+        Some(variables[value - 1])
+    }
+
+    /// Find or create a variable for an existing component and a specific threshold value
+    pub fn ensure_cpt_variable(&mut self, cid: usize, value: usize) -> usize {
+        let value = check_val(value);
+        let variables = self.cpt_variables.get_mut(&cid).unwrap();
+
+        // Create new variable(s) as required
+        for v in variables.len()..value {
+            let vid = self._next_var;
+            self._next_var += 1;
+            self.variables.push(vid);
+            self.var_component_values
+                .insert(vid, Variable::new(cid, v + 1));
+            variables.push(vid);
+        }
+
+        // Return the variable
+        variables[value - 1]
+    }
+
+    pub fn get_cpt_name(&self, uid: usize) -> String {
+        format!("{}", self.cpt_names.get(&uid).unwrap())
+    }
+
+    pub fn set_cpt_name(&mut self, uid: usize, name: String) -> bool {
+        // Reject invalid new names
+        if !RE_UID.is_match(&name) {
+            return false;
+        }
+
+        // Reject existing names
+        if let Some(u) = self.name2uid.get(&name) {
+            return *u == uid;
+        }
+
+        self.name2uid.remove(self.cpt_names.get(&uid).unwrap());
+        self.name2uid.insert(name.clone(), uid);
+        self.cpt_names.insert(uid, name);
+        true
+    }
+
+    pub fn get_var_name(&self, uid: usize) -> String {
+        let var = self.var_component_values.get(&uid).unwrap();
+        let name = self.cpt_names.get(&var.component).unwrap();
+        if var.value != 1 {
+            format!("{}:{}", name, var.value)
+        } else {
+            format!("{}", name)
+        }
+    }
+
+    pub fn variables(&self) -> &Vec<usize> {
+        &self.variables
+    }
+}
+
+/// Convenience functions, building on the core ones without direct access to the fields
+impl QModel {
+    /// Rename a component.
+    /// Returns false if the new name is invalid or already assigned
+    /// to another component
+    pub fn rename(&mut self, source: &str, name: String) -> bool {
+        match self.get_component(source) {
+            None => false,
+            Some(u) => self.set_cpt_name(u, name),
+        }
+    }
+
+    /// Find or create a component with a given name
+    pub fn add_component(&mut self, pattern: &str) -> usize {
+        if self.get_component(pattern).is_none() {
+            return self.ensure_component(pattern);
+        };
+
+        let mut inc = 1;
+        loop {
+            let name = format!("{}_{}", pattern, inc);
+            if self.get_component(&name).is_none() {
+                return self.ensure_component(&name);
+            };
+            inc += 1;
+        }
+    }
+
+    /// Find a variable based on the name of the component and the threshold value
+    pub fn find_variable(&self, name: &str, value: usize) -> Option<usize> {
+        match self.get_component(name) {
+            None => None,
+            Some(cid) => self.get_cpt_variable(cid, value),
+        }
+    }
+
+    /// Find or create a variable with a given component name and threshold value
+    pub fn ensure_variable(&mut self, name: &str, value: usize) -> usize {
+        let cid = self.ensure_component(name);
+        self.ensure_cpt_variable(cid, value)
+    }
+}
+
+/// Handling of Dynamical rules
+impl QModel {
+    /// Assign a Boolean condition for a specific threshold
+    pub fn push_cpt_rule(&mut self, cid: usize, value: usize, rule: Formula) {
+        self.cpt_rules.get_mut(&cid).unwrap().push(value, rule);
+    }
+
+    /// Assign a Boolean condition for a specific threshold
+    pub fn push_var_rule(&mut self, vid: usize, rule: Formula) {
+        let var = self.var_component_values.get(&vid).unwrap();
+        let cpt = var.component;
+        let val = var.value;
+        self.push_cpt_rule(cpt, val, rule);
+    }
+
+    pub fn get_var_rule(&self, vid: usize) -> Expr {
+        let var = self.var_component_values.get(&vid).unwrap();
+        let cid = var.component;
+        let value = var.value;
+        let mut expr = self
+            .cpt_rules
+            .get(&cid)
+            .unwrap()
+            .raw_variable_formula(value);
+        let variables = self.cpt_variables.get(&cid).unwrap();
+
+        if value < variables.len() {
+            let next_var = variables[value];
+            let cur_active = Expr::ATOM(cid);
+            let next_active = Expr::ATOM(next_var);
+            expr = expr.or(&cur_active.and(&next_active));
+        }
+
+        if value > 1 {
+            let prev_var = variables[value - 2];
+            let prev_active = Expr::ATOM(prev_var);
+            expr = expr.and(&prev_active);
+        }
+
+        expr.simplify().unwrap_or(expr)
+    }
+}
+
+impl QModel {
+    /// Enforce the activity of a specific variable
+    pub fn lock_variable(&mut self, vid: usize, value: bool) {
+        let var = &self.var_component_values.get(&vid).unwrap();
+        let cpt = var.component;
+        let val = var.value;
+        if value {
+            self.restrict_component(cpt, val, MAXVAL);
+        } else {
+            self.restrict_component(cpt, 0, val - 1);
+        }
+    }
+
+    /// Restrict the activity of a component
+    pub fn restrict_component(&mut self, cid: usize, min: usize, max: usize) {
+        let rules = self.cpt_rules.get_mut(&cid).unwrap();
+        rules.restrict(min, max);
+    }
+
+    /// Enforce the activity of a specific variable
+    pub fn lock_component(&mut self, cid: usize, value: usize) {
+        let rules = self.cpt_rules.get_mut(&cid).unwrap();
+        rules.lock(value);
+    }
 }
 
 impl SharedModel {
-    pub fn borrow(&self) -> Ref<dyn QModel> {
+    pub fn new() -> Self {
+        Self {
+            rc: Rc::new(RefCell::new(QModel::default())),
+        }
+    }
+
+    pub fn borrow(&self) -> Ref<QModel> {
         self.rc.as_ref().borrow()
     }
 
-    pub fn borrow_mut(&self) -> RefMut<dyn QModel> {
+    pub fn borrow_mut(&self) -> RefMut<QModel> {
         self.rc.as_ref().borrow_mut()
     }
 
@@ -186,77 +301,52 @@ impl SharedModel {
     pub fn lock<'a, I: IntoIterator<Item = (&'a str, bool)>>(&self, pairs: I) {
         let mut model = self.borrow_mut();
         for (name, value) in pairs {
-            let uid = model.variable_by_name(&name);
+            let uid = model.find_variable(&name, 1);
             match uid {
                 None => eprintln!("No such variable: {}", name),
-                Some(uid) => model.lock(uid, value),
+                Some(uid) => model.lock_variable(uid, value),
             }
         }
     }
 }
 
-/// A Boolean variable associated to a qualitative threshold of one of the components
-#[derive(Copy, Clone)]
-pub struct Variable {
-    pub component: usize,
-    pub value: usize,
-}
-
-/// A formula associated with a target value
-pub struct Assign {
-    pub target: usize,
-    pub formula: Formula,
-}
-
-pub struct Component {
-    name: String,
-    variables: HashMap<usize, usize>,
-    assignments: Vec<Assign>,
-    cached_rules: RefCell<HashMap<usize, Rc<Formula>>>,
-}
-
-/// A sharable reference to a component
-#[derive(Clone)]
-pub struct SharedComponent {
-    rc: Rc<RefCell<Component>>,
-}
-
-impl SharedComponent {
-    pub fn from(component: Component) -> Self {
-        SharedComponent {
-            rc: Rc::new(RefCell::new(component)),
-        }
-    }
-
-    pub fn borrow(&self) -> Ref<Component> {
-        self.rc.as_ref().borrow()
-    }
-
-    /// Borrow a mutable version of this shared component.
-    ///
-    /// TODO: should this require a mutable ref?
-    pub fn borrow_mut(&self) -> RefMut<Component> {
-        self.rc.as_ref().borrow_mut()
-    }
-}
-
-/// The component of a model provide the name, a list of
-/// available variables and the dynamic rule.
-impl Component {
-    fn new(name: String) -> Self {
-        Component {
-            name,
-            variables: HashMap::new(),
+impl ComponentRules {
+    fn new() -> Self {
+        ComponentRules {
             assignments: vec![],
-            cached_rules: RefCell::new(HashMap::new()),
         }
     }
 
-    pub fn into_shared(self) -> SharedComponent {
-        SharedComponent::from(self)
+    fn clear(&mut self) {
+        self.assignments.clear();
     }
 
-    fn build_variable_formula(&self, value: usize) -> Expr {
+    fn lock(&mut self, value: usize) {
+        let value = check_val(value);
+        self.clear();
+        if value > 0 {
+            self.push(value, Formula::from_bool(true));
+        }
+    }
+
+    fn restrict(&mut self, min: usize, max: usize) {
+        let min = check_val(min);
+        let max = check_val(max);
+        if max <= min {
+            self.lock(min);
+            return;
+        }
+
+        for assign in self.assignments.iter_mut() {
+            if assign.target < min {
+                assign.target = min;
+            } else if assign.target > max {
+                assign.target = max;
+            }
+        }
+    }
+
+    fn raw_variable_formula(&self, value: usize) -> Expr {
         let mut expr = Expr::FALSE;
         for asg in self.assignments.iter() {
             let cur: Rc<Expr> = asg.formula.convert_as();
@@ -266,44 +356,10 @@ impl Component {
                 expr = expr.or(&cur);
             }
         }
-
-        match self.variables.get(&(value + 1)) {
-            None => (),
-            Some(next_var) => {
-                let cur_var = self.variables.get(&value).unwrap();
-                let cur_active = Expr::ATOM(*cur_var);
-                let next_active = Expr::ATOM(*next_var);
-                expr = expr.or(&cur_active.and(&next_active));
-            }
-        }
-
-        if value > 1 {
-            let prev_var = self.variables.get(&(value - 1)).unwrap();
-            let prev_active = Expr::ATOM(*prev_var);
-            expr = expr.and(&prev_active);
-        }
-
         expr.simplify().unwrap_or(expr)
     }
 
-    pub fn get_formula(&self, value: usize) -> Rc<Formula> {
-        if let Some(f) = self.cached_rules.borrow().get(&value) {
-            return Rc::clone(f);
-        }
-
-        let expr = self.build_variable_formula(value);
-        let f = Rc::new(Formula::from(expr));
-        self.cached_rules.borrow_mut().insert(value, Rc::clone(&f));
-
-        f
-    }
-
-    pub fn extend_formula(&mut self, value: usize, condition: Formula) {
-        if !self.variables.contains_key(&value) {
-            eprintln!("ERROR: Can not assign a non-existing variable -> using default threshold");
-            return self.extend_formula(1, condition);
-        }
-        self.cached_rules.borrow_mut().clear();
+    pub fn push(&mut self, value: usize, condition: Formula) {
         self.assignments.push(Assign {
             target: value,
             formula: condition,
@@ -311,24 +367,8 @@ impl Component {
     }
 
     pub fn set_formula(&mut self, f: Formula, v: usize) {
-        self.assignments.clear();
-        self.extend_formula(v, f);
-    }
-
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
-    pub fn set_name(&mut self, name: String) {
-        self.name = name;
-    }
-
-    pub fn assignments<'a>(&'a self) -> Box<dyn Iterator<Item = &Assign> + 'a> {
-        Box::new(self.assignments.iter())
-    }
-
-    pub fn variables<'a>(&'a self) -> &HashMap<usize, usize> {
-        &self.variables
+        self.clear();
+        self.push(v, f);
     }
 }
 
@@ -350,8 +390,74 @@ impl fmt::Display for Assign {
     }
 }
 
-impl fmt::Display for Component {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.name)
+impl VariableNamer for QModel {
+    fn format_name(&self, f: &mut fmt::Formatter, vid: usize) -> fmt::Result {
+        let var = self.var_component_values.get(&vid).unwrap();
+        let name = self.cpt_names.get(&var.component).unwrap();
+        if var.value != 1 {
+            write!(f, "{}:{}", name, var.value)
+        } else {
+            write!(f, "{}", name)
+        }
     }
+
+    fn as_namer(&self) -> &dyn VariableNamer {
+        self
+    }
+}
+
+impl fmt::Display for QModel {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let namer = self.as_namer();
+
+        for cid in self.components.iter() {
+            let rules = self.cpt_rules.get(&cid).unwrap();
+            let name = self.cpt_names.get(&cid).unwrap();
+            for a in rules.assignments.iter() {
+                write!(f, "{}", name)?;
+                if a.target != 1 {
+                    write!(f, ":{}", a.target)?;
+                }
+                write!(f, " <- ")?;
+                a.formula.gfmt(namer, f)?;
+                writeln!(f)?;
+            }
+        }
+        write!(f, "")
+    }
+}
+
+impl fmt::Debug for QModel {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for u in self.components.iter() {
+            let name = self.cpt_names.get(u).unwrap();
+            write!(f, "{} ({}):", u, name)?;
+            for v in self.cpt_variables.get(u).unwrap().iter() {
+                write!(f, "  {}", v)?;
+            }
+            writeln!(f)?;
+        }
+        writeln!(f)?;
+
+        for v in &self.variables {
+            let var = self.var_component_values.get(v).unwrap();
+            writeln!(f, "{}: {}:{}", v, var.component, var.value)?;
+        }
+        writeln!(f)?;
+
+        write!(f, "{}", self)
+    }
+}
+
+fn check_val(value: usize) -> usize {
+    if value < 1 {
+        eprintln!("Tried to access an impossible value: {}", value);
+        return 1;
+    }
+
+    if value > MAXVAL {
+        eprintln!("Tried to access a large value: {}", value);
+        return MAXVAL;
+    }
+    value
 }

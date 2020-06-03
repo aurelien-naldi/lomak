@@ -1,11 +1,9 @@
 use std::ffi::OsString;
-use std::rc::Rc;
 
 use structopt::StructOpt;
 
 use crate::command::{CLICommand, CommandContext};
-use crate::func::expr;
-use crate::func::paths;
+use crate::func::VariableNamer;
 use crate::model::QModel;
 use std::ops::Deref;
 
@@ -46,46 +44,35 @@ impl CLICommand for CLI {
 }
 
 impl Config {
-    fn show_primes(&self, model: &dyn QModel) {
+    fn show_primes(&self, model: &QModel) {
         if self.json {
             json(model);
         } else {
-            for (uid, var) in model.variables() {
-                let primes: Rc<paths::Paths> = model
-                    .get_component_ref(var.component)
-                    .borrow()
-                    .get_formula(var.value)
-                    .convert_as();
-                println!("PI {}:\n{}", model.name(uid), primes);
+            for vid in model.variables() {
+                let primes = model.get_var_rule(*vid).prime_implicants();
+                println!("PI {}:\n{}", model.name(*vid), primes);
             }
         }
     }
 }
 
-pub fn json(model: &dyn QModel) {
+pub fn json(model: &QModel) {
     println!("{{");
     let mut first = true;
-    let namer = model.as_namer();
-    for (_, var) in model.variables() {
+    for vid in model.variables() {
         if first {
             first = false;
         } else {
             println!(",");
         }
-        let cpt = model.get_component_ref(var.component);
-        let cpt = cpt.borrow();
-        // FIXME: should it be the name of the variable instead of the component?
-        let name = &cpt.name();
-        let pos_primes: Rc<paths::Paths> = cpt.get_formula(var.value).convert_as();
-        let neg_primes = cpt
-            .get_formula(var.value)
-            .convert_as::<expr::Expr>()
-            .not()
-            .prime_implicants();
+        let name = model.get_var_name(*vid);
+        let rule = model.get_var_rule(*vid);
+        let pos_primes = rule.prime_implicants();
+        let neg_primes = rule.not().prime_implicants();
         println!("\"{}\":[", name);
-        neg_primes.to_json(namer);
+        neg_primes.to_json(model);
         println!(",");
-        pos_primes.to_json(namer);
+        pos_primes.to_json(model);
         print!("]");
     }
     println!("\n}}");

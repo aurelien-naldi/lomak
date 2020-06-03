@@ -1,5 +1,4 @@
 use std::io::{Error, Write};
-use std::rc::Rc;
 
 use pest::iterators::*;
 use pest::Parser;
@@ -39,12 +38,12 @@ impl BNETFormat {
         BNETFormat {}
     }
 
-    fn load_expr(&self, model: &mut dyn QModel, expr: Pair<Rule>) -> Expr {
+    fn load_expr(&self, model: &mut QModel, expr: Pair<Rule>) -> Expr {
         let rule = expr.as_rule();
         match rule {
             Rule::bt => Expr::TRUE,
             Rule::bf => Expr::FALSE,
-            Rule::lit => Expr::ATOM(model.ensure_variable(expr.as_str())),
+            Rule::lit => Expr::ATOM(model.ensure_variable(expr.as_str(), 1)),
             _ => {
                 let mut content = expr.into_inner().map(|e| self.load_expr(model, e));
                 match rule {
@@ -61,7 +60,7 @@ impl BNETFormat {
 }
 
 impl io::ParsingFormat for BNETFormat {
-    fn parse_rules(&self, model: &mut dyn QModel, expression: &str) {
+    fn parse_rules(&self, model: &mut QModel, expression: &str) {
         let ptree = BNETParser::parse(Rule::file, expression);
 
         if let Err(err) = ptree {
@@ -77,7 +76,7 @@ impl io::ParsingFormat for BNETFormat {
                 Rule::rule => {
                     let mut inner = record.into_inner();
                     let target = inner.next().unwrap().as_str();
-                    let target = model.ensure_variable(target);
+                    let target = model.ensure_variable(target, 1);
                     expressions.push((target, inner.next().unwrap()));
                 }
                 Rule::EOI => (),
@@ -86,13 +85,13 @@ impl io::ParsingFormat for BNETFormat {
         }
 
         // Parse all expressions
-        for e in expressions {
-            let expr = self.load_expr(model, e.1);
-            model.set_rule(e.0, Formula::from(expr));
+        for (vid, e) in expressions {
+            let expr = self.load_expr(model, e);
+            model.push_var_rule(vid, Formula::from(expr));
         }
     }
 
-    fn parse_formula(&self, model: &mut dyn QModel, formula: &str) -> Result<Expr, String> {
+    fn parse_formula(&self, model: &mut QModel, formula: &str) -> Result<Expr, String> {
         let ptree = BNETParser::parse(Rule::sxpr, formula);
         match ptree {
             Err(s) => Err(format!("Parsing error: {}", s)),
@@ -106,19 +105,11 @@ impl io::ParsingFormat for BNETFormat {
 }
 
 impl io::SavingFormat for BNETFormat {
-    fn write_rules(&self, model: &dyn QModel, out: &mut dyn Write) -> Result<(), Error> {
-        let namer = model.as_namer();
-        for (_uid, var) in model.variables() {
-            if var.value != 1 {
-                panic!("Multivalued models are not yet fully supported");
-            }
-            let func: Rc<Expr> = model
-                .get_component_ref(var.component)
-                .borrow()
-                .get_formula(var.value)
-                .convert_as();
-            write!(out, "{}, ", model.get_name(var.component))?;
-            match *func {
+    fn write_rules(&self, model: &QModel, out: &mut dyn Write) -> Result<(), Error> {
+        for vid in &model.variables {
+            let func: Expr = model.get_var_rule(*vid);
+            write!(out, "{}, ", model.get_var_name(*vid))?;
+            match func {
                 Expr::TRUE => writeln!(out, "1")?,
                 Expr::FALSE => writeln!(out, "0")?,
                 _ => writeln!(
@@ -126,7 +117,7 @@ impl io::SavingFormat for BNETFormat {
                     "{}",
                     NamedExpr {
                         expr: &func,
-                        namer: namer,
+                        namer: model,
                     }
                 )?,
             }

@@ -6,7 +6,7 @@ use std::io::{BufWriter, Read, Write};
 use std::path::Path;
 
 use crate::func::expr::Expr;
-use crate::model::{new_model, QModel, SharedModel};
+use crate::model::{QModel, SharedModel};
 use std::ops::DerefMut;
 
 mod bnet;
@@ -58,27 +58,27 @@ pub trait ParsingFormat {
         // Load the input file into a local string
         let mut unparsed_file = String::new();
         File::open(filename)?.read_to_string(&mut unparsed_file)?;
-        let model = new_model();
+        let model = SharedModel::new();
         let result = model.clone();
         let mut m = model.borrow_mut();
         self.parse_rules(m.deref_mut(), &unparsed_file);
         Ok(result)
     }
 
-    fn parse_rules(&self, model: &mut dyn QModel, expression: &str);
+    fn parse_rules(&self, model: &mut QModel, expression: &str);
 
-    fn parse_formula(&self, model: &mut dyn QModel, formula: &str) -> Result<Expr, String>;
+    fn parse_formula(&self, model: &mut QModel, formula: &str) -> Result<Expr, String>;
 }
 
 /// Trait providing the export filter for Formats.
 pub trait SavingFormat {
-    fn save_file(&self, model: &dyn QModel, filename: &str) -> Result<(), io::Error> {
+    fn save_file(&self, model: &QModel, filename: &str) -> Result<(), io::Error> {
         let f = File::create(filename).expect("Could not create the output file");
         let mut out = BufWriter::new(f);
         self.write_rules(model, &mut out)
     }
 
-    fn write_rules(&self, model: &dyn QModel, out: &mut dyn Write) -> Result<(), io::Error>;
+    fn write_rules(&self, model: &QModel, out: &mut dyn Write) -> Result<(), io::Error>;
 }
 
 pub fn get_format(fmt: &str) -> Result<Box<dyn Format>, io::Error> {
@@ -117,7 +117,7 @@ pub fn load_model(filename: &str, fmt: Option<&str>) -> Result<SharedModel, io::
     }
 }
 
-pub fn save_model(model: &dyn QModel, filename: &str, fmt: Option<&str>) -> Result<(), io::Error> {
+pub fn save_model(model: &QModel, filename: &str, fmt: Option<&str>) -> Result<(), io::Error> {
     let f = match fmt {
         None => guess_format(filename),
         Some(s) => get_format(s),
@@ -133,9 +133,4 @@ pub fn save_model(model: &dyn QModel, filename: &str, fmt: Option<&str>) -> Resu
             Some(f) => f.save_file(model, filename),
         },
     }
-}
-
-pub fn parse_expr(model: &mut dyn QModel, expr: &str) -> Result<Expr, String> {
-    let parser = mnet::MNETFormat::new();
-    parser.parse_formula(model, expr)
 }

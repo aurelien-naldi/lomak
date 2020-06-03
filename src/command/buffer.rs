@@ -4,7 +4,7 @@ use structopt::StructOpt;
 
 use crate::command::{CLICommand, CommandContext};
 use crate::model::modifier::buffer::{BufferConfig, BufferingStrategy};
-use crate::model::LQModelRef;
+use crate::model::QModel;
 
 static NAME: &str = "buffer";
 static ABOUT: &str = "TODO: Add buffer components to delay interactions";
@@ -37,14 +37,14 @@ impl CLICommand for CLI {
 }
 
 impl CLI {
-    fn modify(&self, mut model: LQModelRef, parameters: &[&str]) -> LQModelRef {
+    fn modify(&self, model: &mut QModel, parameters: &[&str]) {
         let strategy = match parameters {
             ["buffer"] => BufferingStrategy::ALLBUFFERS,
             ["delay"] => BufferingStrategy::DELAY,
             ["separate"] => BufferingStrategy::SEPARATING,
             _ => BufferingStrategy::CUSTOM,
         };
-        let mut config = BufferConfig::new(model.as_mut(), strategy);
+        let mut config = BufferConfig::new(model, strategy);
 
         if strategy == BufferingStrategy::CUSTOM {
             for arg in parameters {
@@ -63,7 +63,5 @@ impl CLI {
                 config.add_single_buffer_by_name(split[0], split[1]);
             }
         }
-
-        model
     }
 }

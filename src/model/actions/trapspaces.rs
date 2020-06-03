@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::rc::Rc;
 
 use itertools::Itertools;
 
@@ -56,38 +55,39 @@ impl TrapspacesBuilder {
 
         // Add all variables
         let s = model
-            .variables()
-            .map(|(uid, _)| format!("v{}; v{}", 2 * uid, 2 * uid + 1))
+            .variables
+            .iter()
+            .map(|vid| format!("v{}; v{}", 2 * vid, 2 * vid + 1))
             .join("; ");
         let s = format!("{{{}}}.\n", s);
         solver.add(&s);
 
         // A variable can only be fixed at a specific value
-        for (uid, _) in model.variables() {
-            solver.add(&format!(":- v{}, v{}.\n", 2 * uid, 2 * uid + 1));
+        for vid in &model.variables {
+            solver.add(&format!(":- v{}, v{}.\n", 2 * vid, 2 * vid + 1));
         }
 
-        for (uid, var) in model.variables() {
-            let cpt = model.get_component_ref(var.component);
-            let e: Rc<Expr> = cpt.borrow().get_formula(var.value).convert_as();
+        for vid in model.variables() {
+            let e = model.get_var_rule(*vid);
             let ne = e.not();
-            restrict(&mut *solver, &e, 2 * uid + 1);
-            restrict(&mut *solver, &ne, 2 * uid);
+            restrict(&mut *solver, &e, 2 * vid + 1);
+            restrict(&mut *solver, &ne, 2 * vid);
 
             if self.percolate {
-                enforce(&mut *solver, &e, 2 * uid);
-                enforce(&mut *solver, &ne, 2 * uid + 1);
+                enforce(&mut *solver, &e, 2 * vid);
+                enforce(&mut *solver, &ne, 2 * vid + 1);
             }
+        }
 
-            // Remove the full state space from the solutions when computing elementary trapspaces
-            if self.mode == SolverMode::MIN {
-                let s = model
-                    .variables()
-                    .map(|(uid, _)| format!("not v{}, not v{}", 2 * uid, 2 * uid + 1))
-                    .join(", ");
-                let s = format!(":- {}.\n", s);
-                solver.add(&s);
-            }
+        // Remove the full state space from the solutions when computing elementary trapspaces
+        if self.mode == SolverMode::MIN {
+            let s = model
+                .variables()
+                .iter()
+                .map(|vid| format!("not v{}, not v{}", 2 * vid, 2 * vid + 1))
+                .join(", ");
+            let s = format!(":- {}.\n", s);
+            solver.add(&s);
         }
 
         let mut results = solver.solve();

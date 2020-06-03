@@ -1,10 +1,8 @@
 use std::ffi::OsString;
-use std::rc::Rc;
 
 use structopt::StructOpt;
 
 use crate::command::{CLICommand, CommandContext};
-use crate::func::expr::Expr;
 
 static NAME: &str = "show";
 static ABOUT: &str = "Display the current model";
@@ -36,12 +34,9 @@ impl CLICommand for CLI {
         let model = smodel.borrow();
 
         if config.booleanized {
-            for (uid, var) in model.variables() {
-                let cpt = model.get_component_ref(var.component);
-                let cpt = cpt.borrow();
-                let e: Rc<Expr> = cpt.get_formula(var.value).convert_as();
-
-                println!("{}: {},{} => {}", uid, cpt, var.value, e);
+            for vid in model.variables() {
+                let e = model.get_var_rule(*vid);
+                println!("{} => {}", vid, e);
             }
         } else {
             println!("{}", model);

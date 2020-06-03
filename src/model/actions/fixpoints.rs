@@ -1,5 +1,4 @@
 use std::fmt;
-use std::rc::Rc;
 
 use itertools::Itertools;
 
@@ -33,7 +32,8 @@ impl FixedBuilder {
     /// Apply additional restrictions to the search for fixed points
     pub fn restrict_by_name(&mut self, name: &str, value: bool) {
         let model = self.model.borrow();
-        let uid = model.variable_by_name(name);
+        // TODO: extract threshold from the name?
+        let uid = model.find_variable(name, 1);
         if let Some(uid) = uid {
             if self.restriction.is_none() {
                 self.restriction = Some(LiteralSet::new());
@@ -50,7 +50,8 @@ impl FixedBuilder {
         // Create an ASP variable matching each variable of the model
         let s = model
             .variables()
-            .map(|(uid, _)| format!("v{}", uid))
+            .iter()
+            .map(|vid| format!("v{}", vid))
             .join("; ");
         let s = format!("{{{}}}.", s);
         solver.add(&s);
@@ -59,11 +60,9 @@ impl FixedBuilder {
         //   * retrieve the Boolean formula
         //   * derive the stability condition
         //   * encode it in ASP
-        for (uid, var) in model.variables() {
-            let cpt = model.get_component_ref(var.component);
-            let cpt = cpt.borrow();
-            let cur = Expr::ATOM(uid);
-            let e: Rc<Expr> = cpt.get_formula(var.value).convert_as();
+        for vid in &model.variables {
+            let cur = Expr::ATOM(*vid);
+            let e = model.get_var_rule(*vid);
             for p in cur.not().and(&e).prime_implicants().items() {
                 solver.restrict(p);
             }
@@ -90,11 +89,11 @@ impl FixedBuilder {
 }
 
 impl FixedPoints {
-    pub fn new(model: &dyn QModel, patterns: Vec<LiteralSet>) -> Self {
+    pub fn new(model: &QModel, patterns: Vec<LiteralSet>) -> Self {
         let names = model
-            .variables()
-            .into_iter()
-            .map(|(u, _)| model.get_name(u))
+            .variables
+            .iter()
+            .map(|vid| model.get_var_name(*vid))
             .collect_vec();
         FixedPoints {
             names: names,

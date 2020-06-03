@@ -38,7 +38,7 @@ impl MNETFormat {
         MNETFormat {}
     }
 
-    fn load_expr(&self, model: &mut dyn QModel, expr: Pair<Rule>) -> Expr {
+    fn load_expr(&self, model: &mut QModel, expr: Pair<Rule>) -> Expr {
         let rule = expr.as_rule();
         match rule {
             Rule::bt => Expr::TRUE,
@@ -58,19 +58,19 @@ impl MNETFormat {
         }
     }
 
-    fn load_lit(&self, model: &mut dyn QModel, expr: Pair<Rule>) -> usize {
+    fn load_lit(&self, model: &mut QModel, expr: Pair<Rule>) -> usize {
         let mut expr = expr.into_inner();
         let component = expr.next().unwrap().as_str();
         let value = match expr.next() {
             None => 1,
             Some(e) => e.as_str().parse().unwrap(),
         };
-        model.ensure_variable_with_threshold(component, value)
+        model.ensure_variable(component, value)
     }
 }
 
 impl io::ParsingFormat for MNETFormat {
-    fn parse_rules(&self, model: &mut dyn QModel, expression: &str) {
+    fn parse_rules(&self, model: &mut QModel, expression: &str) {
         let ptree = MNETParser::parse(Rule::file, expression);
 
         if let Err(err) = ptree {
@@ -95,13 +95,13 @@ impl io::ParsingFormat for MNETFormat {
         }
 
         // Parse all expressions
-        for e in expressions {
-            let expr = self.load_expr(model, e.1);
-            model.extend_rule(e.0, Formula::from(expr));
+        for (vid, e) in expressions {
+            let expr = self.load_expr(model, e);
+            model.push_var_rule(vid, Formula::from(expr));
         }
     }
 
-    fn parse_formula(&self, model: &mut dyn QModel, formula: &str) -> Result<Expr, String> {
+    fn parse_formula(&self, model: &mut QModel, formula: &str) -> Result<Expr, String> {
         let ptree = MNETParser::parse(Rule::sxpr, formula);
         match ptree {
             Err(s) => Err(format!("Parsing error: {}", s)),
@@ -115,12 +115,12 @@ impl io::ParsingFormat for MNETFormat {
 }
 
 impl io::SavingFormat for MNETFormat {
-    fn write_rules(&self, model: &dyn QModel, out: &mut dyn Write) -> Result<(), Error> {
-        let namer = model.as_namer();
-        for (_, c) in model.components() {
-            let c = c.borrow();
-            for assign in c.assignments() {
-                write!(out, "{}", &c.name)?;
+    fn write_rules(&self, model: &QModel, out: &mut dyn Write) -> Result<(), Error> {
+        for cid in &model.components {
+            let rule = model.cpt_rules.get(cid).unwrap();
+            let name = model.cpt_names.get(cid).unwrap();
+            for assign in rule.assignments.iter() {
+                write!(out, "{}", name)?;
                 if assign.target != 1 {
                     write!(out, ":{}", assign.target)?;
                 }
@@ -129,7 +129,7 @@ impl io::SavingFormat for MNETFormat {
                     "<- {}",
                     NamedExpr {
                         expr: &assign.formula.convert_as(),
-                        namer: namer,
+                        namer: model,
                     }
                 )?;
             }

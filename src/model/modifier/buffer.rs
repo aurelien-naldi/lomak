@@ -5,7 +5,6 @@ use std::rc::Rc;
 use crate::func::expr::{AtomReplacer, Expr};
 use crate::func::Formula;
 use crate::model::QModel;
-use crate::model::SharedComponent;
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum BufferingStrategy {
@@ -15,7 +14,7 @@ pub enum BufferingStrategy {
     CUSTOM,
 }
 
-/// Describe buffers between a source components and its targets.
+/// Describe buffers between a source component and its targets.
 enum BufferRef {
     SKIP,
     DELAY(BufferSelection),
@@ -30,7 +29,7 @@ struct BufferSelection {
 pub struct BufferConfig<'a> {
     strategy: BufferingStrategy,
     map: HashMap<usize, BufferRef>,
-    model: &'a mut dyn QModel,
+    model: &'a mut QModel,
 }
 
 impl BufferSelection {
@@ -40,7 +39,7 @@ impl BufferSelection {
         }
     }
 
-    fn get_buffer(&self, model: &mut dyn QModel, src: usize) -> usize {
+    fn get_buffer(&self, model: &mut QModel, src: usize) -> usize {
         let cell = self.data.as_ref();
         if cell.borrow().is_none() {
             let v = create_buffer(model, src);
@@ -51,7 +50,7 @@ impl BufferSelection {
 }
 
 impl<'a> BufferConfig<'a> {
-    pub fn new(model: &'a mut dyn QModel, strategy: BufferingStrategy) -> Self {
+    pub fn new(model: &'a mut QModel, strategy: BufferingStrategy) -> Self {
         BufferConfig {
             model: model,
             strategy: strategy,
@@ -60,14 +59,14 @@ impl<'a> BufferConfig<'a> {
     }
 
     pub fn add_single_buffer_by_name(&mut self, source: &str, target: &str) {
-        let usrc = self.model.component_by_name(source);
+        let usrc = self.model.get_component(source);
         if usrc.is_none() {
             println!("unknown buffering source: {}", source);
             return;
         }
-        let utgt = self.model.component_by_name(target);
+        let utgt = self.model.get_component(target);
         if utgt.is_none() {
-            println!("unknown buffering source: {}", target);
+            println!("unknown buffering target: {}", target);
             return;
         }
 
@@ -89,7 +88,7 @@ impl<'a> BufferConfig<'a> {
     }
 
     pub fn add_delay_by_name(&mut self, source: &str) {
-        let usrc = self.model.component_by_name(source);
+        let usrc = self.model.get_component(source);
         if usrc.is_none() {
             println!("unknown buffering source: {}", source);
             return;
@@ -105,16 +104,17 @@ impl<'a> BufferConfig<'a> {
     }
 
     pub fn apply(&mut self) {
-        let components: Vec<(usize, SharedComponent)> = self.model.components_copy();
-        for (cid, component) in components {
-            let mut cpt = component.borrow_mut();
-            for assign in cpt.assignments.iter_mut() {
+        for cid in self.model.components.clone() {
+            let mut rule = self.model.cpt_rules.get_mut(&cid).unwrap().clone();
+            for assign in rule.assignments.iter_mut() {
                 let expr: Rc<Expr> = assign.formula.convert_as();
                 let new_expr = expr.replace_variables(self);
                 if let Some(e) = new_expr {
                     assign.formula.set(e);
                 }
             }
+            // Apply the new rule
+            self.model.cpt_rules.insert(cid, rule);
         }
     }
 
@@ -138,7 +138,7 @@ impl<'a> BufferConfig<'a> {
 
 impl<'a> AtomReplacer for BufferConfig<'a> {
     fn ask_buffer(&mut self, varid: usize, value: bool) -> Option<Expr> {
-        let var = self.model.get_variable(varid);
+        //        let var = self.model.get_variable(varid);
 
         // FIXME: grab the buffer for the source component and replace if needed
 
@@ -146,14 +146,16 @@ impl<'a> AtomReplacer for BufferConfig<'a> {
     }
 }
 
-fn create_buffer(model: &mut dyn QModel, src: usize) -> usize {
-    let cmp = model.get_component_ref(src);
+fn create_buffer(model: &mut QModel, src: usize) -> usize {
     // Create the buffer and add his mirror function
     let buf_id = model.add_component("buffer");
 
-    for (value, var) in cmp.borrow().variables() {
-        let buf_var = model.ensure_associated_variable(buf_id, *value);
-        model.set_rule(buf_var, Formula::from(Expr::ATOM(*var)));
+    let variables = model.cpt_variables.get(&src).unwrap().clone();
+    let mut value = 1;
+    for var in variables {
+        model.ensure_cpt_variable(buf_id, value);
+        model.push_cpt_rule(buf_id, value, Formula::from(Expr::ATOM(var)));
+        value += 1;
     }
 
     buf_id

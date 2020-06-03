@@ -13,7 +13,6 @@ lazy_static = "1.4"
 pest        = "2.1"
 pest_derive = "2.1"
 regex       = "1"
-slab        = "0.4"
 structopt   = { version = "0.3", default-features = false }
 
 [dependencies.clap]

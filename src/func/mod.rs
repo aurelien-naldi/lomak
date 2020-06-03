@@ -108,6 +108,12 @@ pub struct Formula {
     cached: RefCell<Vec<Repr>>,
 }
 
+impl Clone for Formula {
+    fn clone(&self) -> Self {
+        Formula::from(self.repr.clone())
+    }
+}
+
 impl Repr {
     pub fn from<T: BoolRepr>(value: T) -> Repr {
         value.into_repr()
