@@ -7,18 +7,14 @@ edition = "2018"
 
 [dependencies]
 bit-set     = "0.5"
-clingo      = "0.6"
+clap        = { version = "2", default-features = false, features = [ "color", "wrap_help" ] }
+clingo      = { version = "0.6", features = ["derive"] }
 itertools   = "0.9"
 lazy_static = "1.4"
 pest        = "2.1"
 pest_derive = "2.1"
 regex       = "1"
 structopt   = { version = "0.3", default-features = false }
-
-[dependencies.clap]
-version = "2"
-default-features = false
-features = [ "color", "wrap_help" ]
 
 
 # Release profile:

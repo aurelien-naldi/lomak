@@ -211,6 +211,15 @@ impl Paths {
         }
         expr
     }
+
+    pub fn eval_pattern(&self, pattern: &LiteralSet) -> bool {
+        for p in self.paths.iter() {
+            if p.contains_state(state) {
+                return true;
+            }
+        }
+        false
+    }
 }
 
 impl LiteralSet {
