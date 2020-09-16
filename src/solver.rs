@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::func::paths::LiteralSet;
+use crate::func::pattern::Pattern;
 
 mod clingo;
 
@@ -13,7 +13,7 @@ pub enum SolverMode {
 
 pub struct SolverSolution {
     number: u64,
-    pattern: LiteralSet,
+    pattern: Pattern,
 }
 
 pub fn get_solver(mode: SolverMode) -> Box<dyn Solver> {
@@ -21,7 +21,7 @@ pub fn get_solver(mode: SolverMode) -> Box<dyn Solver> {
 }
 
 pub trait Solver {
-    fn restrict(&mut self, p: &LiteralSet);
+    fn restrict(&mut self, p: &Pattern);
 
     fn add(&mut self, instruct: &str);
 
@@ -40,7 +40,7 @@ impl SolverSolution {
         self
     }
 
-    pub fn as_pattern(self) -> LiteralSet {
+    pub fn as_pattern(self) -> Pattern {
         self.pattern
     }
 }

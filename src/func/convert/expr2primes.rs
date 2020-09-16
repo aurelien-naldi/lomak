@@ -1,10 +1,10 @@
 use crate::func::expr::*;
-use crate::func::paths::Paths;
+use crate::func::implicant::Implicants;
 
 impl Expr {
     /// Compute the prime implicants of a Boolean expression.
-    pub fn prime_implicants(&self) -> Paths {
-        let mut paths = Paths::new();
+    pub fn prime_implicants(&self) -> Implicants {
+        let mut paths = Implicants::new();
         self.nnf()
             .as_ref()
             .unwrap_or(self)
@@ -13,7 +13,7 @@ impl Expr {
     }
 
     /// Look for prime implicants, dissolving dlinks as we go
-    fn _prime_implicants(&self, paths: &mut Paths) {
+    fn _prime_implicants(&self, paths: &mut Implicants) {
         if paths.is_empty() {
             return;
         }

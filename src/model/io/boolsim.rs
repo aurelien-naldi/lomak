@@ -4,7 +4,7 @@ use pest::iterators::*;
 use pest::Parser;
 
 use crate::func::expr::{Expr, Operator};
-use crate::func::paths::Paths;
+use crate::func::implicant::Implicants;
 use crate::func::Formula;
 use crate::model::io;
 use crate::model::QModel;
@@ -104,8 +104,8 @@ impl io::SavingFormat for BoolSimFormat {
             if var.value != 1 {
                 panic!("Multivalued models are not yet fully supported");
             }
-            let paths: Paths = model.get_var_rule(*vid).prime_implicants();
-            for _func in paths.items() {
+            let paths: Implicants = model.get_var_rule(*vid).prime_implicants();
+            for _func in paths.iter() {
                 // FIXME: write boolsim
 
                 writeln!(out, "-> {}", model.get_cpt_name(var.component))?;

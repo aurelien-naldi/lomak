@@ -8,12 +8,13 @@ use crate::func::state::State;
 
 use self::expr::Expr;
 use self::gen::Generator;
-use self::paths::Paths;
+use self::implicant::Implicants;
 
 pub mod convert;
 pub mod expr;
 pub mod gen;
-pub mod paths;
+pub mod implicant;
+pub mod pattern;
 pub mod state;
 
 pub trait VariableNamer {
@@ -71,7 +72,7 @@ impl VariableNamer for TrivialNamer {
 pub enum Repr {
     EXPR(Rc<Expr>),
     GEN(Rc<Generator>),
-    PRIMES(Rc<Paths>),
+    PRIMES(Rc<Implicants>),
 }
 
 /// Common API for all representations of Boolean functions

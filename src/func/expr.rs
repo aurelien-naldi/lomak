@@ -6,7 +6,7 @@ use std::iter::Iterator;
 use std::rc::Rc;
 
 use crate::func;
-use crate::func::paths::LiteralSet;
+use crate::func::pattern::Pattern;
 use crate::func::state::State;
 use crate::func::*;
 
@@ -389,17 +389,19 @@ impl Expr {
         }
     }
 
-    pub fn get_literals(&self) -> LiteralSet {
-        self._get_literals(false)
+    pub fn get_literals(&self) -> Pattern {
+        let mut p = Pattern::new();
+        self._fill_literals(&mut p, false);
+        p
     }
 
-    pub fn _get_literals(&self, neg: bool) -> LiteralSet {
+    pub fn _fill_literals(&self, p: &mut Pattern, neg: bool) {
         match self {
-            Expr::TRUE => LiteralSet::new(),
-            Expr::FALSE => LiteralSet::new(),
-            Expr::ATOM(u) => LiteralSet::with(*u, neg),
-            Expr::NATOM(u) => LiteralSet::with(*u, !neg),
-            Expr::OPER(o, c) => c.get_literals(o.is_neg() != neg),
+            Expr::TRUE => (),
+            Expr::FALSE => (),
+            Expr::ATOM(u) => p.set_ignoring_conflicts(*u, !neg),
+            Expr::NATOM(u) => p.set_ignoring_conflicts(*u, neg),
+            Expr::OPER(o, c) => c.fill_literals(p, o.is_neg() != neg),
         }
     }
 }
@@ -440,14 +442,10 @@ impl Children {
         false
     }
 
-    // TODO: cache the result?
-    pub fn get_literals(&self, neg: bool) -> LiteralSet {
-        let mut used = LiteralSet::new();
+    pub fn fill_literals(&self, p: &mut Pattern, neg: bool) {
         for child in self.data.iter() {
-            let u = child._get_literals(neg);
-            used.union_with(&u);
+            child._fill_literals(p, neg);
         }
-        used
     }
 }
 
@@ -660,7 +658,7 @@ impl<'a> BitOr<&'a Expr> for &'a Expr {
 
 #[cfg(test)]
 mod tests {
-    use crate::func::paths::Paths;
+    use crate::func::implicant::Implicants;
     use crate::func::*;
 
     use super::*;
@@ -704,7 +702,7 @@ mod tests {
         let c = Expr::ATOM(3);
 
         let expr = a.or(&b).not().and(&c.not()).or(&a);
-        let path: Rc<Paths> = expr.clone().into_repr().convert_as();
+        let path: Rc<Implicants> = expr.clone().into_repr().convert_as();
 
         let mut state = State::new();
         assert_eq!(expr.eval(&state), true);

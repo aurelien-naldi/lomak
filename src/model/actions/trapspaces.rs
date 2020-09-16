@@ -104,7 +104,7 @@ impl TrapspacesBuilder {
 }
 
 fn restrict(solver: &mut dyn Solver, e: &Expr, u: usize) {
-    for p in e.prime_implicants().items() {
+    for p in e.prime_implicants().iter() {
         let s = p
             .positive()
             .iter()
@@ -121,7 +121,7 @@ fn restrict(solver: &mut dyn Solver, e: &Expr, u: usize) {
 }
 
 fn enforce(solver: &mut dyn Solver, e: &Expr, u: usize) {
-    for p in e.prime_implicants().items() {
+    for p in e.prime_implicants().iter() {
         let s = p
             .positive()
             .iter()

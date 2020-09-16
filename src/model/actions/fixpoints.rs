@@ -3,7 +3,7 @@ use std::fmt;
 use itertools::Itertools;
 
 use crate::func::expr::Expr;
-use crate::func::paths::LiteralSet;
+use crate::func::pattern::Pattern;
 use crate::model::{QModel, SharedModel};
 use crate::solver;
 use crate::solver::SolverMode;
@@ -12,12 +12,12 @@ use std::ops::Deref;
 
 pub struct FixedBuilder {
     model: SharedModel,
-    restriction: Option<LiteralSet>,
+    restriction: Option<Pattern>,
 }
 
 pub struct FixedPoints {
     names: Vec<String>,
-    patterns: Vec<LiteralSet>,
+    patterns: Vec<Pattern>,
     displayed: Option<Vec<usize>>,
 }
 
@@ -36,9 +36,9 @@ impl FixedBuilder {
         let uid = model.find_variable(name, 1);
         if let Some(uid) = uid {
             if self.restriction.is_none() {
-                self.restriction = Some(LiteralSet::new());
+                self.restriction = Some(Pattern::new());
             }
-            self.restriction.as_mut().unwrap().set_literal(uid, value);
+            self.restriction.as_mut().unwrap().set(uid, value);
         }
     }
 
@@ -63,10 +63,10 @@ impl FixedBuilder {
         for vid in &model.variables {
             let cur = Expr::ATOM(*vid);
             let e = model.get_var_rule(*vid);
-            for p in cur.not().and(&e).prime_implicants().items() {
+            for p in cur.not().and(&e).prime_implicants().iter() {
                 solver.restrict(p);
             }
-            for p in cur.and(&e.not()).prime_implicants().items() {
+            for p in cur.and(&e.not()).prime_implicants().iter() {
                 solver.restrict(p);
             }
         }
@@ -89,7 +89,7 @@ impl FixedBuilder {
 }
 
 impl FixedPoints {
-    pub fn new(model: &QModel, patterns: Vec<LiteralSet>) -> Self {
+    pub fn new(model: &QModel, patterns: Vec<Pattern>) -> Self {
         let names = model
             .variables
             .iter()

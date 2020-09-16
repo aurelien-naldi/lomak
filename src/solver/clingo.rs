@@ -4,7 +4,7 @@ use clingo::*;
 use itertools::Itertools;
 use regex::Regex;
 
-use crate::func::paths::LiteralSet;
+use crate::func::pattern::Pattern;
 use crate::solver::{Solver, SolverMode, SolverResults, SolverSolution};
 
 lazy_static! {
@@ -21,7 +21,7 @@ pub struct ClingoResults<'a> {
 }
 
 impl Solver for ClingoProblem {
-    fn restrict(&mut self, p: &LiteralSet) {
+    fn restrict(&mut self, p: &Pattern) {
         let s = p
             .positive()
             .iter()
@@ -127,7 +127,7 @@ impl Iterator for ClingoResults<'_> {
     }
 }
 
-fn model_as_pattern(model: &Model, halved: bool) -> LiteralSet {
+fn model_as_pattern(model: &Model, halved: bool) -> Pattern {
     if halved {
         model_as_half_pattern(model)
     } else {
@@ -135,8 +135,8 @@ fn model_as_pattern(model: &Model, halved: bool) -> LiteralSet {
     }
 }
 
-fn model_as_full_pattern(model: &Model) -> LiteralSet {
-    let mut result = LiteralSet::new();
+fn model_as_full_pattern(model: &Model) -> Pattern {
+    let mut result = Pattern::new();
 
     // retrieve the selected atoms in the model
     let atoms = model
@@ -145,7 +145,7 @@ fn model_as_full_pattern(model: &Model) -> LiteralSet {
 
     for atom in atoms {
         if let Ok(u) = atom_to_uid(atom) {
-            result.set_literal(u, true);
+            result.set(u, true);
         }
     }
 
@@ -156,15 +156,15 @@ fn model_as_full_pattern(model: &Model) -> LiteralSet {
 
     for atom in atoms {
         if let Ok(u) = atom_to_uid(atom) {
-            result.set_literal(u, false);
+            result.set(u, false);
         }
     }
 
     result
 }
 
-fn model_as_half_pattern(model: &Model) -> LiteralSet {
-    let mut result = LiteralSet::new();
+fn model_as_half_pattern(model: &Model) -> Pattern {
+    let mut result = Pattern::new();
 
     // retrieve the selected atoms in the model
     let atoms = model
@@ -173,7 +173,7 @@ fn model_as_half_pattern(model: &Model) -> LiteralSet {
 
     for atom in atoms {
         if let Ok(u) = atom_to_uid(atom) {
-            result.set_literal(u / 2, u % 2 == 0);
+            result.set(u / 2, u % 2 == 0);
         }
     }
 
