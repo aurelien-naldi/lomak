@@ -1,7 +1,7 @@
 //! A logical model is a collection of components associated to Boolean variables and
 //! logical rules controlling changes of activity over time, depending on the model state.
 
-use std::cell::{Ref, RefCell, RefMut};
+use std::cell::{Ref, RefCell, RefMut, Cell};
 use std::collections::HashMap;
 use std::fmt;
 use std::rc::Rc;
@@ -32,25 +32,35 @@ pub struct Variable {
 
 /// A formula associated with a target value
 #[derive(Clone)]
-pub struct Assign {
+struct Assign {
     pub target: usize,
     pub formula: Formula,
 }
 
 /// The list of assignments define the dynamical rules for all variables associated to the same component.
 #[derive(Clone)]
-pub struct ComponentRules {
+struct ComponentRules {
     assignments: Vec<Assign>,
 }
 
-/// A model contains a list of named components, which are associated to
-/// one or several Boolean variables for each qualitative threshold.
-/// Components and variables are identified by unique handles (positive integers).
+/// A model contains a list of named components and an associated Boolean variable for each qualitative threshold.
 ///
 /// Finally, each component is associated to a list of Boolean functions defining
 /// the conditions required for the activation of each threshold.
 #[derive(Default)]
 pub struct QModel {
+    cpt_variables: ModelVariables,
+    cpt_rules: HashMap<usize, ComponentRules>,
+
+    cached_variables: Cell<Option<Rc<ModelVariables>>>,
+}
+
+/// Maintain a list of components and associated variables.
+///
+/// Each component is associated to one or several variables with ordered thresholds.
+/// Both components and variables are identified by unique handles (positive integers)
+#[derive(Default)]
+pub struct ModelVariables {
     _next_cpt: usize,
     _next_var: usize,
     components: Vec<usize>,
@@ -62,7 +72,7 @@ pub struct QModel {
     var_component_values: HashMap<usize, Variable>,
 
     cpt_names: HashMap<usize, String>,
-    cpt_rules: HashMap<usize, ComponentRules>,
+    var_names: HashMap<usize, String>,
 }
 
 /// Sharable model reference
@@ -71,21 +81,88 @@ pub struct SharedModel {
     rc: Rc<RefCell<QModel>>,
 }
 
-/// Core API for qualitative models
-impl QModel {
+pub trait GroupedVariables {
     /// Find a component by name if it exists.
     ///
     /// Components are associated to a group of related Boolean variables.
     /// The variables can be then used in Boolean expressions, not components.
-    pub fn get_component(&self, name: &str) -> Option<usize> {
+    fn get_component(&self, name: &str) -> Option<usize>;
+
+    /// Find or create a component with a given name
+    fn ensure_component(&mut self, name: &str) -> usize;
+
+    /// Retrieve a variable for an existing component and a threshold value if it exists
+    fn get_cpt_variable(&self, cid: usize, value: usize) -> Option<usize>;
+
+    /// Find or create a variable for an existing component and a specific threshold value
+    fn ensure_cpt_variable(&mut self, cid: usize, value: usize) -> usize;
+
+    fn get_cpt_name(&self, uid: usize) -> &str;
+
+    /// Retrieve the list of variables associated to a given component
+    fn get_cpt_variables(&self, cid: usize) -> &Vec<usize>;
+
+    fn get_var_name(&self, vid: usize) -> &str;
+
+    fn variable(&self, vid: usize) -> &Variable;
+
+    fn variables(&self) -> &Vec<usize>;
+
+    fn components(&self) -> &Vec<usize>;
+
+    /// Rename a component.
+    /// Returns false if the new name is invalid or already assigned
+    /// to another component
+    fn rename(&mut self, source: &str, name: String) -> bool {
+        match self.get_component(source) {
+            None => false,
+            Some(u) => self.set_cpt_name(u, name),
+        }
+    }
+
+    /// Find or create a component with a given name
+    fn add_component(&mut self, pattern: &str) -> usize {
+        if self.get_component(pattern).is_none() {
+            return self.ensure_component(pattern);
+        };
+
+        let mut inc = 1;
+        loop {
+            let name = format!("{}_{}", pattern, inc);
+            if self.get_component(&name).is_none() {
+                return self.ensure_component(&name);
+            };
+            inc += 1;
+        }
+    }
+
+    /// Find a variable based on the name of the component and the threshold value
+    fn find_variable(&self, name: &str, value: usize) -> Option<usize> {
+        match self.get_component(name) {
+            None => None,
+            Some(cid) => self.get_cpt_variable(cid, value),
+        }
+    }
+
+    /// Find or create a variable with a given component name and threshold value
+    fn ensure_variable(&mut self, name: &str, value: usize) -> usize {
+        let cid = self.ensure_component(name);
+        self.ensure_cpt_variable(cid, value)
+    }
+
+    fn set_cpt_name(&mut self, uid: usize, name: String) -> bool;
+
+}
+
+impl GroupedVariables for ModelVariables {
+    fn get_component(&self, name: &str) -> Option<usize> {
         if let Some(uid) = self.name2uid.get(name) {
             return Some(*uid);
         }
         None
     }
 
-    /// Find or create a component with a given name
-    pub fn ensure_component(&mut self, name: &str) -> usize {
+    fn ensure_component(&mut self, name: &str) -> usize {
         if let Some(uid) = self.get_component(name) {
             return uid;
         }
@@ -96,13 +173,11 @@ impl QModel {
         self.components.push(cid);
         self.cpt_names.insert(cid, name.to_owned());
         self.cpt_variables.insert(cid, vec![]);
-        self.cpt_rules.insert(cid, ComponentRules::new());
         self.name2uid.insert(name.to_owned(), cid);
         cid
     }
 
-    /// Retrieve a variable for an existing component and a threshold value if it exists
-    pub fn get_cpt_variable(&self, cid: usize, value: usize) -> Option<usize> {
+    fn get_cpt_variable(&self, cid: usize, value: usize) -> Option<usize> {
         let value = check_val(value);
         let variables = self.cpt_variables.get(&cid).unwrap();
         if value > variables.len() {
@@ -111,8 +186,7 @@ impl QModel {
         Some(variables[value - 1])
     }
 
-    /// Find or create a variable for an existing component and a specific threshold value
-    pub fn ensure_cpt_variable(&mut self, cid: usize, value: usize) -> usize {
+    fn ensure_cpt_variable(&mut self, cid: usize, value: usize) -> usize {
         let value = check_val(value);
         let variables = self.cpt_variables.get_mut(&cid).unwrap();
 
@@ -130,11 +204,11 @@ impl QModel {
         variables[value - 1]
     }
 
-    pub fn get_cpt_name(&self, uid: usize) -> String {
-        format!("{}", self.cpt_names.get(&uid).unwrap())
+    fn get_cpt_name(&self, uid: usize) -> &str {
+        &self.cpt_names.get(&uid).unwrap()
     }
 
-    pub fn set_cpt_name(&mut self, uid: usize, name: String) -> bool {
+    fn set_cpt_name(&mut self, uid: usize, name: String) -> bool {
         // Reject invalid new names
         if !RE_UID.is_match(&name) {
             return false;
@@ -151,63 +225,92 @@ impl QModel {
         true
     }
 
-    pub fn get_var_name(&self, uid: usize) -> String {
-        let var = self.var_component_values.get(&uid).unwrap();
-        let name = self.cpt_names.get(&var.component).unwrap();
-        if var.value != 1 {
-            format!("{}:{}", name, var.value)
-        } else {
-            format!("{}", name)
+    fn get_var_name(&self, vid: usize) -> &str {
+        if let Some(name) = self.var_names.get(&vid) {
+            return name;
         }
+        if let Some(var) = self.var_component_values.get(&vid) {
+            if var.value != 1 {
+                panic!("A better name should have been cached for {} = [{}:{}]", vid, var.component, var.value);
+            }
+            return self.get_cpt_name(var.component);
+        }
+        panic!("Unknown variable {}", vid);
     }
 
-    pub fn variables(&self) -> &Vec<usize> {
+    fn get_cpt_variables(&self, cid: usize) -> &Vec<usize> {
+        self.cpt_variables.get(&cid).unwrap()
+    }
+
+    fn variable(&self, vid: usize) -> &Variable {
+        self.var_component_values.get(&vid).unwrap()
+    }
+
+    fn variables(&self) -> &Vec<usize> {
         &self.variables
     }
-}
 
-/// Convenience functions, building on the core ones without direct access to the fields
-impl QModel {
-    /// Rename a component.
-    /// Returns false if the new name is invalid or already assigned
-    /// to another component
-    pub fn rename(&mut self, source: &str, name: String) -> bool {
-        match self.get_component(source) {
-            None => false,
-            Some(u) => self.set_cpt_name(u, name),
-        }
-    }
-
-    /// Find or create a component with a given name
-    pub fn add_component(&mut self, pattern: &str) -> usize {
-        if self.get_component(pattern).is_none() {
-            return self.ensure_component(pattern);
-        };
-
-        let mut inc = 1;
-        loop {
-            let name = format!("{}_{}", pattern, inc);
-            if self.get_component(&name).is_none() {
-                return self.ensure_component(&name);
-            };
-            inc += 1;
-        }
-    }
-
-    /// Find a variable based on the name of the component and the threshold value
-    pub fn find_variable(&self, name: &str, value: usize) -> Option<usize> {
-        match self.get_component(name) {
-            None => None,
-            Some(cid) => self.get_cpt_variable(cid, value),
-        }
-    }
-
-    /// Find or create a variable with a given component name and threshold value
-    pub fn ensure_variable(&mut self, name: &str, value: usize) -> usize {
-        let cid = self.ensure_component(name);
-        self.ensure_cpt_variable(cid, value)
+    fn components(&self) -> &Vec<usize> {
+        &self.components
     }
 }
+
+/// Delegate variable handling in models to the dedicated field
+impl GroupedVariables for QModel {
+    fn get_component(&self, name: &str) -> Option<usize> {
+        self.cpt_variables.get_component(name)
+    }
+
+    fn ensure_component(&mut self, name: &str) -> usize {
+        if let Some(uid) = self.get_component(name) {
+            return uid;
+        }
+
+        // Create a new component
+        let cid = self.cpt_variables.ensure_component(name);
+        self.cpt_rules.insert(cid, ComponentRules::new());
+        cid
+    }
+
+    /// Retrieve a variable for an existing component and a threshold value if it exists
+    fn get_cpt_variable(&self, cid: usize, value: usize) -> Option<usize> {
+        self.cpt_variables.get_cpt_variable(cid, value)
+    }
+
+    /// Find or create a variable for an existing component and a specific threshold value
+    fn ensure_cpt_variable(&mut self, cid: usize, value: usize) -> usize {
+        self.cpt_variables.ensure_cpt_variable(cid, value)
+    }
+
+    fn get_cpt_name(&self, uid: usize) -> &str {
+        self.cpt_variables.get_cpt_name(uid)
+    }
+
+    fn set_cpt_name(&mut self, uid: usize, name: String) -> bool {
+        self.cpt_variables.set_cpt_name(uid, name)
+    }
+
+    fn get_var_name(&self, vid: usize) -> &str {
+        self.cpt_variables.get_var_name(vid)
+    }
+
+    fn get_cpt_variables(&self, cid: usize) -> &Vec<usize> {
+        self.cpt_variables.get_cpt_variables(cid)
+    }
+
+    fn variable(&self, vid: usize) -> &Variable {
+        self.cpt_variables.variable(vid)
+    }
+
+    fn variables(&self) -> &Vec<usize> {
+        self.cpt_variables.variables()
+    }
+
+    fn components(&self) -> &Vec<usize> {
+        self.cpt_variables.components()
+    }
+}
+
 
 /// Handling of Dynamical rules
 impl QModel {
@@ -218,14 +321,14 @@ impl QModel {
 
     /// Assign a Boolean condition for a specific threshold
     pub fn push_var_rule(&mut self, vid: usize, rule: Formula) {
-        let var = self.var_component_values.get(&vid).unwrap();
+        let var = self.variable(vid);
         let cpt = var.component;
         let val = var.value;
         self.push_cpt_rule(cpt, val, rule);
     }
 
     pub fn get_var_rule(&self, vid: usize) -> Expr {
-        let var = self.var_component_values.get(&vid).unwrap();
+        let var = self.variable(vid);
         let cid = var.component;
         let value = var.value;
         let mut expr = self
@@ -233,7 +336,7 @@ impl QModel {
             .get(&cid)
             .unwrap()
             .raw_variable_formula(value);
-        let variables = self.cpt_variables.get(&cid).unwrap();
+        let variables = self.get_cpt_variables(cid);
 
         if value < variables.len() {
             let next_var = variables[value];
@@ -255,7 +358,7 @@ impl QModel {
 impl QModel {
     /// Enforce the activity of a specific variable
     pub fn lock_variable(&mut self, vid: usize, value: bool) {
-        let var = &self.var_component_values.get(&vid).unwrap();
+        let var = &self.variable(vid);
         let cpt = var.component;
         let val = var.value;
         if value {
@@ -390,15 +493,9 @@ impl fmt::Display for Assign {
     }
 }
 
-impl VariableNamer for QModel {
+impl<T> VariableNamer for T where T: GroupedVariables {
     fn format_name(&self, f: &mut fmt::Formatter, vid: usize) -> fmt::Result {
-        let var = self.var_component_values.get(&vid).unwrap();
-        let name = self.cpt_names.get(&var.component).unwrap();
-        if var.value != 1 {
-            write!(f, "{}:{}", name, var.value)
-        } else {
-            write!(f, "{}", name)
-        }
+        write!(f, "{}", self.get_var_name(vid))
     }
 
     fn as_namer(&self) -> &dyn VariableNamer {
@@ -410,9 +507,9 @@ impl fmt::Display for QModel {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let namer = self.as_namer();
 
-        for cid in self.components.iter() {
+        for cid in self.components().iter() {
             let rules = self.cpt_rules.get(&cid).unwrap();
-            let name = self.cpt_names.get(&cid).unwrap();
+            let name = self.get_cpt_name(*cid);
             for a in rules.assignments.iter() {
                 write!(f, "{}", name)?;
                 if a.target != 1 {
@@ -429,18 +526,18 @@ impl fmt::Display for QModel {
 
 impl fmt::Debug for QModel {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for u in self.components.iter() {
-            let name = self.cpt_names.get(u).unwrap();
+        for u in self.components().iter() {
+            let name = self.get_cpt_name(*u);
             write!(f, "{} ({}):", u, name)?;
-            for v in self.cpt_variables.get(u).unwrap().iter() {
+            for v in self.get_cpt_variables(*u).iter() {
                 write!(f, "  {}", v)?;
             }
             writeln!(f)?;
         }
         writeln!(f)?;
 
-        for v in &self.variables {
-            let var = self.var_component_values.get(v).unwrap();
+        for v in self.variables() {
+            let var = self.variable(*v);
             writeln!(f, "{}: {}:{}", v, var.component, var.value)?;
         }
         writeln!(f)?;

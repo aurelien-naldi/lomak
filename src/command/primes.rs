@@ -4,7 +4,7 @@ use structopt::StructOpt;
 
 use crate::command::{CLICommand, CommandContext};
 use crate::func::VariableNamer;
-use crate::model::QModel;
+use crate::model::{QModel, GroupedVariables};
 use std::ops::Deref;
 
 static NAME: &str = "primes";
@@ -50,7 +50,7 @@ impl Config {
         } else {
             for vid in model.variables() {
                 let primes = model.get_var_rule(*vid).prime_implicants();
-                println!("PI {}:\n{}", model.name(*vid), primes);
+                println!("PI {}:\n{}", model.get_var_name(*vid), primes);
             }
         }
     }

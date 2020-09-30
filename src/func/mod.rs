@@ -31,6 +31,10 @@ pub trait VariableNamer {
     }
 }
 
+pub struct VariableGroup {
+    group: RefCell<Rc<dyn VariableNamer>>
+}
+
 pub struct Fmt<F>(pub F)
 where
     F: Fn(&mut fmt::Formatter) -> fmt::Result;

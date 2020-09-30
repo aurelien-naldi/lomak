@@ -6,7 +6,7 @@ use pest::Parser;
 use crate::func::expr::{Expr, Operator};
 use crate::func::implicant::Implicants;
 use crate::func::Formula;
-use crate::model::io;
+use crate::model::{io, GroupedVariables};
 use crate::model::QModel;
 
 #[derive(Parser)]
@@ -99,8 +99,8 @@ impl io::ParsingFormat for BoolSimFormat {
 impl io::SavingFormat for BoolSimFormat {
     fn write_rules(&self, model: &QModel, out: &mut dyn Write) -> Result<(), Error> {
         //        let namer = model.as_namer();
-        for vid in &model.variables {
-            let var = model.var_component_values.get(vid).unwrap();
+        for vid in model.variables() {
+            let var = model.variable(*vid);
             if var.value != 1 {
                 panic!("Multivalued models are not yet fully supported");
             }

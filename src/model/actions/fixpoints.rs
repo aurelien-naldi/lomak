@@ -4,7 +4,7 @@ use itertools::Itertools;
 
 use crate::func::expr::Expr;
 use crate::func::pattern::Pattern;
-use crate::model::{QModel, SharedModel};
+use crate::model::{QModel, SharedModel, GroupedVariables};
 use crate::solver;
 use crate::solver::SolverMode;
 use std::fmt::Formatter;
@@ -60,7 +60,7 @@ impl FixedBuilder {
         //   * retrieve the Boolean formula
         //   * derive the stability condition
         //   * encode it in ASP
-        for vid in &model.variables {
+        for vid in model.variables() {
             let cur = Expr::ATOM(*vid);
             let e = model.get_var_rule(*vid);
             for p in cur.not().and(&e).prime_implicants().iter() {
@@ -91,9 +91,9 @@ impl FixedBuilder {
 impl FixedPoints {
     pub fn new(model: &QModel, patterns: Vec<Pattern>) -> Self {
         let names = model
-            .variables
+            .variables()
             .iter()
-            .map(|vid| model.get_var_name(*vid))
+            .map(|vid| model.get_var_name(*vid).to_string())
             .collect_vec();
         FixedPoints {
             names: names,

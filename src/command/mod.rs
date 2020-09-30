@@ -1,3 +1,12 @@
+//! Define commands for the Command Line Interface
+//!
+//! This module provides facilities to register a collection of commands.
+//! Each command is a wrapper over core API features defined in a private submodule.
+//!
+//! As the CLI enables to execute a chain of commands, the defined commands are recognized in the
+//! list of parameters to extract separate lists of arguments for each successive command.
+
+
 use std::collections::HashMap;
 use std::env;
 use std::ffi::OsString;
@@ -5,21 +14,22 @@ use std::sync::Arc;
 
 use crate::model::SharedModel;
 
-mod help;
-mod load;
+pub mod help;
+pub mod load;
 
-mod buffer;
-mod perturbation;
-mod rename;
+pub mod buffer;
+pub mod perturbation;
+pub mod rename;
 
-mod fixpoints;
-mod primes;
-mod save;
-mod show;
-mod trapspaces;
+pub mod fixpoints;
+pub mod primes;
+pub mod save;
+pub mod show;
+pub mod trapspaces;
 
 lazy_static! {
-    pub static ref COMMANDS: CommandManager = CommandManager::new()
+    /// Single-instance CommandManager created and filled at runtime
+    static ref COMMANDS: CommandManager = CommandManager::new()
         // Help: show commands
         .register( Arc::new( help::CLI{} ))
 
@@ -40,11 +50,16 @@ lazy_static! {
         ;
 }
 
+/// Split the list of CLI parameters into separate slices for each successive command.
+///
+/// Scan the list of parameters to search for known commands and will consider that
+/// they denote the start of the next command.
 pub struct SelectedArgs {
     all_args: Vec<OsString>,
     next_slice: usize,
 }
 
+/// Register and retrieve commands
 pub struct CommandManager {
     services: HashMap<&'static str, Arc<dyn CLICommand>>,
     aliases: HashMap<&'static str, &'static str>,
@@ -104,6 +119,7 @@ impl CommandContext {
     }
 }
 
+/// API for individual commands
 pub trait CLICommand: Sync + Send {
     fn name(&self) -> &'static str;
 

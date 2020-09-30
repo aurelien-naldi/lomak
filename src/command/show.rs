@@ -3,6 +3,7 @@ use std::ffi::OsString;
 use structopt::StructOpt;
 
 use crate::command::{CLICommand, CommandContext};
+use crate::model::GroupedVariables;
 
 static NAME: &str = "show";
 static ABOUT: &str = "Display the current model";

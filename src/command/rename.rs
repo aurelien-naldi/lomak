@@ -4,6 +4,7 @@ use structopt::StructOpt;
 
 use crate::command::{CLICommand, CommandContext};
 use std::ops::DerefMut;
+use crate::model::GroupedVariables;
 
 static NAME: &str = "rename";
 static ABOUT: &str = "Rename one or several components";

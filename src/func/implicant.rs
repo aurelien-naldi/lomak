@@ -49,6 +49,16 @@ impl Implicants {
         lits
     }
 
+    /// Retrieve all unsigned regulators from this list of implicants.
+    pub fn get_regulators(&self) -> BitSet {
+        let mut lits = BitSet::new();
+        for l in self.patterns.iter() {
+            lits.union_with(l.positive());
+            lits.union_with(l.negative());
+        }
+        lits
+    }
+
     pub fn merge_raw(&mut self, next: &Implicants) {
         // Tag the subsumed paths
         let mut s_subsumed = BitSet::new();

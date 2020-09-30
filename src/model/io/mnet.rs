@@ -5,7 +5,7 @@ use pest::Parser;
 
 use crate::func::expr::{Expr, NamedExpr, Operator};
 use crate::func::Formula;
-use crate::model::io;
+use crate::model::{io, GroupedVariables};
 use crate::model::QModel;
 
 #[derive(Parser)]
@@ -116,9 +116,9 @@ impl io::ParsingFormat for MNETFormat {
 
 impl io::SavingFormat for MNETFormat {
     fn write_rules(&self, model: &QModel, out: &mut dyn Write) -> Result<(), Error> {
-        for cid in &model.components {
+        for cid in model.components() {
             let rule = model.cpt_rules.get(cid).unwrap();
-            let name = model.cpt_names.get(cid).unwrap();
+            let name = model.get_cpt_name(*cid);
             for assign in rule.assignments.iter() {
                 write!(out, "{}", name)?;
                 if assign.target != 1 {

@@ -5,7 +5,7 @@ use pest::Parser;
 
 use crate::func::expr::{Expr, NamedExpr, Operator};
 use crate::func::Formula;
-use crate::model::io;
+use crate::model::{io, GroupedVariables};
 use crate::model::QModel;
 
 #[derive(Parser)]
@@ -106,7 +106,7 @@ impl io::ParsingFormat for BNETFormat {
 
 impl io::SavingFormat for BNETFormat {
     fn write_rules(&self, model: &QModel, out: &mut dyn Write) -> Result<(), Error> {
-        for vid in &model.variables {
+        for vid in model.variables() {
             let func: Expr = model.get_var_rule(*vid);
             write!(out, "{}, ", model.get_var_name(*vid))?;
             match func {

@@ -4,7 +4,7 @@ use itertools::Itertools;
 
 use crate::func::expr::Expr;
 use crate::model::actions::fixpoints::FixedPoints;
-use crate::model::SharedModel;
+use crate::model::{SharedModel, GroupedVariables};
 use crate::solver;
 use crate::solver::Solver;
 use crate::solver::SolverMode;
@@ -55,7 +55,7 @@ impl TrapspacesBuilder {
 
         // Add all variables
         let s = model
-            .variables
+            .variables()
             .iter()
             .map(|vid| format!("v{}; v{}", 2 * vid, 2 * vid + 1))
             .join("; ");
@@ -63,7 +63,7 @@ impl TrapspacesBuilder {
         solver.add(&s);
 
         // A variable can only be fixed at a specific value
-        for vid in &model.variables {
+        for vid in model.variables() {
             solver.add(&format!(":- v{}, v{}.\n", 2 * vid, 2 * vid + 1));
         }
 

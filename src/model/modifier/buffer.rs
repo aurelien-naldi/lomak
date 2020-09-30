@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use crate::func::expr::{AtomReplacer, Expr};
 use crate::func::Formula;
-use crate::model::QModel;
+use crate::model::{QModel, GroupedVariables};
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum BufferingStrategy {
@@ -104,7 +104,7 @@ impl<'a> BufferConfig<'a> {
     }
 
     pub fn apply(&mut self) {
-        for cid in self.model.components.clone() {
+        for cid in self.model.components().clone() {
             let mut rule = self.model.cpt_rules.get_mut(&cid).unwrap().clone();
             for assign in rule.assignments.iter_mut() {
                 let expr: Rc<Expr> = assign.formula.convert_as();
@@ -150,7 +150,7 @@ fn create_buffer(model: &mut QModel, src: usize) -> usize {
     // Create the buffer and add his mirror function
     let buf_id = model.add_component("buffer");
 
-    let variables = model.cpt_variables.get(&src).unwrap().clone();
+    let variables = model.get_cpt_variables(src).clone();
     let mut value = 1;
     for var in variables {
         model.ensure_cpt_variable(buf_id, value);
