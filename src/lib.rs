@@ -6,8 +6,11 @@
 extern crate lazy_static;
 #[macro_use]
 extern crate pest_derive;
+#[macro_use]
+extern crate thiserror;
 
 pub mod command;
+pub mod error;
 pub mod func;
 pub mod model;
 pub mod services;

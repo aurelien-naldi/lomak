@@ -4,7 +4,7 @@ use itertools::Itertools;
 
 use crate::func::expr::Expr;
 use crate::func::pattern::Pattern;
-use crate::model::{QModel, SharedModel, GroupedVariables};
+use crate::model::{GroupedVariables, QModel, SharedModel};
 use crate::solver;
 use crate::solver::SolverMode;
 use std::fmt::Formatter;
@@ -32,8 +32,7 @@ impl FixedBuilder {
     /// Apply additional restrictions to the search for fixed points
     pub fn restrict_by_name(&mut self, name: &str, value: bool) {
         let model = self.model.borrow();
-        // TODO: extract threshold from the name?
-        let uid = model.find_variable(name, 1);
+        let uid = model.get_handle(name);
         if let Some(uid) = uid {
             if self.restriction.is_none() {
                 self.restriction = Some(Pattern::new());
@@ -48,11 +47,7 @@ impl FixedBuilder {
         let model = self.model.borrow();
 
         // Create an ASP variable matching each variable of the model
-        let s = model
-            .variables()
-            .iter()
-            .map(|vid| format!("v{}", vid))
-            .join("; ");
+        let s = model.variables().map(|vid| format!("v{}", vid)).join("; ");
         let s = format!("{{{}}}.", s);
         solver.add(&s);
 
@@ -92,8 +87,7 @@ impl FixedPoints {
     pub fn new(model: &QModel, patterns: Vec<Pattern>) -> Self {
         let names = model
             .variables()
-            .iter()
-            .map(|vid| model.get_var_name(*vid).to_string())
+            .map(|vid| model.get_name(*vid).to_string())
             .collect_vec();
         FixedPoints {
             names: names,

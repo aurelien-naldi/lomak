@@ -4,6 +4,7 @@ use structopt::StructOpt;
 
 use crate::command::{CLICommand, CommandContext};
 use crate::model::actions::trapspaces::TrapspacesBuilder;
+use crate::error::EmptyLomakResult;
 
 static NAME: &str = "trapspaces";
 static ABOUT: &str = "Compute the trapspaces (stable patterns) of the model";
@@ -50,9 +51,9 @@ impl CLICommand for CLI {
         &["fixed-patterns"]
     }
 
-    fn run(&self, context: CommandContext, args: &[OsString]) -> CommandContext {
+    fn run(&self, context: &mut CommandContext, args: &[OsString]) -> EmptyLomakResult {
         let config: Config = Config::from_iter(args);
-        let smodel = context.get_model();
+        let smodel = context.get_model()?;
 
         let mut builder = TrapspacesBuilder::new(smodel);
         builder.set_percolate(config.percolate);
@@ -70,6 +71,6 @@ impl CLICommand for CLI {
         }
         println!("{}", result);
 
-        context
+        Ok(())
     }
 }

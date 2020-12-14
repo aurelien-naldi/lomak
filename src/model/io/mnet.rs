@@ -1,12 +1,13 @@
-use std::io::{Error, Write};
+use std::io::Write;
 
 use pest::iterators::*;
 use pest::Parser;
 
 use crate::func::expr::{Expr, NamedExpr, Operator};
 use crate::func::Formula;
-use crate::model::{io, GroupedVariables};
 use crate::model::QModel;
+use crate::model::{io, GroupedVariables};
+use crate::error::EmptyLomakResult;
 
 #[derive(Parser)]
 #[grammar_inline = r####"
@@ -60,17 +61,28 @@ impl MNETFormat {
 
     fn load_lit(&self, model: &mut QModel, expr: Pair<Rule>) -> usize {
         let mut expr = expr.into_inner();
-        let component = expr.next().unwrap().as_str();
-        let value = match expr.next() {
-            None => 1,
-            Some(e) => e.as_str().parse().unwrap(),
-        };
-        model.ensure_variable(component, value)
+        let cid = model.ensure(expr.next().unwrap().as_str());
+        if let Some(e) = expr.next() {
+            return model.ensure_threshold(cid, e.as_str().parse().unwrap());
+        }
+        cid
+    }
+
+    fn parse_formula(&self, model: &mut QModel, formula: &str) -> Result<Expr, String> {
+        let ptree = MNETParser::parse(Rule::sxpr, formula);
+        match ptree {
+            Err(s) => Err(format!("Parsing error: {}", s)),
+            Ok(mut ptree) => {
+                let expr = ptree.next().unwrap().into_inner().next().unwrap();
+                let expr = self.load_expr(model, expr);
+                Ok(expr)
+            }
+        }
     }
 }
 
 impl io::ParsingFormat for MNETFormat {
-    fn parse_rules(&self, model: &mut QModel, expression: &str) {
+    fn parse_into_model(&self, model: &mut QModel, expression: &str) {
         let ptree = MNETParser::parse(Rule::file, expression);
 
         if let Err(err) = ptree {
@@ -100,25 +112,13 @@ impl io::ParsingFormat for MNETFormat {
             model.push_var_rule(vid, Formula::from(expr));
         }
     }
-
-    fn parse_formula(&self, model: &mut QModel, formula: &str) -> Result<Expr, String> {
-        let ptree = MNETParser::parse(Rule::sxpr, formula);
-        match ptree {
-            Err(s) => Err(format!("Parsing error: {}", s)),
-            Ok(mut ptree) => {
-                let expr = ptree.next().unwrap().into_inner().next().unwrap();
-                let expr = self.load_expr(model, expr);
-                Ok(expr)
-            }
-        }
-    }
 }
 
 impl io::SavingFormat for MNETFormat {
-    fn write_rules(&self, model: &QModel, out: &mut dyn Write) -> Result<(), Error> {
+    fn write_rules(&self, model: &QModel, out: &mut dyn Write) -> EmptyLomakResult {
         for cid in model.components() {
-            let rule = model.cpt_rules.get(cid).unwrap();
-            let name = model.get_cpt_name(*cid);
+            let rule = model.rules.get(cid).unwrap();
+            let name = model.get_name(*cid);
             for assign in rule.assignments.iter() {
                 write!(out, "{}", name)?;
                 if assign.target != 1 {

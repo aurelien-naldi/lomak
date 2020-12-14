@@ -3,8 +3,9 @@ use std::ffi::OsString;
 use structopt::StructOpt;
 
 use crate::command::{CLICommand, CommandContext};
-use std::ops::DerefMut;
 use crate::model::GroupedVariables;
+use std::ops::DerefMut;
+use crate::error::EmptyLomakResult;
 
 static NAME: &str = "rename";
 static ABOUT: &str = "Rename one or several components";
@@ -30,16 +31,16 @@ impl CLICommand for CLI {
         ABOUT
     }
 
-    fn run(&self, context: CommandContext, args: &[OsString]) -> CommandContext {
+    fn run(&self, context: &mut CommandContext, args: &[OsString]) -> EmptyLomakResult {
         // Start by parsing arguments to handle help without any context
         let config: Config = Config::from_iter(args);
 
-        let smodel = context.get_model();
+        let smodel = context.get_model()?;
 
         // TODO: multiple rename actions ?
         let mut model = smodel.borrow_mut();
-        model.deref_mut().rename(&config.source, config.target);
+        model.deref_mut().rename(&config.source, &config.target);
 
-        context
+        Ok(())
     }
 }

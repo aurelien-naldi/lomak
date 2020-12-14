@@ -1,4 +1,4 @@
-use std::io::{Error, Write};
+use std::io::Write;
 
 use pest::iterators::*;
 use pest::Parser;
@@ -6,8 +6,9 @@ use pest::Parser;
 use crate::func::expr::{Expr, Operator};
 use crate::func::implicant::Implicants;
 use crate::func::Formula;
-use crate::model::{io, GroupedVariables};
 use crate::model::QModel;
+use crate::model::{io, GroupedVariables};
+use crate::error::EmptyLomakResult;
 
 #[derive(Parser)]
 #[grammar_inline = r####"
@@ -37,7 +38,7 @@ impl BoolSimFormat {
     fn load_expr(&self, model: &mut QModel, expr: Pair<Rule>) -> Expr {
         let rule = expr.as_rule();
         match rule {
-            Rule::lit => Expr::ATOM(model.ensure_variable(expr.as_str(), 1)),
+            Rule::lit => Expr::ATOM(model.ensure(expr.as_str())),
             _ => {
                 let mut content = expr.into_inner().map(|e| self.load_expr(model, e));
                 match rule {
@@ -47,39 +48,6 @@ impl BoolSimFormat {
                     _ => panic!("Parsing tokens should not get there"),
                 }
             }
-        }
-    }
-}
-
-impl io::ParsingFormat for BoolSimFormat {
-    fn parse_rules(&self, model: &mut QModel, expression: &str) {
-        let ptree = BoolSimParser::parse(Rule::file, expression);
-
-        if let Err(err) = ptree {
-            println!("Parsing error: {}", err);
-            return;
-        }
-
-        // Load all lines to restore the component order
-        let ptree = ptree.unwrap().next().unwrap();
-        let mut expressions = vec![];
-        for record in ptree.into_inner() {
-            match record.as_rule() {
-                Rule::rule => {
-                    let mut inner = record.into_inner();
-                    let target = inner.next().unwrap().as_str();
-                    let target = model.ensure_variable(target, 1);
-                    expressions.push((target, inner.next().unwrap()));
-                }
-                Rule::EOI => (),
-                _ => panic!("Should not get there!"),
-            }
-        }
-
-        // Parse all expressions
-        for (vid, e) in expressions {
-            let expr = self.load_expr(model, e);
-            model.push_var_rule(vid, Formula::from(expr));
         }
     }
 
@@ -96,19 +64,46 @@ impl io::ParsingFormat for BoolSimFormat {
     }
 }
 
-impl io::SavingFormat for BoolSimFormat {
-    fn write_rules(&self, model: &QModel, out: &mut dyn Write) -> Result<(), Error> {
-        //        let namer = model.as_namer();
-        for vid in model.variables() {
-            let var = model.variable(*vid);
-            if var.value != 1 {
-                panic!("Multivalued models are not yet fully supported");
+impl io::ParsingFormat for BoolSimFormat {
+    fn parse_into_model(&self, model: &mut QModel, expression: &str) {
+        let ptree = BoolSimParser::parse(Rule::file, expression);
+
+        if let Err(err) = ptree {
+            println!("Parsing error: {}", err);
+            return;
+        }
+
+        // Load all lines to restore the component order
+        let ptree = ptree.unwrap().next().unwrap();
+        let mut expressions = vec![];
+        for record in ptree.into_inner() {
+            match record.as_rule() {
+                Rule::rule => {
+                    let mut inner = record.into_inner();
+                    let target = inner.next().unwrap().as_str();
+                    let target = model.ensure(target);
+                    expressions.push((target, inner.next().unwrap()));
+                }
+                Rule::EOI => (),
+                _ => panic!("Should not get there!"),
             }
+        }
+
+        // Parse all expressions
+        for (vid, e) in expressions {
+            let expr = self.load_expr(model, e);
+            model.push_var_rule(vid, Formula::from(expr));
+        }
+    }
+}
+
+impl io::SavingFormat for BoolSimFormat {
+    fn write_rules(&self, model: &QModel, out: &mut dyn Write) -> EmptyLomakResult {
+        for vid in model.variables() {
             let paths: Implicants = model.get_var_rule(*vid).prime_implicants();
             for _func in paths.iter() {
                 // FIXME: write boolsim
-
-                writeln!(out, "-> {}", model.get_cpt_name(var.component))?;
+                writeln!(out, "-> {}", model.get_name(*vid))?;
             }
         }
 

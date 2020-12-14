@@ -1,3 +1,3 @@
 pub mod fixpoints;
-pub mod trapspaces;
 pub mod reach;
+pub mod trapspaces;

@@ -4,6 +4,7 @@ use structopt::StructOpt;
 
 use crate::command::{CLICommand, CommandContext};
 use crate::model::actions::fixpoints::FixedBuilder;
+use crate::error::EmptyLomakResult;
 
 static NAME: &str = "fixpoints";
 static ABOUT: &str = "Compute the fixed points of the model";
@@ -38,11 +39,11 @@ impl CLICommand for CLI {
         &["fixed", "stable", "fp"]
     }
 
-    fn run(&self, context: CommandContext, args: &[OsString]) -> CommandContext {
+    fn run(&self, context: &mut CommandContext, args: &[OsString]) -> EmptyLomakResult {
         let config: Config = Config::from_iter(args);
 
         // Create the fixpoint builder
-        let smodel = context.get_model();
+        let smodel = context.get_model()?;
         let mut builder = FixedBuilder::new(smodel);
 
         // Apply extra restrictions if any
@@ -60,8 +61,10 @@ impl CLICommand for CLI {
         if let Some(display) = config.displayed {
             result.set_displayed_names(Some(display));
         }
+        println!("Fixed points:");
         println!("{}", result);
+        println!("---");
 
-        context
+        Ok(())
     }
 }

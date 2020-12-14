@@ -19,8 +19,14 @@ fn main() {
     app.get_matches_from(args_wrapper.scan());
 
     // Apply all commands: loader, modifiers and actions
-    let mut context = CommandContext::Empty;
+    let mut context = CommandContext::default();
     while args_wrapper.has_next() {
-        context = args_wrapper.parse_next(context);
+        match args_wrapper.parse_next(&mut context) {
+            Ok(_) => (),
+            Err(e) => {
+                eprintln!("{}", e);
+                break;
+            }
+        }
     }
 }

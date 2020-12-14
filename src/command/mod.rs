@@ -13,6 +13,7 @@ use std::ffi::OsString;
 use std::sync::Arc;
 
 use crate::model::SharedModel;
+use crate::error::{LomakResult, EmptyLomakResult, LomakError};
 
 pub mod help;
 pub mod load;
@@ -105,17 +106,25 @@ impl CommandManager {
     }
 }
 
-pub enum CommandContext {
-    Empty,
-    Model(SharedModel),
+#[derive(Default)]
+pub struct CommandContext {
+    models: HashMap<String,SharedModel>,
 }
 
 impl CommandContext {
-    pub fn get_model(&self) -> SharedModel {
-        match self {
-            CommandContext::Model(m) => m.clone(),
-            _ => panic!("No model in the context"),
+    pub fn get_model(&self) -> LomakResult<SharedModel> {
+        self.get_named_model(None)
+    }
+
+    pub fn get_named_model(&self, name: Option<&str>) -> LomakResult<SharedModel> {
+        match self.models.get(name.unwrap_or("")) {
+            Some(m) => Ok(m.clone()),
+            None => Err(LomakError::MissingModel()),
         }
+    }
+
+    pub fn set_model(&mut self, model: SharedModel, name: Option<&str>) {
+        self.models.insert(name.unwrap_or("").to_owned(), model);
     }
 }
 
@@ -129,7 +138,7 @@ pub trait CLICommand: Sync + Send {
         &[]
     }
 
-    fn run(&self, context: CommandContext, args: &[OsString]) -> CommandContext;
+    fn run(&self, context: &mut CommandContext, args: &[OsString]) -> EmptyLomakResult;
 }
 
 impl SelectedArgs {
@@ -145,18 +154,18 @@ impl SelectedArgs {
         self.next_slice < self.all_args.len()
     }
 
-    pub fn parse_next<'a>(&mut self, context: CommandContext) -> CommandContext {
+    pub fn parse_next<'a>(&mut self, context: &mut CommandContext) -> EmptyLomakResult {
         self.run_next_command(context, &COMMANDS)
     }
 
     fn run_next_command(
         &mut self,
-        context: CommandContext,
+        context: &mut CommandContext,
         manager: &CommandManager,
-    ) -> CommandContext {
+    ) -> EmptyLomakResult {
         let next_command = self.all_args[self.next_slice].to_str().unwrap();
         let cmd = match manager.get_command(next_command) {
-            None => return context,
+            None => return Ok(()),
             Some(c) => c,
         };
 

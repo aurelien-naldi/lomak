@@ -1,17 +1,17 @@
+use thiserror::Error;
+use std::fmt;
 use std::ffi::OsStr;
 use std::fs::File;
-use std::io;
-use std::io::ErrorKind;
 use std::io::{BufWriter, Read, Write};
 use std::path::Path;
 
-use crate::func::expr::Expr;
 use crate::model::{QModel, SharedModel};
-use std::ops::DerefMut;
+use crate::error::{LomakResult, EmptyLomakResult};
 
 mod bnet;
 mod boolsim;
 mod mnet;
+mod sbml;
 
 /// A Format may provide import and export filters
 pub trait Format: TrySaving + TryParsing {}
@@ -22,8 +22,8 @@ pub trait Format: TrySaving + TryParsing {}
 /// An empty implementor enables the definition of a format without an
 /// export filter.
 pub trait TrySaving {
-    fn as_saver(&self) -> Option<&dyn SavingFormat> {
-        None
+    fn as_saver(&self) -> Result<&dyn SavingFormat, FormatError> {
+        Err(FormatError::NoWriter())
     }
 }
 
@@ -33,104 +33,100 @@ pub trait TrySaving {
 /// An empty implementor enables the definition of a format without an
 /// import filter.
 pub trait TryParsing {
-    fn as_parser(&self) -> Option<&dyn ParsingFormat> {
-        None
+    fn as_parser(&self) -> Result<&dyn ParsingFormat, FormatError> {
+        Err(FormatError::NoParser())
     }
 }
 
 impl<T: TrySaving + TryParsing> Format for T {}
 
 impl<T: SavingFormat> TrySaving for T {
-    fn as_saver(&self) -> Option<&dyn SavingFormat> {
-        Some(self)
+    fn as_saver(&self) -> Result<&dyn SavingFormat, FormatError> {
+        Ok(self)
     }
 }
 
 impl<T: ParsingFormat> TryParsing for T {
-    fn as_parser(&self) -> Option<&dyn ParsingFormat> {
-        Some(self)
+    fn as_parser(&self) -> Result<&dyn ParsingFormat, FormatError> {
+        Ok(self)
     }
 }
 
 /// Trait providing the import filter for Formats.
 pub trait ParsingFormat {
-    fn parse_file(&self, filename: &str) -> Result<SharedModel, io::Error> {
+    fn parse_file(&self, filename: &str) -> LomakResult<SharedModel> {
         // Load the input file into a local string
         let mut unparsed_file = String::new();
         File::open(filename)?.read_to_string(&mut unparsed_file)?;
-        let model = SharedModel::new();
-        let result = model.clone();
-        let mut m = model.borrow_mut();
-        self.parse_rules(m.deref_mut(), &unparsed_file);
-        Ok(result)
+        self.parse_str(&unparsed_file)
     }
 
-    fn parse_rules(&self, model: &mut QModel, expression: &str);
+    fn parse_str(&self, expression: &str) -> LomakResult<SharedModel> {
+        let mut model = QModel::default();
+        self.parse_into_model(&mut model, expression);
+        Ok( SharedModel::with(model) )
+    }
 
-    fn parse_formula(&self, model: &mut QModel, formula: &str) -> Result<Expr, String>;
+    fn parse_into_model(&self, model: &mut QModel, expression: &str);
 }
 
 /// Trait providing the export filter for Formats.
 pub trait SavingFormat {
-    fn save_file(&self, model: &QModel, filename: &str) -> Result<(), io::Error> {
+    fn save_file(&self, model: &QModel, filename: &str) -> EmptyLomakResult {
         let f = File::create(filename).expect("Could not create the output file");
         let mut out = BufWriter::new(f);
         self.write_rules(model, &mut out)
     }
 
-    fn write_rules(&self, model: &QModel, out: &mut dyn Write) -> Result<(), io::Error>;
+    fn write_rules(&self, model: &QModel, out: &mut dyn Write) -> EmptyLomakResult;
 }
 
-pub fn get_format(fmt: &str) -> Result<Box<dyn Format>, io::Error> {
-    // TODO: select the right format
+pub fn get_format(fmt: &str) -> Result<Box<dyn Format>, FormatError> {
     match fmt.to_lowercase().trim() {
         "mnet" => Result::Ok(Box::new(mnet::MNETFormat::new())),
         "bnet" => Result::Ok(Box::new(bnet::BNETFormat::new())),
         "bsim" => Result::Ok(Box::new(boolsim::BoolSimFormat::new())),
-        _ => Err(io::Error::new(ErrorKind::NotFound, "No matching format")),
+        "sbml" => Result::Ok(Box::new(sbml::SBMLFormat::new())),
+        _ => Err(FormatError::NotFound(fmt.to_owned())),
     }
 }
 
-fn guess_format(filename: &str) -> Result<Box<dyn Format>, io::Error> {
+fn guess_format(filename: &str) -> Result<Box<dyn Format>, FormatError> {
     Path::new(filename)
         .extension()
         .and_then(OsStr::to_str)
-        .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Could not guess the extension"))
+        .ok_or_else(|| FormatError::NotFound("".to_owned()))
         .and_then(get_format)
 }
 
-pub fn load_model(filename: &str, fmt: Option<&str>) -> Result<SharedModel, io::Error> {
+pub fn load_model(filename: &str, fmt: Option<&str>) -> LomakResult<SharedModel> {
     let f = match fmt {
         None => guess_format(filename),
         Some(s) => get_format(s),
-    };
+    }?;
 
-    match f {
-        Err(e) => Err(e),
-        Ok(f) => match f.as_parser() {
-            None => Err(io::Error::new(
-                ErrorKind::NotFound,
-                "No parser for this format",
-            )),
-            Some(f) => f.parse_file(filename),
-        },
-    }
+    let parser = f.as_parser()?;
+    parser.parse_file(filename)
 }
 
-pub fn save_model(model: &QModel, filename: &str, fmt: Option<&str>) -> Result<(), io::Error> {
+pub fn save_model(model: &QModel, filename: &str, fmt: Option<&str>) -> EmptyLomakResult {
     let f = match fmt {
         None => guess_format(filename),
         Some(s) => get_format(s),
-    };
+    }?;
 
-    match f {
-        Err(e) => Err(e),
-        Ok(f) => match f.as_saver() {
-            None => Err(io::Error::new(
-                ErrorKind::NotFound,
-                "No exporter for this format",
-            )),
-            Some(f) => f.save_file(model, filename),
-        },
-    }
+    let writer = f.as_saver()?;
+    writer.save_file(model, filename)
+}
+
+#[derive(Error,Debug)]
+pub enum FormatError {
+    #[error("Format \"{0}\" not found")]
+    NotFound(String),
+
+    #[error("This format has no parser")]
+    NoParser(),
+
+    #[error("This format has no writer")]
+    NoWriter(),
 }

@@ -3,9 +3,9 @@ use std::ffi::OsString;
 use structopt::StructOpt;
 
 use crate::command::{CLICommand, CommandContext};
-use crate::func::VariableNamer;
-use crate::model::{QModel, GroupedVariables};
+use crate::model::{GroupedVariables, QModel};
 use std::ops::Deref;
+use crate::error::EmptyLomakResult;
 
 static NAME: &str = "primes";
 static ABOUT: &str = "Compute the prime implicants of the model's functions";
@@ -31,15 +31,15 @@ impl CLICommand for CLI {
         &["pi", "implicants"]
     }
 
-    fn run(&self, context: CommandContext, args: &[OsString]) -> CommandContext {
+    fn run(&self, context: &mut CommandContext, args: &[OsString]) -> EmptyLomakResult {
         let config: Config = Config::from_iter(args);
 
-        let smodel = context.get_model();
+        let smodel = context.get_model()?;
         let model = smodel.borrow();
 
         config.show_primes(model.deref());
 
-        context
+        Ok(())
     }
 }
 
@@ -50,7 +50,7 @@ impl Config {
         } else {
             for vid in model.variables() {
                 let primes = model.get_var_rule(*vid).prime_implicants();
-                println!("PI {}:\n{}", model.get_var_name(*vid), primes);
+                println!("PI {}:\n{}", model.get_name(*vid), primes);
             }
         }
     }
@@ -65,7 +65,7 @@ pub fn json(model: &QModel) {
         } else {
             println!(",");
         }
-        let name = model.get_var_name(*vid);
+        let name = model.get_name(*vid);
         let rule = model.get_var_rule(*vid);
         let pos_primes = rule.prime_implicants();
         let neg_primes = rule.not().prime_implicants();

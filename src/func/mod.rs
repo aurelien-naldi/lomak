@@ -10,8 +10,8 @@ use self::expr::Expr;
 use self::gen::Generator;
 use self::implicant::Implicants;
 
-pub mod convert;
 pub mod expr;
+pub mod expr2primes;
 pub mod gen;
 pub mod implicant;
 pub mod pattern;
@@ -32,7 +32,7 @@ pub trait VariableNamer {
 }
 
 pub struct VariableGroup {
-    group: RefCell<Rc<dyn VariableNamer>>
+    group: RefCell<Rc<dyn VariableNamer>>,
 }
 
 pub struct Fmt<F>(pub F)

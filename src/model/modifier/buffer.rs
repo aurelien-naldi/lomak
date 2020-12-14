@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use crate::func::expr::{AtomReplacer, Expr};
 use crate::func::Formula;
-use crate::model::{QModel, GroupedVariables};
+use crate::model::{GroupedVariables, QModel};
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum BufferingStrategy {
@@ -59,12 +59,12 @@ impl<'a> BufferConfig<'a> {
     }
 
     pub fn add_single_buffer_by_name(&mut self, source: &str, target: &str) {
-        let usrc = self.model.get_component(source);
+        let usrc = self.model.get_handle(source);
         if usrc.is_none() {
             println!("unknown buffering source: {}", source);
             return;
         }
-        let utgt = self.model.get_component(target);
+        let utgt = self.model.get_handle(target);
         if utgt.is_none() {
             println!("unknown buffering target: {}", target);
             return;
@@ -88,7 +88,7 @@ impl<'a> BufferConfig<'a> {
     }
 
     pub fn add_delay_by_name(&mut self, source: &str) {
-        let usrc = self.model.get_component(source);
+        let usrc = self.model.get_handle(source);
         if usrc.is_none() {
             println!("unknown buffering source: {}", source);
             return;
@@ -104,8 +104,9 @@ impl<'a> BufferConfig<'a> {
     }
 
     pub fn apply(&mut self) {
-        for cid in self.model.components().clone() {
-            let mut rule = self.model.cpt_rules.get_mut(&cid).unwrap().clone();
+        let components: Vec<usize> = self.model.components().copied().collect();
+        for cid in components {
+            let mut rule = self.model.rules.get_mut(&cid).unwrap().clone();
             for assign in rule.assignments.iter_mut() {
                 let expr: Rc<Expr> = assign.formula.convert_as();
                 let new_expr = expr.replace_variables(self);
@@ -114,7 +115,7 @@ impl<'a> BufferConfig<'a> {
                 }
             }
             // Apply the new rule
-            self.model.cpt_rules.insert(cid, rule);
+            self.model.rules.insert(cid, rule);
         }
     }
 
@@ -150,10 +151,10 @@ fn create_buffer(model: &mut QModel, src: usize) -> usize {
     // Create the buffer and add his mirror function
     let buf_id = model.add_component("buffer");
 
-    let variables = model.get_cpt_variables(src).clone();
+    let variables = model.get_variables(src).clone();
     let mut value = 1;
     for var in variables {
-        model.ensure_cpt_variable(buf_id, value);
+        model.ensure_threshold(buf_id, value);
         model.push_cpt_rule(buf_id, value, Formula::from(Expr::ATOM(var)));
         value += 1;
     }

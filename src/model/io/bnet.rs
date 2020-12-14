@@ -1,12 +1,13 @@
-use std::io::{Error, Write};
+use std::io::Write;
 
 use pest::iterators::*;
 use pest::Parser;
 
 use crate::func::expr::{Expr, NamedExpr, Operator};
 use crate::func::Formula;
-use crate::model::{io, GroupedVariables};
 use crate::model::QModel;
+use crate::model::{io, GroupedVariables};
+use crate::error::EmptyLomakResult;
 
 #[derive(Parser)]
 #[grammar_inline = r####"
@@ -43,7 +44,7 @@ impl BNETFormat {
         match rule {
             Rule::bt => Expr::TRUE,
             Rule::bf => Expr::FALSE,
-            Rule::lit => Expr::ATOM(model.ensure_variable(expr.as_str(), 1)),
+            Rule::lit => Expr::ATOM(model.ensure(expr.as_str())),
             _ => {
                 let mut content = expr.into_inner().map(|e| self.load_expr(model, e));
                 match rule {
@@ -55,39 +56,6 @@ impl BNETFormat {
                     _ => panic!("Parsing tokens should not get there"),
                 }
             }
-        }
-    }
-}
-
-impl io::ParsingFormat for BNETFormat {
-    fn parse_rules(&self, model: &mut QModel, expression: &str) {
-        let ptree = BNETParser::parse(Rule::file, expression);
-
-        if let Err(err) = ptree {
-            println!("Parsing error: {}", err);
-            return;
-        }
-
-        // Load all lines to restore the component order
-        let ptree = ptree.unwrap().next().unwrap();
-        let mut expressions = vec![];
-        for record in ptree.into_inner() {
-            match record.as_rule() {
-                Rule::rule => {
-                    let mut inner = record.into_inner();
-                    let target = inner.next().unwrap().as_str();
-                    let target = model.ensure_variable(target, 1);
-                    expressions.push((target, inner.next().unwrap()));
-                }
-                Rule::EOI => (),
-                _ => panic!("Should not get there!"),
-            }
-        }
-
-        // Parse all expressions
-        for (vid, e) in expressions {
-            let expr = self.load_expr(model, e);
-            model.push_var_rule(vid, Formula::from(expr));
         }
     }
 
@@ -104,11 +72,44 @@ impl io::ParsingFormat for BNETFormat {
     }
 }
 
+impl io::ParsingFormat for BNETFormat {
+    fn parse_into_model(&self, model: &mut QModel, expression: &str) {
+        let ptree = BNETParser::parse(Rule::file, expression);
+
+        if let Err(err) = ptree {
+            println!("Parsing error: {}", err);
+            return;
+        }
+
+        // Load all lines to restore the component order
+        let ptree = ptree.unwrap().next().unwrap();
+        let mut expressions = vec![];
+        for record in ptree.into_inner() {
+            match record.as_rule() {
+                Rule::rule => {
+                    let mut inner = record.into_inner();
+                    let target = inner.next().unwrap().as_str();
+                    let target = model.ensure(target);
+                    expressions.push((target, inner.next().unwrap()));
+                }
+                Rule::EOI => (),
+                _ => panic!("Should not get there!"),
+            }
+        }
+
+        // Parse all expressions
+        for (vid, e) in expressions {
+            let expr = self.load_expr(model, e);
+            model.push_var_rule(vid, Formula::from(expr));
+        }
+    }
+}
+
 impl io::SavingFormat for BNETFormat {
-    fn write_rules(&self, model: &QModel, out: &mut dyn Write) -> Result<(), Error> {
+    fn write_rules(&self, model: &QModel, out: &mut dyn Write) -> EmptyLomakResult {
         for vid in model.variables() {
             let func: Expr = model.get_var_rule(*vid);
-            write!(out, "{}, ", model.get_var_name(*vid))?;
+            write!(out, "{}, ", model.get_name(*vid))?;
             match func {
                 Expr::TRUE => writeln!(out, "1")?,
                 Expr::FALSE => writeln!(out, "0")?,

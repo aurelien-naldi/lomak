@@ -5,6 +5,7 @@ use structopt::StructOpt;
 use crate::command::{CLICommand, CommandContext};
 use crate::model::modifier::buffer::{BufferConfig, BufferingStrategy};
 use crate::model::QModel;
+use crate::error::{LomakError, EmptyLomakResult};
 
 static NAME: &str = "buffer";
 static ABOUT: &str = "TODO: Add buffer components to delay interactions";
@@ -27,12 +28,12 @@ impl CLICommand for CLI {
         ABOUT
     }
 
-    fn run(&self, context: CommandContext, args: &[OsString]) -> CommandContext {
+    fn run(&self, context: &mut CommandContext, args: &[OsString]) -> EmptyLomakResult {
         let _config: Config = Config::from_iter(args);
 
         // TODO: call the buffering tool
 
-        context
+        Ok(())
     }
 }
 

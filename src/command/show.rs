@@ -4,6 +4,7 @@ use structopt::StructOpt;
 
 use crate::command::{CLICommand, CommandContext};
 use crate::model::GroupedVariables;
+use crate::error::EmptyLomakResult;
 
 static NAME: &str = "show";
 static ABOUT: &str = "Display the current model";
@@ -28,10 +29,10 @@ impl CLICommand for CLI {
         &["display", "print"]
     }
 
-    fn run(&self, context: CommandContext, args: &[OsString]) -> CommandContext {
+    fn run(&self, context: &mut CommandContext, args: &[OsString]) -> EmptyLomakResult {
         let config: Config = Config::from_iter(args);
 
-        let smodel = context.get_model();
+        let smodel = context.get_model()?;
         let model = smodel.borrow();
 
         if config.booleanized {
@@ -44,6 +45,6 @@ impl CLICommand for CLI {
         }
         println!();
 
-        context
+        Ok(())
     }
 }

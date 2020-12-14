@@ -4,6 +4,7 @@ use structopt::StructOpt;
 
 use crate::command::{CLICommand, CommandContext};
 use crate::model::io;
+use crate::error::EmptyLomakResult;
 
 static NAME: &str = "load";
 static ABOUT: &str = "Load a model from a file";
@@ -28,18 +29,12 @@ impl CLICommand for CLI {
         ABOUT
     }
 
-    fn run(&self, _context: CommandContext, args: &[OsString]) -> CommandContext {
+    fn run(&self, context: &mut CommandContext, args: &[OsString]) -> EmptyLomakResult {
         // Start by parsing arguments to handle help without any context
         let config: Config = Config::from_iter(args);
 
-        let model = match io::load_model(&config.filename, config.format.as_deref()) {
-            Err(e) => {
-                println!("ERROR loading \"{}\": {}", &config.filename, e);
-                return CommandContext::Empty;
-            }
-            Ok(m) => m,
-        };
-
-        CommandContext::Model(model)
+        let model = io::load_model(&config.filename, config.format.as_deref())?;
+        context.set_model(model, None);
+        Ok(())
     }
 }

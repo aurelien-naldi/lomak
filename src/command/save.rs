@@ -2,6 +2,7 @@ use std::ffi::OsString;
 use structopt::StructOpt;
 
 use crate::command::{CLICommand, CommandContext};
+use crate::error::EmptyLomakResult;
 
 static NAME: &str = "save";
 static ABOUT: &str = "Save the current model";
@@ -31,16 +32,12 @@ impl CLICommand for CLI {
         &["export", "convert"]
     }
 
-    fn run(&self, context: CommandContext, args: &[OsString]) -> CommandContext {
+    fn run(&self, context: &mut CommandContext, args: &[OsString]) -> EmptyLomakResult {
         let config: Config = Config::from_iter(args);
-        match context
-            .get_model()
-            .save(&config.output, config.format.as_deref())
-        {
-            Ok(_) => (),
-            Err(e) => eprintln!("Error during save: {}", e),
-        };
-
         context
+            .get_model()?
+            .save(&config.output, config.format.as_deref())?;
+
+        Ok(())
     }
 }

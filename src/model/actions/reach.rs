@@ -1,13 +1,12 @@
-use crate::model::{QModel, GroupedVariables};
-use crate::func::state::State;
-use crate::func::implicant::Implicants;
-use std::collections::HashMap;
-use bit_set::BitSet;
-use crate::func::pattern::Pattern;
 use crate::func::expr::Expr;
+use crate::func::implicant::Implicants;
+use crate::func::state::State;
+use crate::model::{GroupedVariables, QModel};
+use bit_set::BitSet;
+use std::collections::HashMap;
 
 pub struct Reachable {
-    info: HashMap<usize,VariableInfo>,
+    info: HashMap<usize, VariableInfo>,
     initial: State,
 }
 
@@ -30,19 +29,15 @@ impl VariableInfo {
 }
 
 impl Reachable {
-
     pub fn new(model: &QModel, initial: State) -> Self {
-
         let variables = model.variables().clone();
-        let functions: HashMap<usize,VariableInfo> = variables.iter().map(|vid| (*vid, VariableInfo::new(&model.get_var_rule(*vid)))
-        ).collect();
+        let functions: HashMap<usize, VariableInfo> = variables
+            .map(|vid| (*vid, VariableInfo::new(&model.get_var_rule(*vid))))
+            .collect();
 
         Reachable {
             info: functions,
             initial: initial,
         }
     }
-
-
 }
-
