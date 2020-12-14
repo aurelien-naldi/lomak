@@ -190,15 +190,3 @@ impl SBMLParser {
 
 
 }
-
-#[cfg(test)]
-mod tests {
-    use crate::model::io::sbml::SBMLFormat;
-    use crate::model::io::ParsingFormat;
-
-    #[test]
-    fn load_sbml() {
-        let fmt = SBMLFormat::new();
-        let model = fmt.parse_file("sample.sbml").unwrap();
-    }
-}
