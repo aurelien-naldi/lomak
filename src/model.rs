@@ -666,7 +666,7 @@ mod tests {
 
     #[test]
     fn the_regex() {
-        let smodel = SharedModel::new();
+        let smodel = SharedModel::default();
         {
             let mut model = smodel.borrow_mut();
 
