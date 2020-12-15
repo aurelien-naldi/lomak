@@ -3,9 +3,9 @@ use std::ffi::OsString;
 use structopt::StructOpt;
 
 use crate::command::{CLICommand, CommandContext};
+use crate::error::EmptyLomakResult;
 use crate::variables::GroupedVariables;
 use std::ops::DerefMut;
-use crate::error::EmptyLomakResult;
 
 static NAME: &str = "rename";
 static ABOUT: &str = "Rename one or several components";

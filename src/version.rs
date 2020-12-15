@@ -2,7 +2,7 @@ use std::cell::Cell;
 
 #[derive(Default, Clone)]
 pub struct Version {
-    inner: Cell<InnerVersion>
+    inner: Cell<InnerVersion>,
 }
 
 #[derive(Default, Copy, Clone)]
@@ -24,7 +24,10 @@ impl Version {
         let mut i = self.inner.get();
         if i.changed {
             i.version += 1;
-            self.inner.set(InnerVersion{changed: false, version: i.version});
+            self.inner.set(InnerVersion {
+                changed: false,
+                version: i.version,
+            });
         }
         i.version
     }
@@ -51,5 +54,4 @@ mod tests {
         v.change();
         assert_eq!(v.version(), 2);
     }
-
 }

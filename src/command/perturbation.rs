@@ -3,8 +3,8 @@ use std::ffi::OsString;
 use structopt::StructOpt;
 
 use crate::command::{CLICommand, CommandContext};
-use itertools::Itertools;
 use crate::error::EmptyLomakResult;
+use itertools::Itertools;
 
 static NAME: &str = "perturbation";
 static ABOUT: &str = "Apply a perturbation to one or several components";

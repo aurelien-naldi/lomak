@@ -3,9 +3,9 @@ use std::ffi::OsString;
 use structopt::StructOpt;
 
 use crate::command::{CLICommand, CommandContext};
+use crate::error::{EmptyLomakResult, LomakError};
 use crate::model::modifier::buffer::{BufferConfig, BufferingStrategy};
 use crate::model::QModel;
-use crate::error::{LomakError, EmptyLomakResult};
 
 static NAME: &str = "buffer";
 static ABOUT: &str = "TODO: Add buffer components to delay interactions";

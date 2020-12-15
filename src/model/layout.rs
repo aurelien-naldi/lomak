@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use crate::version::{Version, Versionned};
+use std::collections::HashMap;
 
 pub struct Layout {
     data: HashMap<usize, NodeLayoutInfo>,

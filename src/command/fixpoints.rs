@@ -3,8 +3,8 @@ use std::ffi::OsString;
 use structopt::StructOpt;
 
 use crate::command::{CLICommand, CommandContext};
-use crate::model::actions::fixpoints::FixedBuilder;
 use crate::error::EmptyLomakResult;
+use crate::model::actions::fixpoints::FixedBuilder;
 
 static NAME: &str = "fixpoints";
 static ABOUT: &str = "Compute the fixed points of the model";

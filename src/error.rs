@@ -1,15 +1,14 @@
 use clingo;
-use std::io;
+use roxmltree;
 use std::error::Error;
 use std::fmt;
+use std::io;
 use std::num;
-use roxmltree;
 use thiserror::Error;
 
 use crate::model::io::FormatError;
 
-
-#[derive(Error,Debug)]
+#[derive(Error, Debug)]
 pub enum LomakError {
     #[error("IO error: {0}")]
     Io(#[from] io::Error),
@@ -57,17 +56,13 @@ pub struct ParseTxtError {
 
 impl GenericError {
     pub fn new(s: String) -> Self {
-        GenericError{
-            s: s,
-        }
+        GenericError { s: s }
     }
 }
 
 impl ParseTxtError {
     pub fn new(e: Box<impl Error + 'static>) -> Self {
-        ParseTxtError {
-            source: e,
-        }
+        ParseTxtError { source: e }
     }
 }
 
@@ -82,7 +77,6 @@ impl fmt::Display for ParseTxtError {
         write!(f, "{}", self.source)
     }
 }
-
 
 pub type LomakResult<T> = Result<T, LomakError>;
 

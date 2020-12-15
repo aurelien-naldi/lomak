@@ -3,8 +3,8 @@ use std::ffi::OsString;
 use structopt::StructOpt;
 
 use crate::command::{CLICommand, CommandContext};
-use crate::model::io;
 use crate::error::EmptyLomakResult;
+use crate::model::io;
 
 static NAME: &str = "load";
 static ABOUT: &str = "Load a model from a file";

@@ -1,12 +1,12 @@
-use thiserror::Error;
-use std::fmt;
 use std::ffi::OsStr;
+use std::fmt;
 use std::fs::File;
 use std::io::{BufWriter, Read, Write};
 use std::path::Path;
+use thiserror::Error;
 
+use crate::error::{EmptyLomakResult, LomakResult};
 use crate::model::{QModel, SharedModel};
-use crate::error::{LomakResult, EmptyLomakResult};
 
 mod bnet;
 mod boolsim;
@@ -64,7 +64,7 @@ pub trait ParsingFormat {
     fn parse_str(&self, expression: &str) -> LomakResult<SharedModel> {
         let mut model = QModel::default();
         self.parse_into_model(&mut model, expression)?;
-        Ok( SharedModel::with(model) )
+        Ok(SharedModel::with(model))
     }
 
     fn parse_into_model(&self, model: &mut QModel, expression: &str) -> EmptyLomakResult;
@@ -119,7 +119,7 @@ pub fn save_model(model: &QModel, filename: &str, fmt: Option<&str>) -> EmptyLom
     writer.save_file(model, filename)
 }
 
-#[derive(Error,Debug)]
+#[derive(Error, Debug)]
 pub enum FormatError {
     #[error("Format \"{0}\" not found")]
     NotFound(String),

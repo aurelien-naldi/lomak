@@ -6,14 +6,13 @@
 //! As the CLI enables to execute a chain of commands, the defined commands are recognized in the
 //! list of parameters to extract separate lists of arguments for each successive command.
 
-
 use std::collections::HashMap;
 use std::env;
 use std::ffi::OsString;
 use std::sync::Arc;
 
+use crate::error::{EmptyLomakResult, LomakError, LomakResult};
 use crate::model::SharedModel;
-use crate::error::{LomakResult, EmptyLomakResult, LomakError};
 
 pub mod help;
 pub mod load;
@@ -108,7 +107,7 @@ impl CommandManager {
 
 #[derive(Default)]
 pub struct CommandContext {
-    models: HashMap<String,SharedModel>,
+    models: HashMap<String, SharedModel>,
 }
 
 impl CommandContext {

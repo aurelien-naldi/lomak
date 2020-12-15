@@ -5,13 +5,12 @@ use std::rc::Rc;
 
 use regex::Regex;
 
+use crate::error::EmptyLomakResult;
 use crate::func::expr::*;
 use crate::func::*;
+use crate::version::{Version, Versionned};
 use std::ops::Deref;
 use std::slice::Iter;
-use crate::error::EmptyLomakResult;
-use crate::version::{Version, Versionned};
-
 
 /// Maximal number of variables associated to each component
 pub static MAXVAL: usize = 9;
@@ -54,7 +53,6 @@ pub struct Variable {
     pub component: usize,
     pub value: usize,
 }
-
 
 pub enum GroupedVariableError {
     UnknownComponent,
@@ -324,8 +322,8 @@ impl Variable {
 }
 
 impl<T> VariableNamer for T
-    where
-        T: GroupedVariables,
+where
+    T: GroupedVariables,
 {
     fn format_name(&self, f: &mut fmt::Formatter, vid: usize) -> fmt::Result {
         write!(f, "{}", self.get_name(vid))

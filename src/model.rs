@@ -10,18 +10,17 @@ use std::slice::Iter;
 
 use regex::Regex;
 
+use crate::error::EmptyLomakResult;
 use crate::func::expr::*;
 use crate::func::*;
-use crate::error::EmptyLomakResult;
-use crate::variables::{GroupedVariables, ModelVariables, MAXVAL, check_val};
-use crate::version::{Versionned, Version};
 use crate::model::layout::Layout;
+use crate::variables::{check_val, GroupedVariables, ModelVariables, MAXVAL};
+use crate::version::{Version, Versionned};
 
 pub mod actions;
 pub mod io;
-pub mod modifier;
 pub mod layout;
-
+pub mod modifier;
 
 /// A formula associated with a target value
 #[derive(Clone)]
@@ -68,13 +67,12 @@ pub struct FrozenModel {
 }
 
 /// Sharable model reference
-#[derive(Clone,Default)]
+#[derive(Clone, Default)]
 pub struct SharedModel {
     rc: Rc<RefCell<QModel>>,
 }
 
 impl Rules {
-
     fn change(&mut self) {
         self.version.change();
     }
@@ -143,7 +141,7 @@ impl GroupedVariables for QModel {
 
     fn ensure(&mut self, name: &str) -> usize {
         let handle = self.variables.ensure(name);
-        self.rules.ensure( self.variables.component(handle).unwrap() );
+        self.rules.ensure(self.variables.component(handle).unwrap());
         handle
     }
 
@@ -167,12 +165,12 @@ impl QModel {
     }
 
     pub fn frozen_variables(&self) -> Rc<ModelVariables> {
-        self.cache.borrow_mut().get_variables( &self.variables)
+        self.cache.borrow_mut().get_variables(&self.variables)
     }
 
-    pub fn frozen_rules(&self) -> Rc< HashMap<usize, Formula> > {
+    pub fn frozen_rules(&self) -> Rc<HashMap<usize, Formula>> {
         let m = HashMap::new();
-        Rc::new( m )
+        Rc::new(m)
     }
 
     /// Assign a Boolean condition for a specific threshold
@@ -417,12 +415,13 @@ impl ModelCache {
         if self
             .variables
             .as_ref()
-            .map(|v|v.version() != vars.version())
-            .unwrap_or(true) {
+            .map(|v| v.version() != vars.version())
+            .unwrap_or(true)
+        {
             self.variables = Some(Rc::new(vars.clone()));
         }
 
-        Rc::clone( self.variables.as_ref().unwrap() )
+        Rc::clone(self.variables.as_ref().unwrap())
     }
 }
 
