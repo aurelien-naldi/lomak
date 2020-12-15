@@ -1,8 +1,11 @@
-use std::io;
-use std::num;
-use thiserror::Error;
-use std::fmt;
 use clingo;
+use std::io;
+use std::error::Error;
+use std::fmt;
+use std::num;
+use roxmltree;
+use thiserror::Error;
+
 use crate::model::io::FormatError;
 
 
@@ -22,6 +25,9 @@ pub enum LomakError {
 
     #[error("No model was provided")]
     MissingModel(),
+
+    #[error(transparent)]
+    Generic(#[from] GenericError),
 }
 
 #[derive(Error, Debug)]
@@ -31,8 +37,61 @@ pub enum ParseError {
 
     #[error("Float parsing error: {0}")]
     ParseFloat(#[from] num::ParseFloatError),
+
+    #[error("Error parsing XML document: {0}")]
+    ParseXML(#[from] roxmltree::Error),
+
+    #[error("Error parsing text document: {0}")]
+    ParseText(#[from] ParseTxtError),
 }
+
+#[derive(Error, Debug)]
+pub struct GenericError {
+    s: String,
+}
+
+#[derive(Error, Debug)]
+pub struct ParseTxtError {
+    source: Box<dyn Error>,
+}
+
+impl GenericError {
+    pub fn new(s: String) -> Self {
+        GenericError{
+            s: s,
+        }
+    }
+}
+
+impl ParseTxtError {
+    pub fn new(e: Box<impl Error + 'static>) -> Self {
+        ParseTxtError {
+            source: e,
+        }
+    }
+}
+
+impl fmt::Display for GenericError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.s)
+    }
+}
+
+impl fmt::Display for ParseTxtError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.source)
+    }
+}
+
 
 pub type LomakResult<T> = Result<T, LomakError>;
 
 pub type EmptyLomakResult = LomakResult<()>;
+
+impl<R: pest::RuleType + 'static> From<pest::error::Error<R>> for LomakError {
+    fn from(e: pest::error::Error<R>) -> Self {
+        let e = ParseTxtError::new(Box::new(e));
+        let e: ParseError = e.into();
+        e.into()
+    }
+}

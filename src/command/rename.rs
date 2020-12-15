@@ -3,7 +3,7 @@ use std::ffi::OsString;
 use structopt::StructOpt;
 
 use crate::command::{CLICommand, CommandContext};
-use crate::model::GroupedVariables;
+use crate::variables::GroupedVariables;
 use std::ops::DerefMut;
 use crate::error::EmptyLomakResult;
 

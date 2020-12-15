@@ -8,7 +8,7 @@ use crate::func::implicant::Implicants;
 use crate::func::Formula;
 use crate::model::QModel;
 use crate::model::{io, GroupedVariables};
-use crate::error::EmptyLomakResult;
+use crate::error::{EmptyLomakResult, LomakError, ParseTxtError, ParseError, LomakResult};
 
 #[derive(Parser)]
 #[grammar_inline = r####"
@@ -51,30 +51,20 @@ impl BoolSimFormat {
         }
     }
 
-    fn parse_formula(&self, model: &mut QModel, formula: &str) -> Result<Expr, String> {
-        let ptree = BoolSimParser::parse(Rule::sxpr, formula);
-        match ptree {
-            Err(s) => Err(format!("Parsing error: {}", s)),
-            Ok(mut ptree) => {
-                let expr = ptree.next().unwrap().into_inner().next().unwrap();
-                let expr = self.load_expr(model, expr);
-                Ok(expr)
-            }
-        }
+    fn parse_formula(&self, model: &mut QModel, formula: &str) -> LomakResult<Expr> {
+        let mut ptree = BoolSimParser::parse(Rule::sxpr, formula)?;
+        let expr = ptree.next().unwrap().into_inner().next().unwrap();
+        let expr = self.load_expr(model, expr);
+        Ok(expr)
     }
 }
 
 impl io::ParsingFormat for BoolSimFormat {
-    fn parse_into_model(&self, model: &mut QModel, expression: &str) {
-        let ptree = BoolSimParser::parse(Rule::file, expression);
-
-        if let Err(err) = ptree {
-            println!("Parsing error: {}", err);
-            return;
-        }
+    fn parse_into_model(&self, model: &mut QModel, expression: &str) -> EmptyLomakResult {
+        let mut ptree = BoolSimParser::parse(Rule::file, expression)?;
 
         // Load all lines to restore the component order
-        let ptree = ptree.unwrap().next().unwrap();
+        let ptree = ptree.next().unwrap();
         let mut expressions = vec![];
         for record in ptree.into_inner() {
             match record.as_rule() {
@@ -94,6 +84,8 @@ impl io::ParsingFormat for BoolSimFormat {
             let expr = self.load_expr(model, e);
             model.push_var_rule(vid, Formula::from(expr));
         }
+
+        Ok(())
     }
 }
 

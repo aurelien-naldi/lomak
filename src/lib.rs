@@ -15,3 +15,5 @@ pub mod func;
 pub mod model;
 pub mod services;
 pub mod solver;
+pub mod variables;
+pub mod version;

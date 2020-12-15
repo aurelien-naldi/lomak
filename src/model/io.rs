@@ -63,11 +63,11 @@ pub trait ParsingFormat {
 
     fn parse_str(&self, expression: &str) -> LomakResult<SharedModel> {
         let mut model = QModel::default();
-        self.parse_into_model(&mut model, expression);
+        self.parse_into_model(&mut model, expression)?;
         Ok( SharedModel::with(model) )
     }
 
-    fn parse_into_model(&self, model: &mut QModel, expression: &str);
+    fn parse_into_model(&self, model: &mut QModel, expression: &str) -> EmptyLomakResult;
 }
 
 /// Trait providing the export filter for Formats.

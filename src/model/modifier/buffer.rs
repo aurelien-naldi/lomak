@@ -106,7 +106,7 @@ impl<'a> BufferConfig<'a> {
     pub fn apply(&mut self) {
         let components: Vec<usize> = self.model.components().copied().collect();
         for cid in components {
-            let mut rule = self.model.rules.get_mut(&cid).unwrap().clone();
+            let mut rule = self.model.rules.get(cid).unwrap().clone();
             for assign in rule.assignments.iter_mut() {
                 let expr: Rc<Expr> = assign.formula.convert_as();
                 let new_expr = expr.replace_variables(self);

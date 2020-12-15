@@ -4,8 +4,8 @@ use crate::model::{io, GroupedVariables, QModel};
 use std::io::Write;
 
 use regex::Regex;
-use roxmltree::{Node, Children};
-use crate::error::EmptyLomakResult;
+use roxmltree::{Node, Children, Document};
+use crate::error::{EmptyLomakResult, LomakResult, LomakError, ParseError, GenericError};
 
 const BASE_NS: &'static str = r"http://www.sbml.org/sbml/level3/version(\d)";
 
@@ -31,28 +31,31 @@ impl io::SavingFormat for SBMLFormat {
 }
 
 impl io::ParsingFormat for SBMLFormat {
-    fn parse_into_model(&self, model: &mut QModel, expression: &str) {
-        SBMLParser::parse(model, expression);
+    fn parse_into_model(&self, model: &mut QModel, expression: &str) -> EmptyLomakResult {
+        SBMLParser::parse(model, expression)
+    }
+}
+
+pub fn load_xml(expression: &str) -> Result<Document, ParseError> {
+    let parsed = roxmltree::Document::parse(expression);
+
+    match parsed {
+        Err(e) => Err(ParseError::ParseXML(e)),
+        Ok(d) => Ok(d),
     }
 }
 
 impl SBMLParser {
 
-    fn parse(model: &mut QModel, expression: &str) {
-        let doc = match roxmltree::Document::parse(expression) {
-            Err(e) => {
-                println!("ERROR {}", e);
-                return;
-            }
-            Ok(d) => d,
-        };
+    fn parse(model: &mut QModel, expression: &str) -> EmptyLomakResult {
 
+        let doc = load_xml(expression)?;
         let root = doc.root_element();
         let ns_core = root.default_namespace().unwrap();
 
         if !SBML_NS.is_match(ns_core) {
-            println!("Not an SBML document namespace: {}", ns_core);
-            return;
+            let e = GenericError::new(format!("Not an SBML document namespace: {}", ns_core));
+            return Err( LomakError::from(e) );
         }
 
         let ns_qual = match root
@@ -61,8 +64,8 @@ impl SBMLParser {
             .find(|ns| QUAL_NS.is_match( ns.uri() ))
             .map(|ns| ns.uri()) {
             None => {
-                println!("Not a qualitative SBML model");
-                return;
+                let e = GenericError::new(format!("Not a qualitative SBML model"));
+                return Err( LomakError::from(e) );
             },
             Some(n) => n,
         };
@@ -71,8 +74,8 @@ impl SBMLParser {
             .children()
             .find(|n| n.has_tag_name("model")) {
             None => {
-                println!("NO MODEL FOUND IN THIS SBML FILE");
-                return;
+                let e = GenericError::new(format!("This SBML file contains no model"));
+                return Err( LomakError::from(e) );
             },
             Some(model) => model,
         };
@@ -111,6 +114,8 @@ impl SBMLParser {
                 };
             },
         };
+
+        Ok(())
     }
 
     fn parse_species(ns: &str, model: &mut QModel, species: Children) {

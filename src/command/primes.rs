@@ -1,11 +1,11 @@
 use std::ffi::OsString;
-
+use std::ops::Deref;
 use structopt::StructOpt;
 
 use crate::command::{CLICommand, CommandContext};
-use crate::model::{GroupedVariables, QModel};
-use std::ops::Deref;
 use crate::error::EmptyLomakResult;
+use crate::model::QModel;
+use crate::variables::GroupedVariables;
 
 static NAME: &str = "primes";
 static ABOUT: &str = "Compute the prime implicants of the model's functions";
