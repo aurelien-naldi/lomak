@@ -115,7 +115,7 @@ impl<'a> BufferConfig<'a> {
                 }
             }
             // Apply the new rule
-            self.model.rules.insert(cid, rule);
+            self.model.rules._replace(cid, rule);
         }
     }
 

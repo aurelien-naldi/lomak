@@ -1,0 +1,12 @@
+versionning:
+* ID unique a la creation initiale
+* numero de version
+* liste d'ordre de clones
+
+
+undo/redo:
+* liste d'edits
+* desactivable
+* load/gen/clone en debut de chaine
+
+

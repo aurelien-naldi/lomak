@@ -48,7 +48,7 @@ pub struct QModel {
 }
 
 #[derive(Default)]
-struct Rules {
+pub struct Rules {
     rules: HashMap<usize, ComponentRules>,
     version: Version,
 }
@@ -73,47 +73,41 @@ pub struct SharedModel {
 }
 
 impl Rules {
-    fn change(&mut self) {
-        self.version.change();
-    }
-
-    fn contains_key(&self, cid: usize) -> bool {
-        self.rules.contains_key(&cid)
-    }
-
-    fn ensure(&mut self, cid: usize) {
-        if !self.contains_key(cid) {
-            self.insert(cid, ComponentRules::new());
+    /// Private helper to retrieve and modify the set f rules associated to a component.
+    /// This call registers a change since the last version
+    fn _ensure(&mut self, cid: usize) -> &mut ComponentRules {
+        if !self.rules.contains_key(&cid) {
+            self.rules.insert(cid, ComponentRules::new());
         }
+        self.version.change();
+        self.rules.get_mut(&cid).unwrap()
     }
 
-    fn insert(&mut self, cid: usize, rule: ComponentRules) -> Option<ComponentRules> {
-        self.change();
+    /// Replace all rules for the specified component, and return the previous rules if available
+    /// This call registers a change since the last version
+    fn _replace(&mut self, cid: usize, rule: ComponentRules) -> Option<ComponentRules> {
+        self.version.change();
         self.rules.insert(cid, rule)
     }
 
+    /// Retrieve the set of rules for a component if it exists
     fn get(&self, cid: usize) -> Option<&ComponentRules> {
         self.rules.get(&cid)
     }
 
     /// Assign a Boolean condition for a specific threshold
-    fn push_cpt_rule(&mut self, cid: usize, value: usize, rule: Formula) {
-        self.rules.get_mut(&cid).unwrap().push(value, rule);
-        self.change();
+    fn push(&mut self, cid: usize, value: usize, rule: Formula) {
+        self._ensure(cid).push(value, rule);
     }
 
     /// Restrict the activity of a component
     pub fn restrict_component(&mut self, cid: usize, min: usize, max: usize) {
-        let rules = self.rules.get_mut(&cid).unwrap();
-        rules.restrict(min, max);
-        self.change();
+        self._ensure(cid).restrict(min, max);
     }
 
     /// Enforce the activity of a specific variable
     pub fn lock_component(&mut self, cid: usize, value: usize) {
-        let rules = self.rules.get_mut(&cid).unwrap();
-        rules.lock(value);
-        self.change();
+        self._ensure(cid).lock(value);
     }
 }
 
@@ -141,7 +135,7 @@ impl GroupedVariables for QModel {
 
     fn ensure(&mut self, name: &str) -> usize {
         let handle = self.variables.ensure(name);
-        self.rules.ensure(self.variables.component(handle).unwrap());
+        self.rules._ensure(self.variables.component(handle).unwrap());
         handle
     }
 
@@ -175,7 +169,7 @@ impl QModel {
 
     /// Assign a Boolean condition for a specific threshold
     pub fn push_cpt_rule(&mut self, cid: usize, value: usize, rule: Formula) {
-        self.rules.push_cpt_rule(cid, value, rule);
+        self.rules.push(cid, value, rule);
     }
 
     /// Assign a Boolean condition for a specific threshold
