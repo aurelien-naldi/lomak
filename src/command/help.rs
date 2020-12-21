@@ -3,7 +3,7 @@ use std::ffi::OsString;
 use structopt::StructOpt;
 
 use crate::command;
-use crate::error::EmptyLomakResult;
+use crate::helper::error::EmptyLomakResult;
 
 static NAME: &str = "help";
 static ABOUT: &str = "List available commands";
@@ -25,7 +25,7 @@ impl command::CLICommand for CLI {
         &["display", "print"]
     }
 
-    fn run(&self, context: &mut command::CommandContext, args: &[OsString]) -> EmptyLomakResult {
+    fn run(&self, _context: &mut command::CommandContext, args: &[OsString]) -> EmptyLomakResult {
         let _config: Config = Config::from_iter(args);
 
         command::COMMANDS.print_commands();

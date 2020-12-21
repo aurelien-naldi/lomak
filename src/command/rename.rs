@@ -3,7 +3,7 @@ use std::ffi::OsString;
 use structopt::StructOpt;
 
 use crate::command::{CLICommand, CommandContext};
-use crate::error::EmptyLomakResult;
+use crate::helper::error::{EmptyLomakResult, GenericError, LomakError};
 use crate::variables::GroupedVariables;
 use std::ops::DerefMut;
 
@@ -39,8 +39,9 @@ impl CLICommand for CLI {
 
         // TODO: multiple rename actions ?
         let mut model = smodel.borrow_mut();
-        model.deref_mut().rename(&config.source, &config.target);
-
-        Ok(())
+        match model.deref_mut().rename(&config.source, &config.target) {
+            Err(s) => Err(LomakError::Generic(GenericError::new(s.to_owned()))),
+            Ok(_) => Ok(()),
+        }
     }
 }

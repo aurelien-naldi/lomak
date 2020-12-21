@@ -1,21 +1,23 @@
-//! A logical model is a collection of components associated to Boolean variables and
-//! logical rules controlling changes of activity over time, depending on the model state.
+//! Collection of components associated to Boolean variables and dynamical rules.
+//! Submodules provide file formats, modifiers as well as analysis tools.
+//!
+//! Each component has an activity level, represented as the Boolean states of the corresponding
+//! Boolean variables. A state of the whole system is then given by the set of all Boolean states.
+//! Logical rules define possible changes of activity over time, depending on the current model state.
 
-use std::cell::{Cell, Ref, RefCell, RefMut};
+use std::cell::{Ref, RefCell, RefMut};
 use std::collections::HashMap;
 use std::fmt;
 use std::ops::Deref;
 use std::rc::Rc;
 use std::slice::Iter;
 
-use regex::Regex;
-
-use crate::error::EmptyLomakResult;
 use crate::func::expr::*;
 use crate::func::*;
+use crate::helper::error::EmptyLomakResult;
+use crate::helper::version::{Version, Versionned};
 use crate::model::layout::Layout;
 use crate::variables::{check_val, GroupedVariables, ModelVariables, MAXVAL};
-use crate::version::{Version, Versionned};
 
 pub mod actions;
 pub mod io;
@@ -135,7 +137,8 @@ impl GroupedVariables for QModel {
 
     fn ensure(&mut self, name: &str) -> usize {
         let handle = self.variables.ensure(name);
-        self.rules._ensure(self.variables.component(handle).unwrap());
+        self.rules
+            ._ensure(self.variables.component(handle).unwrap());
         handle
     }
 

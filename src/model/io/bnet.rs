@@ -3,13 +3,11 @@ use std::io::Write;
 use pest::iterators::*;
 use pest::Parser;
 
-use crate::error::{EmptyLomakResult, LomakError, LomakResult, ParseError, ParseTxtError};
 use crate::func::expr::{Expr, NamedExpr, Operator};
 use crate::func::Formula;
+use crate::helper::error::{EmptyLomakResult, LomakResult};
 use crate::model::QModel;
 use crate::model::{io, GroupedVariables};
-use pest::error::Error;
-use roxmltree::Error::ParserError;
 
 #[derive(Parser)]
 #[grammar_inline = r####"

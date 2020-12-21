@@ -3,7 +3,7 @@ use std::ffi::OsString;
 use structopt::StructOpt;
 
 use crate::command::{CLICommand, CommandContext};
-use crate::error::{EmptyLomakResult, LomakError};
+use crate::helper::error::EmptyLomakResult;
 use crate::model::modifier::buffer::{BufferConfig, BufferingStrategy};
 use crate::model::QModel;
 

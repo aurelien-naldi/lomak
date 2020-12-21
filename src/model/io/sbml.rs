@@ -3,7 +3,7 @@ use crate::func::Formula;
 use crate::model::{io, GroupedVariables, QModel};
 use std::io::Write;
 
-use crate::error::{EmptyLomakResult, GenericError, LomakError, LomakResult, ParseError};
+use crate::helper::error::{EmptyLomakResult, GenericError, LomakError, ParseError};
 use regex::Regex;
 use roxmltree::{Children, Document, Node};
 

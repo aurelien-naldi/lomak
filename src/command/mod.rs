@@ -1,31 +1,44 @@
 //! Define commands for the Command Line Interface
 //!
-//! This module provides facilities to register a collection of commands.
-//! Each command is a wrapper over core API features defined in a private submodule.
+//! This module provides facilities to register a collection of commands, where ach command,
+//! defined in a private submodule, is a thin wrapper over core API features.
 //!
-//! As the CLI enables to execute a chain of commands, the defined commands are recognized in the
-//! list of parameters to extract separate lists of arguments for each successive command.
+//! The CLI enables to chain several commands, each can use and modify a global context, currently
+//!limited to a shared model. The global CLI will thus start by searching command names in the full
+//! list of arguments. The arguments between two successive commands define the arguments of the
+//! first command.
+//!
+//! # Example
+//!
+//! The following command:
+//!
+//! ```lomak load -f sbml model.xml perturbation --ko Cmp3 fixpoints```
+//!
+//! defines the following subcommands:
+//! * **load** ```-f sbml model.xml```
+//! * **perturbation** ```--ko Cmp3```
+//! * **fixpoints**
 
 use std::collections::HashMap;
 use std::env;
 use std::ffi::OsString;
 use std::sync::Arc;
 
-use crate::error::{EmptyLomakResult, LomakError, LomakResult};
+use crate::helper::error::{EmptyLomakResult, LomakError, LomakResult};
 use crate::model::SharedModel;
 
-pub mod help;
-pub mod load;
+mod help;
+mod load;
 
-pub mod buffer;
-pub mod perturbation;
-pub mod rename;
+mod buffer;
+mod perturbation;
+mod rename;
 
-pub mod fixpoints;
-pub mod primes;
-pub mod save;
-pub mod show;
-pub mod trapspaces;
+mod fixpoints;
+mod primes;
+mod save;
+mod show;
+mod trapspaces;
 
 lazy_static! {
     /// Single-instance CommandManager created and filled at runtime
@@ -105,6 +118,7 @@ impl CommandManager {
     }
 }
 
+/// The execution context to allow successive commands to share a model or additional data
 #[derive(Default)]
 pub struct CommandContext {
     models: HashMap<String, SharedModel>,

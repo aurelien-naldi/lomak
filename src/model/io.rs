@@ -1,11 +1,10 @@
 use std::ffi::OsStr;
-use std::fmt;
 use std::fs::File;
 use std::io::{BufWriter, Read, Write};
 use std::path::Path;
 use thiserror::Error;
 
-use crate::error::{EmptyLomakResult, LomakResult};
+use crate::helper::error::{EmptyLomakResult, LomakResult};
 use crate::model::{QModel, SharedModel};
 
 mod bnet;

@@ -3,11 +3,11 @@ use std::collections::HashMap;
 use itertools::Itertools;
 
 use crate::func::expr::Expr;
+use crate::helper::solver;
+use crate::helper::solver::Solver;
+use crate::helper::solver::SolverMode;
 use crate::model::actions::fixpoints::FixedPoints;
 use crate::model::{GroupedVariables, SharedModel};
-use crate::solver;
-use crate::solver::Solver;
-use crate::solver::SolverMode;
 use std::ops::Deref;
 
 pub struct TrapspacesBuilder {

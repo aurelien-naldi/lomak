@@ -1,15 +1,10 @@
-use std::cell::{Cell, Ref, RefCell, RefMut};
 use std::collections::HashMap;
 use std::fmt;
-use std::rc::Rc;
 
 use regex::Regex;
 
-use crate::error::EmptyLomakResult;
-use crate::func::expr::*;
 use crate::func::*;
-use crate::version::{Version, Versionned};
-use std::ops::Deref;
+use crate::helper::version::{Version, Versionned};
 use std::slice::Iter;
 
 /// Maximal number of variables associated to each component
@@ -154,7 +149,7 @@ impl ModelVariables {
 
     /// Make sure that a handle exists
     fn ensure_handle(&mut self, handle: usize) {
-        if let Some(var) = self.var_to_cpt_value.get(&handle) {
+        if self.var_to_cpt_value.get(&handle).is_some() {
             return;
         }
 

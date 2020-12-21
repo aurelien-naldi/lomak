@@ -3,7 +3,7 @@ use std::ffi::OsString;
 use structopt::StructOpt;
 
 use crate::command::{CLICommand, CommandContext};
-use crate::error::EmptyLomakResult;
+use crate::helper::error::EmptyLomakResult;
 use itertools::Itertools;
 
 static NAME: &str = "perturbation";

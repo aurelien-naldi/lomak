@@ -1,3 +1,5 @@
+//! Over-simplistic constraint solver helper, based on the Clingo ASP solver.
+
 use std::fmt;
 
 use crate::func::pattern::Pattern;

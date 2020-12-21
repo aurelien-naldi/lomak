@@ -3,7 +3,7 @@ use std::ops::Deref;
 use structopt::StructOpt;
 
 use crate::command::{CLICommand, CommandContext};
-use crate::error::EmptyLomakResult;
+use crate::helper::error::EmptyLomakResult;
 use crate::model::QModel;
 use crate::variables::GroupedVariables;
 

@@ -1,3 +1,6 @@
+//! Simple error types and helpers for consistent error handling.
+//!
+//! It uses the thiserror crate to reduce boilerplate.
 use clingo;
 use roxmltree;
 use std::error::Error;

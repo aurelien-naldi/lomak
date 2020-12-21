@@ -1,5 +1,15 @@
+//! Define and maintain versioned data structures
+
 use std::cell::Cell;
 
+/// A versioned data structure has a ```version``` method which gives a new version number if
+/// the content of the structure has changed since its last call.
+pub trait Versionned {
+    fn version(&self) -> usize;
+}
+
+/// Store and update the current version number.
+/// Use this struct as a field to implement the ```Versionned``` trait.
 #[derive(Default, Clone)]
 pub struct Version {
     inner: Cell<InnerVersion>,
@@ -31,10 +41,6 @@ impl Version {
         }
         i.version
     }
-}
-
-pub trait Versionned {
-    fn version(&self) -> usize;
 }
 
 #[cfg(test)]

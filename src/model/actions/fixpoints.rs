@@ -4,9 +4,9 @@ use itertools::Itertools;
 
 use crate::func::expr::Expr;
 use crate::func::pattern::Pattern;
+use crate::helper::solver;
+use crate::helper::solver::SolverMode;
 use crate::model::{GroupedVariables, QModel, SharedModel};
-use crate::solver;
-use crate::solver::SolverMode;
 use std::fmt::Formatter;
 use std::ops::Deref;
 
