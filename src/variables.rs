@@ -1,3 +1,4 @@
+//! Manage a collection of named components and associated Boolean variables
 use std::collections::HashMap;
 use std::fmt;
 
@@ -6,6 +7,7 @@ use regex::Regex;
 use crate::func::*;
 use crate::helper::version::{Version, Versionned};
 use std::slice::Iter;
+use crate::helper::error::{LomakResult, LomakError, GenericError};
 
 /// Maximal number of variables associated to each component
 pub static MAXVAL: usize = 9;
@@ -58,6 +60,14 @@ pub enum GroupedVariableError {
 pub trait GroupedVariables {
     /// Find a variable by name if it exists.
     fn get_handle(&self, name: &str) -> Option<usize>;
+
+    /// Find a variable by name if it exists.
+    fn get_handle_res(&self, name: &str) -> LomakResult<usize> {
+        match self.get_handle(name) {
+            None => Err(LomakError::Generic( GenericError::new(format!("Unknown variable {}", name) ))),
+            Some(u) => Ok(u),
+        }
+    }
 
     /// Retrieve the name of a variable
     /// If the handle corresponds to a variable associated to threshold 1, this corresponds to the name of the component,
@@ -175,6 +185,7 @@ impl ModelVariables {
 
         self.changed();
         self.components.push(handle);
+        self.variables.push(handle);
         self.names.insert(handle, name.to_owned());
         self.cpt_to_variables.insert(handle, vec![handle]);
         self.name2uid.insert(name.to_owned(), handle);

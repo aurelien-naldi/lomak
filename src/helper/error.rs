@@ -92,3 +92,7 @@ impl<R: pest::RuleType + 'static> From<pest::error::Error<R>> for LomakError {
         e.into()
     }
 }
+
+pub fn generic_error(s: String) -> LomakError {
+    LomakError::Generic( GenericError::new(s) )
+}

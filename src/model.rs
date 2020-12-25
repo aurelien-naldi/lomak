@@ -75,7 +75,7 @@ pub struct SharedModel {
 }
 
 impl Rules {
-    /// Private helper to retrieve and modify the set f rules associated to a component.
+    /// Private helper to retrieve and modify the set of rules associated to a component.
     /// This call registers a change since the last version
     fn _ensure(&mut self, cid: usize) -> &mut ComponentRules {
         if !self.rules.contains_key(&cid) {
@@ -166,7 +166,11 @@ impl QModel {
     }
 
     pub fn frozen_rules(&self) -> Rc<HashMap<usize, Formula>> {
-        let m = HashMap::new();
+        let mut m = HashMap::new();
+        for u in self.variables() {
+            let e = self.get_var_rule(*u);
+            m.insert(*u, Formula::from(e));
+        }
         Rc::new(m)
     }
 

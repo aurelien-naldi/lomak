@@ -9,55 +9,66 @@ use crate::helper::solver::SolverMode;
 use crate::model::{GroupedVariables, QModel, SharedModel};
 use std::fmt::Formatter;
 use std::ops::Deref;
+use crate::variables::ModelVariables;
+use std::rc::Rc;
+use std::collections::HashMap;
+use crate::func::Formula;
+use crate::helper::error::{EmptyLomakResult, LomakError, GenericError, generic_error};
 
 pub struct FixedBuilder {
-    model: SharedModel,
+    variables: Rc<ModelVariables>,
+    rules: Rc<HashMap<usize, Formula>>,
     restriction: Option<Pattern>,
 }
 
 pub struct FixedPoints {
-    names: Vec<String>,
+    variables: Rc<ModelVariables>,
     patterns: Vec<Pattern>,
     displayed: Option<Vec<usize>>,
 }
 
 impl FixedBuilder {
     pub fn new(model: SharedModel) -> Self {
+        let m = model.borrow();
         FixedBuilder {
-            model,
+            variables: m.frozen_variables(),
+            rules: m.frozen_rules(),
             restriction: None,
         }
     }
 
     /// Apply additional restrictions to the search for fixed points
-    pub fn restrict_by_name(&mut self, name: &str, value: bool) {
-        let model = self.model.borrow();
-        let uid = model.get_handle(name);
-        if let Some(uid) = uid {
-            if self.restriction.is_none() {
-                self.restriction = Some(Pattern::new());
-            }
-            self.restriction.as_mut().unwrap().set(uid, value);
+    pub fn restrict_by_name(&mut self, name: &str, value: bool) -> EmptyLomakResult {
+        let uid = self.variables.get_handle_res(name)?;
+        self._restrict(uid, value);
+        Ok(())
+    }
+
+    /// Apply additional restrictions to the search for fixed points
+    pub fn _restrict(&mut self, uid: usize, value: bool) {
+        if self.restriction.is_none() {
+            self.restriction = Some(Pattern::new());
         }
+        self.restriction.as_mut().unwrap().set(uid, value);
     }
 
     pub fn solve(&self, max: Option<usize>) -> FixedPoints {
         let mut solver = solver::get_solver(SolverMode::ALL);
 
-        let model = self.model.borrow();
-
         // Create an ASP variable matching each variable of the model
-        let s = model.variables().map(|vid| format!("v{}", vid)).join("; ");
+        let s = self.variables.variables().map(|vid| format!("v{}", vid)).join("; ");
         let s = format!("{{{}}}.", s);
+        println!("#VARS: {{{}}}.", s);
         solver.add(&s);
 
         // For each variable:
         //   * retrieve the Boolean formula
         //   * derive the stability condition
         //   * encode it in ASP
-        for vid in model.variables() {
+        for vid in self.variables.variables() {
             let cur = Expr::ATOM(*vid);
-            let e = model.get_var_rule(*vid);
+            // TODO: handle missing expr ??
+            let e: Rc<Expr> = self.rules.get(vid).map(|f| f.convert_as()).unwrap();
             for p in cur.not().and(&e).prime_implicants().iter() {
                 solver.restrict(p);
             }
@@ -79,36 +90,21 @@ impl FixedBuilder {
             .take(max.unwrap_or(10000))
             .collect_vec();
 
-        FixedPoints::new(model.deref(), patterns)
+        FixedPoints::new(Rc::clone(&self.variables), patterns)
     }
 }
 
 impl FixedPoints {
-    pub fn new(model: &QModel, patterns: Vec<Pattern>) -> Self {
-        let names = model
-            .variables()
-            .map(|vid| model.get_name(*vid).to_string())
-            .collect_vec();
+    pub fn new(variables: Rc<ModelVariables>, patterns: Vec<Pattern>) -> Self {
         FixedPoints {
-            names: names,
+            variables: variables,
             patterns: patterns,
             displayed: None,
         }
     }
 
     pub fn set_displayed_names(&mut self, names: Option<Vec<String>>) {
-        match names {
-            None => self.set_displayed(None),
-            Some(names) => {
-                let selected = names
-                    .iter()
-                    .filter_map(|n| self.names.iter().position(|name| n == name))
-                    .collect_vec();
-                if selected.len() > 0 {
-                    self.set_displayed(Some(selected));
-                }
-            }
-        }
+        unimplemented!();
     }
 
     pub fn set_displayed(&mut self, displayed: Option<Vec<usize>>) {
@@ -118,22 +114,17 @@ impl FixedPoints {
 
 impl fmt::Display for FixedPoints {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let display = match &self.displayed {
-            None => self.names.iter().enumerate().map(|(u, _)| u).collect_vec(),
-            Some(v) => v.clone(),
-        };
+        // TODO: filter displayed components
         writeln!(
             f,
             "{}",
-            display
-                .iter()
-                .map(|uid| self.names.get(*uid).unwrap())
+            self.variables.variables()
+                .map(|uid| self.variables.get_name(*uid))
                 .join(" ")
         )?;
 
         for p in self.patterns.iter() {
-            p.filter_fmt(f, &display)?;
-            writeln!(f, "")?;
+            writeln!(f, "{}", p)?;
         }
         write!(f, "")
     }
