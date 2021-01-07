@@ -4,16 +4,16 @@ use itertools::Itertools;
 
 use crate::func::expr::Expr;
 use crate::func::pattern::Pattern;
+use crate::func::Formula;
+use crate::helper::error::{generic_error, EmptyLomakResult, GenericError, LomakError};
 use crate::helper::solver;
 use crate::helper::solver::SolverMode;
 use crate::model::{GroupedVariables, QModel, SharedModel};
+use crate::variables::ModelVariables;
+use std::collections::HashMap;
 use std::fmt::Formatter;
 use std::ops::Deref;
-use crate::variables::ModelVariables;
 use std::rc::Rc;
-use std::collections::HashMap;
-use crate::func::Formula;
-use crate::helper::error::{EmptyLomakResult, LomakError, GenericError, generic_error};
 
 pub struct FixedBuilder {
     variables: Rc<ModelVariables>,
@@ -56,7 +56,11 @@ impl FixedBuilder {
         let mut solver = solver::get_solver(SolverMode::ALL);
 
         // Create an ASP variable matching each variable of the model
-        let s = self.variables.variables().map(|vid| format!("v{}", vid)).join("; ");
+        let s = self
+            .variables
+            .variables()
+            .map(|vid| format!("v{}", vid))
+            .join("; ");
         let s = format!("{{{}}}.", s);
         println!("#VARS: {{{}}}.", s);
         solver.add(&s);
@@ -118,7 +122,8 @@ impl fmt::Display for FixedPoints {
         writeln!(
             f,
             "{}",
-            self.variables.variables()
+            self.variables
+                .variables()
                 .map(|uid| self.variables.get_name(*uid))
                 .join(" ")
         )?;

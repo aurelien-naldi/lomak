@@ -3,15 +3,15 @@ use std::collections::HashMap;
 use itertools::Itertools;
 
 use crate::func::expr::Expr;
+use crate::func::Formula;
 use crate::helper::solver;
 use crate::helper::solver::Solver;
 use crate::helper::solver::SolverMode;
 use crate::model::actions::fixpoints::FixedPoints;
 use crate::model::{GroupedVariables, SharedModel};
-use std::ops::Deref;
 use crate::variables::ModelVariables;
+use std::ops::Deref;
 use std::rc::Rc;
-use crate::func::Formula;
 
 pub struct TrapspacesBuilder {
     variables: Rc<ModelVariables>,
@@ -58,7 +58,8 @@ impl TrapspacesBuilder {
         let mut solver = solver::get_solver(self.mode);
 
         // Add all variables
-        let s = self.variables
+        let s = self
+            .variables
             .variables()
             .map(|vid| format!("v{}; v{}", 2 * vid, 2 * vid + 1))
             .join("; ");
@@ -84,7 +85,8 @@ impl TrapspacesBuilder {
 
         // Remove the full state space from the solutions when computing elementary trapspaces
         if self.mode == SolverMode::MIN {
-            let s = self.variables
+            let s = self
+                .variables
                 .variables()
                 .map(|vid| format!("not v{}, not v{}", 2 * vid, 2 * vid + 1))
                 .join(", ");
@@ -101,7 +103,7 @@ impl TrapspacesBuilder {
             .take(max.unwrap_or(10000))
             .collect_vec();
 
-        FixedPoints::new(Rc::clone( &self.variables), patterns)
+        FixedPoints::new(Rc::clone(&self.variables), patterns)
     }
 }
 

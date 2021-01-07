@@ -5,9 +5,9 @@ use std::fmt;
 use regex::Regex;
 
 use crate::func::*;
+use crate::helper::error::{GenericError, LomakError, LomakResult};
 use crate::helper::version::{Version, Versionned};
 use std::slice::Iter;
-use crate::helper::error::{LomakResult, LomakError, GenericError};
 
 /// Maximal number of variables associated to each component
 pub static MAXVAL: usize = 9;
@@ -64,7 +64,10 @@ pub trait GroupedVariables {
     /// Find a variable by name if it exists.
     fn get_handle_res(&self, name: &str) -> LomakResult<usize> {
         match self.get_handle(name) {
-            None => Err(LomakError::Generic( GenericError::new(format!("Unknown variable {}", name) ))),
+            None => Err(LomakError::Generic(GenericError::new(format!(
+                "Unknown variable {}",
+                name
+            )))),
             Some(u) => Ok(u),
         }
     }
