@@ -198,7 +198,11 @@ impl QModel {
         let var = var.unwrap();
         let cid = var.component;
         let value = var.value;
-        let mut expr = self.rules.get(cid).unwrap().raw_variable_formula(value);
+        let mut expr = self
+            .rules
+            .get(cid)
+            .map(|c| c.raw_variable_formula(value))
+            .unwrap_or(Expr::FALSE);
         let variables = self.get_variables(cid);
 
         if value < variables.len() {
