@@ -5,14 +5,13 @@ use itertools::Itertools;
 use crate::func::expr::Expr;
 use crate::func::pattern::Pattern;
 use crate::func::Formula;
-use crate::helper::error::{generic_error, EmptyLomakResult, GenericError, LomakError};
+use crate::helper::error::EmptyLomakResult;
 use crate::helper::solver;
 use crate::helper::solver::SolverMode;
-use crate::model::{GroupedVariables, QModel, SharedModel};
+use crate::model::{GroupedVariables, SharedModel};
 use crate::variables::ModelVariables;
 use std::collections::HashMap;
 use std::fmt::Formatter;
-use std::ops::Deref;
 use std::rc::Rc;
 
 pub struct FixedBuilder {
@@ -108,7 +107,14 @@ impl FixedPoints {
     }
 
     pub fn set_displayed_names(&mut self, names: Option<Vec<String>>) {
-        unimplemented!();
+        self.displayed = match names {
+            None => None,
+            Some(n) => Some(
+                n.iter()
+                    .filter_map(|s| self.variables.get_handle(s))
+                    .collect(),
+            ),
+        };
     }
 
     pub fn set_displayed(&mut self, displayed: Option<Vec<usize>>) {

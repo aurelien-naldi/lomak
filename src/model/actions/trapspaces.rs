@@ -10,7 +10,6 @@ use crate::helper::solver::SolverMode;
 use crate::model::actions::fixpoints::FixedPoints;
 use crate::model::{GroupedVariables, SharedModel};
 use crate::variables::ModelVariables;
-use std::ops::Deref;
 use std::rc::Rc;
 
 pub struct TrapspacesBuilder {
