@@ -1,0 +1,27 @@
+# This is a basic workflow to help you get started with Actions
+
+name: matrix
+
+# Controls when the action will run. 
+on:
+  # Triggers the workflow on push or pull request events but only for the master branch
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  ping_matrix:
+   runs-on: ubuntu-latest
+   steps:
+     - name: send message
+       uses: s3krit/matrix-message-action@v0.0.3
+       with:
+         room_id: ${{ secrets.MATRIX_ROOM_ID }}
+         access_token: ${{ secrets.MATRIX_ACCESS_TOKEN }}
+         message: "Something changed on github"
+         server: "matrix.org"
