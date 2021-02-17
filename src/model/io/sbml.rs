@@ -445,9 +445,10 @@ impl SBMLParser {
                 Err(GenericError::new(format!(
                     "Unsupported mathml tag: {} ({:?})",
                     name,
-                    math.document().text_pos_at( children.get(0).unwrap().range().start)
+                    math.document()
+                        .text_pos_at(children.get(0).unwrap().range().start)
                 )))?
-            },
+            }
         }
     }
 
