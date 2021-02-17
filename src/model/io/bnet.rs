@@ -8,6 +8,7 @@ use crate::func::Formula;
 use crate::helper::error::{EmptyLomakResult, LomakResult};
 use crate::model::QModel;
 use crate::model::{io, GroupedVariables};
+use crate::model::io::Format;
 
 #[derive(Parser)]
 #[grammar_inline = r####"
@@ -32,13 +33,16 @@ COMMENT = _{ "#" ~ (!NEWLINE ~ ANY)* ~ NEWLINE? }
 "####]
 pub struct BNETParser;
 
+#[derive(Default)]
 pub struct BNETFormat;
 
-impl BNETFormat {
-    pub fn new() -> BNETFormat {
-        BNETFormat {}
+impl Format for BNETFormat {
+    fn description(&self) -> &str {
+        "List of Boolean functions used by (Py)BoolNet"
     }
+}
 
+impl BNETFormat {
     fn load_expr(&self, model: &mut QModel, expr: Pair<Rule>) -> Expr {
         let rule = expr.as_rule();
         match rule {

@@ -8,6 +8,7 @@ use crate::func::Formula;
 use crate::helper::error::{EmptyLomakResult, LomakResult};
 use crate::model::QModel;
 use crate::model::{io, GroupedVariables};
+use crate::model::io::Format;
 
 #[derive(Parser)]
 #[grammar_inline = r####"
@@ -32,13 +33,16 @@ COMMENT = _{ "#" ~ (!NEWLINE ~ ANY)* ~ NEWLINE* }
 "####]
 pub struct MNETParser;
 
+#[derive(Default)]
 pub struct MNETFormat;
 
-impl MNETFormat {
-    pub fn new() -> MNETFormat {
-        MNETFormat {}
+impl Format for MNETFormat {
+    fn description(&self) -> &str {
+        "List of Multi-valued functions"
     }
+}
 
+impl MNETFormat {
     fn load_expr(&self, model: &mut QModel, expr: Pair<Rule>) -> Expr {
         let rule = expr.as_rule();
         match rule {

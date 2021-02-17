@@ -3,10 +3,11 @@ use std::ffi::OsString;
 use structopt::StructOpt;
 
 use crate::command;
+use crate::model::io;
 use crate::helper::error::EmptyLomakResult;
 
 static NAME: &str = "help";
-static ABOUT: &str = "List available commands";
+static ABOUT: &str = "List available commands and formats";
 
 #[derive(Debug, StructOpt)]
 #[structopt(name=NAME, about=ABOUT)]
@@ -29,6 +30,8 @@ impl command::CLICommand for CLI {
         let _config: Config = Config::from_iter(args);
 
         command::COMMANDS.print_commands();
+        println!();
+        io::print_formats();
         Ok(())
     }
 }

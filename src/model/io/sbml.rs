@@ -14,6 +14,7 @@ use crate::helper::error::LomakError::Generic;
 use std::any::Any;
 use std::rc::Rc;
 use crate::func::Repr::EXPR;
+use crate::model::io::Format;
 
 const BASE_NS: &'static str = r"http://www.sbml.org/sbml/level3/version(\d)";
 
@@ -24,12 +25,14 @@ lazy_static! {
         Regex::new(&(format!(r"{}/layout/version(\d)", BASE_NS))).unwrap();
 }
 
+#[derive(Default)]
 pub struct SBMLFormat;
 pub struct SBMLParser;
 
-impl SBMLFormat {
-    pub fn new() -> SBMLFormat {
-        SBMLFormat {}
+
+impl Format for SBMLFormat {
+    fn description(&self) -> &str {
+        "The SBML qual exchange format"
     }
 }
 

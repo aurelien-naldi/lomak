@@ -12,8 +12,12 @@ mod boolsim;
 mod mnet;
 mod sbml;
 
+static FORMATS: [&str;4] = ["bnet", "mnet", "bsim", "sbml"];
+
 /// A Format may provide import and export filters
-pub trait Format: TrySaving + TryParsing {}
+pub trait Format: TrySaving + TryParsing {
+    fn description(&self) -> &str;
+}
 
 /// Denotes an object which may be able to save a model, or not.
 /// This is a requirement for the definition of a Format. This trait is
@@ -36,8 +40,6 @@ pub trait TryParsing {
         Err(FormatError::NoParser())
     }
 }
-
-impl<T: TrySaving + TryParsing> Format for T {}
 
 impl<T: SavingFormat> TrySaving for T {
     fn as_saver(&self) -> Result<&dyn SavingFormat, FormatError> {
@@ -82,10 +84,10 @@ pub trait SavingFormat {
 
 pub fn get_format(fmt: &str) -> Result<Box<dyn Format>, FormatError> {
     match fmt.to_lowercase().trim() {
-        "mnet" => Result::Ok(Box::new(mnet::MNETFormat::new())),
-        "bnet" => Result::Ok(Box::new(bnet::BNETFormat::new())),
-        "bsim" => Result::Ok(Box::new(boolsim::BoolSimFormat::new())),
-        "sbml" => Result::Ok(Box::new(sbml::SBMLFormat::new())),
+        "mnet" => Result::Ok(Box::new(mnet::MNETFormat::default())),
+        "bnet" => Result::Ok(Box::new(bnet::BNETFormat::default())),
+        "bsim" => Result::Ok(Box::new(boolsim::BoolSimFormat::default())),
+        "sbml" => Result::Ok(Box::new(sbml::SBMLFormat::default())),
         _ => Err(FormatError::NotFound(fmt.to_owned())),
     }
 }
@@ -116,6 +118,18 @@ pub fn save_model(model: &QModel, filename: &str, fmt: Option<&str>) -> EmptyLom
 
     let writer = f.as_saver()?;
     writer.save_file(model, filename)
+}
+
+pub fn print_formats() {
+    println!("Available formats (< read, > write):");
+    for name in &FORMATS {
+        if let Ok(fmt) = get_format(name) {
+            let parser = if fmt.as_parser().is_ok() { "<" } else { " "};
+            let saver = if fmt.as_saver().is_ok() { ">" } else { " "};
+            println!("  {:16} {}{}  {}", name, parser, saver, fmt.description());
+        }
+
+    }
 }
 
 #[derive(Error, Debug)]

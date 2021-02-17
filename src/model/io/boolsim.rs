@@ -9,6 +9,7 @@ use crate::func::Formula;
 use crate::helper::error::{EmptyLomakResult, LomakResult};
 use crate::model::QModel;
 use crate::model::{io, GroupedVariables};
+use crate::model::io::Format;
 
 #[derive(Parser)]
 #[grammar_inline = r####"
@@ -28,13 +29,16 @@ COMMENT = _{ "#" ~ (!NEWLINE ~ ANY)* ~ NEWLINE? }
 "####]
 pub struct BoolSimParser;
 
+#[derive(Default)]
 pub struct BoolSimFormat;
 
-impl BoolSimFormat {
-    pub fn new() -> Self {
-        BoolSimFormat {}
+impl Format for BoolSimFormat {
+    fn description(&self) -> &str {
+        "List of Boolean functions used by boolSim/genYsis"
     }
+}
 
+impl BoolSimFormat {
     fn load_expr(&self, model: &mut QModel, expr: Pair<Rule>) -> Expr {
         let rule = expr.as_rule();
         match rule {
