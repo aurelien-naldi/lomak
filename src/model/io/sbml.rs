@@ -203,7 +203,9 @@ fn write_expr(model: &QModel, expr: &Expr, w: &mut XmlWriter) {
             write_atom(model, *u, w);
         }
         Expr::NATOM(u) => {
+            w.start_element("apply");
             w.start_element("not");
+            w.end_element();
             write_atom(model, *u, w);
             w.end_element();
         }
@@ -438,10 +440,14 @@ impl SBMLParser {
             "not" => SBMLParser::parse_not(model, params),
             "true" => Ok(Expr::TRUE),
             "false" => Ok(Expr::FALSE),
-            _ => Err(GenericError::new(format!(
-                "Unsupported mathml tag: {}",
-                name
-            )))?,
+            _ => {
+                let range = math.range();
+                Err(GenericError::new(format!(
+                    "Unsupported mathml tag: {} ({:?})",
+                    name,
+                    math.document().text_pos_at( children.get(0).unwrap().range().start)
+                )))?
+            },
         }
     }
 
