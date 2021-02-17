@@ -13,6 +13,8 @@ use std::num::ParseIntError;
 use crate::helper::error::LomakError::Generic;
 use std::any::Any;
 use std::rc::Rc;
+use xmlwriter;
+use xmlwriter::XmlWriter;
 use crate::func::Repr::EXPR;
 use crate::model::io::Format;
 
@@ -38,9 +40,187 @@ impl Format for SBMLFormat {
 
 impl io::SavingFormat for SBMLFormat {
     fn write_rules(&self, model: &QModel, out: &mut dyn Write) -> EmptyLomakResult {
-        unimplemented!()
+
+        let sbml_ns = "http://www.sbml.org/sbml/level3/version2/core";
+        let qual_ns = "http://www.sbml.org/sbml/level3/version1/qual/version1";
+        let layout_ns = "http://www.sbml.org/sbml/level3/version1/layout/version1";
+        let math_ns = "http://www.w3.org/1998/Math/MathML";
+
+        let mut w = XmlWriter::new( xmlwriter::Options::default());
+        w.start_element("sbml");
+        w.write_attribute("xmlns", sbml_ns);
+        w.write_attribute("level", "3");
+        w.write_attribute("version", "2");
+
+        // require the qual extension
+        w.write_attribute("xmlns:qual", qual_ns);
+        w.write_attribute("qual:required", "true");
+
+        // TODO: detect if a layout is available
+        let has_layout = false;
+        if has_layout {
+            // Layout information is available but not required
+            w.write_attribute("xmlns:layout", layout_ns);
+            w.write_attribute("layout:required", "false");
+        }
+
+        w.start_element("model");
+        w.write_attribute("id", "model_id");
+
+        // The single compartment
+        w.start_element("listOfCompartments");
+        w.start_element("compartments");
+        w.write_attribute("id", "comp1");
+        w.write_attribute("constant", "true");
+        w.end_element();
+        w.end_element();
+
+        // Layout information if available
+        if has_layout {
+            // TODO: add layout information
+        }
+
+        // List of qualitative species
+        w.start_element("qual:listOfQualitativeSpecies");
+        w.write_attribute("xmlns:qual", qual_ns);
+        for uid in model.components() {
+            let max = model.get_variables(*uid).len();
+            w.start_element("qual:qualitativeSpecies");
+            w.write_attribute("qual:id", model.get_name(*uid));
+            w.write_attribute("qual:compartment", "comp1");
+            // TODO: detect and annotate inputs nodes?
+            w.write_attribute("qual:constant", "false");
+            w.write_attribute("qual:maxLevel", &max);
+            w.end_element();
+        }
+        w.end_element();
+
+        // List of transitions
+        w.start_element("qual:listOfTransitions");
+        w.write_attribute("xmlns:qual", qual_ns);
+
+        for uid in model.components() {
+            let rule = model.rules.get(*uid).unwrap();
+            let name = model.get_name(*uid);
+
+            w.start_element("qual:transition");
+            w.write_attribute("qual:id", &format!("tr_{}", name));
+
+            w.start_element("qual:listOfInputs");
+            // FIXME: list regulators
+            w.end_element();
+
+            // Each transition has a single output
+            w.start_element("qual:listOfOutputs");
+            w.start_element("qual:output");
+            w.write_attribute("qual:id", &format!("tr_{}_out", name));
+            w.write_attribute("qual:qualitativeSpecies", &name);
+            w.write_attribute("qual:transitionEffect", "assignmentLevel");
+            w.end_element();
+            w.end_element();
+
+            w.start_element("qual:listOfFunctionTerms");
+            w.start_element("qual:defaultTerm");
+            w.write_attribute("qual:resultLevel", "0");
+            w.end_element();
+            for assign in rule.assignments.iter() {
+                w.start_element("qual:functionTerm");
+                w.write_attribute("qual:resultLevel", &assign.target);
+                w.start_element("math");
+                w.write_attribute("xmlns", math_ns);
+                write_expr(model, assign.formula.convert_as::<Expr>().as_ref(), &mut w);
+                w.end_element();
+                w.end_element();
+            }
+            w.end_element();
+
+            // end transition
+            w.end_element();
+        }
+
+        w.end_element();
+
+        write!( out, "{}", w.end_document() )?;
+        Ok(())
     }
 }
+
+fn write_atom(model: &QModel, vid: usize, w: &mut XmlWriter) {
+    // TODO: Handle multivalued
+    w.start_element("apply");
+
+    w.start_element("geq");
+    w.end_element();
+
+    w.start_element("ci");
+    w.write_text(model.get_name(vid));
+    w.end_element();
+
+    w.start_element("cn");
+    w.write_attribute("type", "integer");
+    w.write_text("1");
+    w.end_element();
+
+    w.end_element();
+}
+
+fn write_op(model: &QModel, op: Operator, children: &expr::Children, w: &mut XmlWriter) {
+    w.start_element("apply");
+    match op {
+        Operator::AND => {
+            w.start_element("and");
+            w.end_element();
+            write_children(model, children, w);
+        }
+        Operator::NAND => {
+            w.start_element("not");
+            w.end_element();
+            write_op(model, Operator::AND, children, w);
+        }
+        Operator::OR => {
+            w.start_element("or");
+            w.end_element();
+            write_children(model, children, w);
+        }
+        Operator::NOR => {
+            w.start_element("not");
+            w.end_element();
+            write_op(model, Operator::OR, children, w);
+        }
+    }
+    w.end_element();
+}
+
+fn write_children(model: &QModel, children: &expr::Children, w: &mut XmlWriter) {
+    for e in children.data.iter() {
+        write_expr(model, e, w)
+    }
+}
+
+fn write_expr(model: &QModel, expr: &Expr, w: &mut XmlWriter) {
+    match expr {
+        Expr::ATOM(u) => {
+            write_atom(model, *u, w);
+        },
+        Expr::NATOM(u) => {
+            w.start_element("not");
+            write_atom(model, *u, w);
+            w.end_element();
+        },
+        Expr::TRUE => {
+            w.start_element("true");
+            w.end_element();
+        },
+        Expr::FALSE => {
+            w.start_element("false");
+            w.end_element();
+        },
+        Expr::OPER(o, c) => {
+            write_op(model, *o, c, w);
+        },
+    }
+}
+
 
 impl io::ParsingFormat for SBMLFormat {
     fn parse_into_model(&self, model: &mut QModel, expression: &str) -> EmptyLomakResult {
@@ -106,7 +286,7 @@ impl SBMLParser {
             .find(|t| t.has_tag_name((ns_qual, "listOfTransitions")))
             .map(|n| n.children())
         {
-            SBMLParser::parse_transitions(ns_qual, model, transitions);
+            SBMLParser::parse_transitions(ns_qual, model, transitions)?;
         }
 
         // Load layout
@@ -248,6 +428,8 @@ impl SBMLParser {
             "and" => SBMLParser::parse_operation(model, Operator::AND, params),
             "or" => SBMLParser::parse_operation(model, Operator::OR, params),
             "not" => SBMLParser::parse_not(model, params),
+            "true" => Ok( Expr::TRUE ),
+            "false" => Ok( Expr::FALSE ),
             _ => Err( GenericError::new(format!( "Unsupported mathml tag: {}", name)) )?,
         }
     }
@@ -319,7 +501,7 @@ impl SBMLParser {
 
     fn parse_not(model: &QModel, params: &[Node]) -> Result<Expr, ParseError> {
         if params.len() != 1 {
-            return Err( GenericError::new("Not operand should have a single child".to_owned()) )?;
+            return Err( GenericError::new(format!("Not operand should have a single child, found {}", params.len())) )?;
         }
 
         let child = SBMLParser::parse_math(model, &params[0])?;

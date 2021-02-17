@@ -17,6 +17,7 @@ regex       = "1"
 roxmltree   = "0.13"
 structopt   = { version = "0.3", default-features = false }
 thiserror   = "1.0"
+xmlwriter   = "0.1"
 
 
 # Release profile:
