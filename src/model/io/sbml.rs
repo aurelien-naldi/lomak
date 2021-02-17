@@ -1,11 +1,19 @@
-use crate::func::expr::Expr;
+use crate::func::expr::{Expr, Operator};
+use crate::func::expr;
 use crate::func::Formula;
 use crate::model::{io, GroupedVariables, QModel};
 use std::io::Write;
 
-use crate::helper::error::{EmptyLomakResult, GenericError, LomakError, ParseError};
+use crate::helper::error::{EmptyLomakResult, GenericError, LomakError, ParseError, LomakResult, CanFail};
 use regex::Regex;
 use roxmltree::{Children, Document, Node};
+use std::str::FromStr;
+use crate::helper::error::ParseError::ParseXML;
+use std::num::ParseIntError;
+use crate::helper::error::LomakError::Generic;
+use std::any::Any;
+use std::rc::Rc;
+use crate::func::Repr::EXPR;
 
 const BASE_NS: &'static str = r"http://www.sbml.org/sbml/level3/version(\d)";
 
@@ -150,7 +158,7 @@ impl SBMLParser {
         }
     }
 
-    fn parse_transitions(ns: &str, model: &mut QModel, transitions: Children) {
+    fn parse_transitions(ns: &str, model: &mut QModel, transitions: Children) -> CanFail<ParseError> {
         for n_tr in transitions {
             if !n_tr.has_tag_name("transition") {
                 continue;
@@ -167,14 +175,32 @@ impl SBMLParser {
                 None => continue, // a transition without any function is useless
                 Some(f) => f,
             };
-            let basal_level = match functions.children().find(|n| n.has_tag_name("defaultTerm")) {
-                None => 0,
-                Some(v) => {
-                    // FIXME: retrieve the value
-                    0
+
+            let mut rules = vec!();
+
+            // Add the default value if it is not 0
+            if let Some(d) = functions
+                .children()
+                .find(|n| n.has_tag_name("defaultTerm")) {
+                if let Some(v) = SBMLParser::collect::<usize>( d.attribute((ns,"resultLevel"))) {
+                    if v != 0 {
+                        rules.push( (v, Expr::TRUE));
+                    }
                 }
-            };
+            }
+
             // > functionTerm ( resultLevel=1 ) > math > apply > ...
+            for term in functions
+                .children()
+                .filter(|n| n.has_tag_name("functionTerm")) {
+                let math = match term.children().find(|n|n.has_tag_name("math")) {
+                    None => continue,
+                    Some(m) => m.children().find(|n| n.has_tag_name("apply")).unwrap(),
+                };
+                let target: usize = SBMLParser::collect( term.attribute((ns, "resultLevel"))).unwrap_or(0);
+                let expr = SBMLParser::parse_math( model, &math)?;
+                rules.push( (target, expr));
+            }
 
             // listOfOutputs > output (qualitativeSpecies, transitionEffect=assignmentLevel)
             let outputs = match n_tr
@@ -185,9 +211,134 @@ impl SBMLParser {
                 None => continue, // a transition must have at least one output
                 Some(o) => o,
             };
+
+            // Apply the rules to all outputs
             for o in outputs {
-                // Apply the function to all outputs
+                let target = match o.attribute((ns, "qualitativeSpecies")).map( |t| model.get_handle(t)) {
+                    Some( Some(t)) => t,
+                    _ => Err( GenericError::new("Could not identify the output".to_owned()) )?,
+                };
+
+                for (v,e) in rules.iter() {
+                    model.rules.push(target, *v,Formula::from(e.clone()));
+                }
             }
+        }
+        Ok(())
+    }
+
+    fn parse_math(model: &QModel, math: &Node) -> Result<Expr, ParseError> {
+        let children: Vec<Node> = math.children().filter(|n|n.is_element()).collect();
+        if children.len() < 1 {
+            Err( GenericError::new("Missing content in mathml?".to_owned()) )?;
+        }
+
+        let name = children.get(0).unwrap().tag_name().name();
+        let params = &children[1..];
+        match name {
+            "eq" => SBMLParser::parse_comparison(model, Comparison::EQ, params),
+            "neq" => SBMLParser::parse_comparison(model, Comparison::NEQ, params),
+            "gt" => SBMLParser::parse_comparison(model, Comparison::GT, params),
+            "geq" => SBMLParser::parse_comparison(model, Comparison::GEQ, params),
+            "lt" => SBMLParser::parse_comparison(model, Comparison::LT, params),
+            "leq" => SBMLParser::parse_comparison(model, Comparison::LEQ, params),
+            "and" => SBMLParser::parse_operation(model, Operator::AND, params),
+            "or" => SBMLParser::parse_operation(model, Operator::OR, params),
+            "not" => SBMLParser::parse_not(model, params),
+            _ => Err( GenericError::new(format!( "Unsupported mathml tag: {}", name)) )?,
+        }
+    }
+
+    fn parse_comparison(model: &QModel, cmp: Comparison, params: &[Node]) -> Result<Expr, ParseError> {
+        let mut variable = None;
+        let mut value = None;
+
+        for n in params {
+            match n.tag_name().name() {
+                "ci" => variable = n.text(),
+                "cn" => value = n.text(),
+                _  => return Err( GenericError::new(format!("Unsupported element in comparison: {}", n.tag_name().name()) ))?,
+            }
+        }
+
+        let var = match variable.map(|v| model.get_handle(v.trim())) {
+            Some(Some(u)) => Ok(u),
+            _ => Err( GenericError::new("Missing or unknown variable".to_owned()) ),
+        }?;
+
+        let val = match value.map( |s| s.trim().parse::<usize>()) {
+            Some( r) => r?,
+            None => Err( GenericError::new("Missing associated value".to_owned()) )?,
+        };
+
+        let (min,max) = match cmp {
+            Comparison::EQ => {
+                if val == 0 {
+                    (None,Some(1))
+                } else {
+                    (Some(val),Some(val+1))
+                }
+            },
+            Comparison::NEQ => {
+                if val > 0 {
+                    if let Some(n) = model.get_variable(var, val + 1) {
+                        // The next value exists and the current one is at least 1, so it must exist
+                        let c = model.get_variable(var, val).unwrap();
+                        return Ok(Expr::ATOM(n).or(&Expr::NATOM(c)));
+                    }
+                }
+                (Some(val+1),None)
+            },
+            Comparison::GEQ => {
+                (Some(val), None)
+            },
+            Comparison::LEQ => {
+                (None, Some(val+1))
+            },
+            Comparison::GT => {
+                (Some(val+1), None)
+            },
+            Comparison::LT => {
+                (None, Some(val))
+            },
+        };
+
+        let emin = min.map( |v| model.get_variable(var,v).map(|u| Expr::ATOM(u)));
+        let emax = max.map( |v| model.get_variable(var,v).map(|u| Expr::NATOM(u)));
+
+        match (emin,emax) {
+            (Some(Some(mn)), Some(Some(mx))) => Ok( mn.and(&mx) ),
+            (Some(Some(e)), _) => Ok( e ),
+            (_, Some(Some(e))) => Ok( e ),
+            _ => Err( GenericError::new("Could not construct a constraint!".to_owned()))?,
+        }
+    }
+
+    fn parse_not(model: &QModel, params: &[Node]) -> Result<Expr, ParseError> {
+        if params.len() != 1 {
+            return Err( GenericError::new("Not operand should have a single child".to_owned()) )?;
+        }
+
+        let child = SBMLParser::parse_math(model, &params[0])?;
+        Ok(child.not())
+    }
+
+    fn parse_operation(model: &QModel, op: Operator, params: &[Node]) -> Result<Expr, ParseError> {
+        let mut children: Vec<Expr> = vec!();
+        for c in params {
+            let c = SBMLParser::parse_math(model, c)?;
+            children.push(c);
+        }
+        let children = expr::Children {
+            data: Rc::new( children),
+        };
+        Ok(Expr::OPER(op, children))
+    }
+
+    fn collect<T: FromStr>(value: Option<&str>) -> Option<T> {
+        match value {
+            None => None,
+            Some(v) => v.parse::<T>().ok(),
         }
     }
 
@@ -199,4 +350,14 @@ impl SBMLParser {
         // > listOfAdditionalGraphicalObjects > generalGlyph (id, reference)
         // >> boundingBox > position (x,y) ; dimensions (width,height)
     }
+}
+
+#[derive(Debug)]
+enum Comparison {
+    EQ,
+    NEQ,
+    GT,
+    GEQ,
+    LT,
+    LEQ,
 }

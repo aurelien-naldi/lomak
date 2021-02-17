@@ -23,7 +23,7 @@ pub enum Expr {
     OPER(Operator, Children),
 }
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Operator {
     AND,
     OR,

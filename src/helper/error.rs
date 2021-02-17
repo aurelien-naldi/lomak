@@ -45,6 +45,9 @@ pub enum ParseError {
 
     #[error("Error parsing text document: {0}")]
     ParseText(#[from] ParseTxtError),
+
+    #[error("Error parsing: {0}")]
+    ParseMessage(#[from] GenericError),
 }
 
 #[derive(Error, Debug)]
@@ -82,6 +85,8 @@ impl fmt::Display for ParseTxtError {
 }
 
 pub type LomakResult<T> = Result<T, LomakError>;
+
+pub type CanFail<E> = Result<(), E>;
 
 pub type EmptyLomakResult = LomakResult<()>;
 

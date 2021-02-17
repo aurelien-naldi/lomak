@@ -85,7 +85,7 @@ pub trait GroupedVariables {
     /// Retrieve a variable for an existing component and a threshold value if it exists
     fn get_variable(&self, handle: usize, value: usize) -> Option<usize> {
         let variables = self.get_variables(handle);
-        if value > 0 && value < variables.len() {
+        if value > 0 && value <= variables.len() {
             Some(variables[value - 1])
         } else {
             None

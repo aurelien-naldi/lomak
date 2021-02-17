@@ -5,53 +5,41 @@ impl Expr {
     /// Compute the prime implicants of a Boolean expression.
     pub fn prime_implicants(&self) -> Implicants {
         let mut paths = Implicants::new();
-        self._prime_implicants_pure(&mut paths);
+        self._prime_implicants(&mut paths, false);
         paths
     }
 
-    /// Dispatch prime implicant construction to specialized functions depending on the negated status
+    /// Construct prime implicants.
+    ///
+    /// This method handles terminal nodes (booleans and atoms) and relies on
+    /// helpers functions for recursive calls on the children of logical operators.
     fn _prime_implicants(&self, paths: &mut Implicants, neg: bool) {
+        if paths.is_empty() {
+            return;
+        }
         if neg {
-            self._prime_implicants_neg(paths);
+            match self {
+                Expr::TRUE => paths.clear(),
+                Expr::FALSE => (),
+                Expr::ATOM(u) => paths.extend_literal(*u, false),
+                Expr::NATOM(u) => paths.extend_literal(*u, true),
+                Expr::OPER(Operator::OR, c) => Expr::_pi_and(c, paths, true),
+                Expr::OPER(Operator::NOR, c) => Expr::_pi_or(c, paths, false),
+                Expr::OPER(Operator::AND, c) => Expr::_pi_or(c, paths, true),
+                Expr::OPER(Operator::NAND, c) => Expr::_pi_and(c, paths, false),
+            };
         } else {
-            self._prime_implicants_pure(paths);
+            match self {
+                Expr::TRUE => (),
+                Expr::FALSE => paths.clear(),
+                Expr::ATOM(u) => paths.extend_literal(*u, true),
+                Expr::NATOM(u) => paths.extend_literal(*u, false),
+                Expr::OPER(Operator::OR, c) => Expr::_pi_or(c, paths, false),
+                Expr::OPER(Operator::NOR, c) => Expr::_pi_and(c, paths, true),
+                Expr::OPER(Operator::AND, c) => Expr::_pi_and(c, paths, false),
+                Expr::OPER(Operator::NAND, c) => Expr::_pi_or(c, paths, true),
+            };
         }
-    }
-
-    /// Look for prime implicants, dissolving dlinks as we go, for non-negated expressions
-    fn _prime_implicants_pure(&self, paths: &mut Implicants) {
-        if paths.is_empty() {
-            return;
-        }
-
-        match self {
-            Expr::TRUE => (),
-            Expr::FALSE => paths.clear(),
-            Expr::ATOM(u) => paths.extend_literal(*u, true),
-            Expr::NATOM(u) => paths.extend_literal(*u, false),
-            Expr::OPER(Operator::OR, c) => Expr::_pi_or(c, paths, false),
-            Expr::OPER(Operator::NOR, c) => Expr::_pi_and(c, paths, true),
-            Expr::OPER(Operator::AND, c) => Expr::_pi_and(c, paths, false),
-            Expr::OPER(Operator::NAND, c) => Expr::_pi_or(c, paths, true),
-        };
-    }
-
-    /// Look for prime implicants, dissolving dlinks as we go, for negated expressions
-    fn _prime_implicants_neg(&self, paths: &mut Implicants) {
-        if paths.is_empty() {
-            return;
-        }
-
-        match self {
-            Expr::TRUE => paths.clear(),
-            Expr::FALSE => (),
-            Expr::ATOM(u) => paths.extend_literal(*u, false),
-            Expr::NATOM(u) => paths.extend_literal(*u, true),
-            Expr::OPER(Operator::OR, c) => Expr::_pi_and(c, paths, true),
-            Expr::OPER(Operator::NOR, c) => Expr::_pi_or(c, paths, false),
-            Expr::OPER(Operator::AND, c) => Expr::_pi_or(c, paths, true),
-            Expr::OPER(Operator::NAND, c) => Expr::_pi_and(c, paths, false),
-        };
     }
 
     fn _pi_and(c: &Children, paths: &mut Implicants, neg: bool) {
