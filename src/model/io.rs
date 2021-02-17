@@ -12,7 +12,7 @@ mod boolsim;
 mod mnet;
 mod sbml;
 
-static FORMATS: [&str;4] = ["bnet", "mnet", "bsim", "sbml"];
+static FORMATS: [&str; 4] = ["bnet", "mnet", "bsim", "sbml"];
 
 /// A Format may provide import and export filters
 pub trait Format: TrySaving + TryParsing {
@@ -124,11 +124,10 @@ pub fn print_formats() {
     println!("Available formats (< read, > write):");
     for name in &FORMATS {
         if let Ok(fmt) = get_format(name) {
-            let parser = if fmt.as_parser().is_ok() { "<" } else { " "};
-            let saver = if fmt.as_saver().is_ok() { ">" } else { " "};
+            let parser = if fmt.as_parser().is_ok() { "<" } else { " " };
+            let saver = if fmt.as_saver().is_ok() { ">" } else { " " };
             println!("  {:16} {}{}  {}", name, parser, saver, fmt.description());
         }
-
     }
 }
 

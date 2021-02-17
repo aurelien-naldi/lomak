@@ -3,8 +3,8 @@ use std::ffi::OsString;
 use structopt::StructOpt;
 
 use crate::command;
-use crate::model::io;
 use crate::helper::error::EmptyLomakResult;
+use crate::model::io;
 
 static NAME: &str = "help";
 static ABOUT: &str = "List available commands and formats";

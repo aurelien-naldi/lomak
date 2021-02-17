@@ -6,9 +6,9 @@ use pest::Parser;
 use crate::func::expr::{Expr, NamedExpr, Operator};
 use crate::func::Formula;
 use crate::helper::error::{EmptyLomakResult, LomakResult};
+use crate::model::io::Format;
 use crate::model::QModel;
 use crate::model::{io, GroupedVariables};
-use crate::model::io::Format;
 
 #[derive(Parser)]
 #[grammar_inline = r####"
