@@ -13,7 +13,7 @@ use crate::func::VariableNamer;
 /// i.e. the intersection of both bitsets should be empty. However, some operations
 /// on patterns do not prevent the creation of conflicts, either for performance reasons
 /// or to use them to carry extra information.
-#[derive(Clone, PartialEq, Eq, Default)]
+#[derive(Clone, PartialEq, Eq, Default, Debug)]
 pub struct Pattern {
     positive: BitSet,
     negative: BitSet,
@@ -23,6 +23,27 @@ pub enum PatternState {
     TRUE,
     FALSE,
     ANY,
+}
+
+/// Describe the relation between two patterns and identify merged patterns when they exist
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum PatternRelation {
+    /// The patterns are fully separated (at least two conflicts)
+    Disjoint,
+    /// The patterns overlap but do not include each other (no conflict)
+    Overlap,
+    /// The first pattern includes the second one
+    Contains,
+    /// The first pattern is included in the second one
+    Contained,
+    /// A joined pattern includes both patterns
+    JoinBoth(Pattern),
+    /// A joined pattern includes only the first pattern
+    JoinFirst(Pattern),
+    /// A joined pattern includes only the second pattern
+    JoinSecond(Pattern),
+    /// A joined pattern does not include any of the two patterns
+    JoinOverlap(Pattern),
 }
 
 impl Pattern {
@@ -173,6 +194,33 @@ impl Pattern {
     /// The geometric inclusion does not hold if one of the patterns has conflicts.
     pub fn contains(&self, other: &Pattern) -> bool {
         other.positive.is_superset(&self.positive) && other.negative.is_superset(&self.negative)
+    }
+
+    /// Evaluate the relation between two patterns
+    pub fn relate(&self, p: &Pattern) -> PatternRelation {
+        match self.conflicts(p).len() {
+            0 => {
+                if self.contains(p) {
+                    return PatternRelation::Contains;
+                }
+                if p.contains(self) {
+                    return PatternRelation::Contained;
+                }
+                PatternRelation::Overlap
+            }
+            1 => {
+                // Check if the merged pattern contains the original ones
+                let mut merged = self.clone();
+                merged.merge_with(p);
+                match (merged.contains(self), merged.contains(p)) {
+                    (true, true) => PatternRelation::JoinBoth(merged),
+                    (true, false) => PatternRelation::JoinFirst(merged),
+                    (false, true) => PatternRelation::JoinSecond(merged),
+                    (false, false) => PatternRelation::JoinOverlap(merged),
+                }
+            }
+            _ => PatternRelation::Disjoint,
+        }
     }
 }
 
@@ -349,12 +397,17 @@ impl Pattern {
 #[cfg(test)]
 mod tests {
     use crate::func::pattern::Pattern;
+    use crate::func::pattern::PatternRelation::{Disjoint, JoinBoth, JoinFirst};
 
     #[test]
     fn test_patterns() {
-        let mut a = Pattern::from_str("--0-1--00-");
-        let mut b = Pattern::from_str("0-0-11-00-");
-        let mut c = Pattern::from_str("0-1-11-00-");
+        let p = Pattern::from_str("1-0-1--10-");
+        let a = Pattern::from_str("--0-1--00-");
+        let mpa = Pattern::from_str("1-0-1---0-");
+
+        let b = Pattern::from_str("0-0-11-00-");
+        let c = Pattern::from_str("0-1-11-00-");
+        let mbc = Pattern::from_str("0---11-00-");
 
         assert_eq!(a.len(), 4);
         assert_eq!(a.positive().len(), 1);
@@ -367,5 +420,13 @@ mod tests {
 
         assert_eq!(b.contains(&a), false);
         assert_eq!(c.contains(&a), false);
+
+        assert_eq!(mbc.contains(&a), false);
+        assert_eq!(mbc.contains(&b), true);
+        assert_eq!(mbc.contains(&c), true);
+        assert_eq!(mbc.contains(&p), false);
+
+        assert_eq!(p.relate(&a), JoinFirst(mpa));
+        assert_eq!(b.relate(&c), JoinBoth(mbc));
     }
 }
