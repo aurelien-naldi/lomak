@@ -176,7 +176,9 @@ impl Implicants {
         self.patterns = npaths;
 
         // Integrate the new conflict-solving patterns in the result
-        self.merge_raw(&candidates);
+        if candidates.patterns.len() > 0 {
+            self.merge_raw(&candidates);
+        }
     }
 
     /// Remove all paths contained in another list of implicants
