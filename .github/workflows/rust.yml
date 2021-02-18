@@ -36,3 +36,12 @@ jobs:
     - name: Run tests
       run: cargo test --verbose
 
+    # Strip and upload the debug build
+    - name: strip the debug build
+      run: strip target/debug/lomak
+    - name: 'Upload Artifact'
+      uses: actions/upload-artifact@v2
+      with:
+        name: lomak-latest
+        path: target/debug/lomak
+
