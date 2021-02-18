@@ -9,6 +9,8 @@ use crate::func;
 use crate::func::pattern::Pattern;
 use crate::func::state::State;
 use crate::func::*;
+use crate::helper::error::{GenericError, LomakResult, ParseError};
+use crate::variables::GroupedVariables;
 
 /* ************************************************************************************* */
 /* ************************ Data structures and basic operations *********************** */
@@ -29,6 +31,61 @@ pub enum Operator {
     OR,
     NAND,
     NOR,
+}
+
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub enum Comparator {
+    EQ,
+    NEQ,
+    GT,
+    GEQ,
+    LT,
+    LEQ,
+}
+
+impl Comparator {
+    pub fn get_expr(
+        &self,
+        grp: &impl GroupedVariables,
+        var: usize,
+        val: usize,
+    ) -> Result<Expr, ParseError> {
+        let (min, max) = match self {
+            Comparator::EQ => {
+                if val == 0 {
+                    (None, Some(1))
+                } else {
+                    (Some(val), Some(val + 1))
+                }
+            }
+            Comparator::NEQ => {
+                if val > 0 {
+                    if let Some(n) = grp.get_variable(var, val + 1) {
+                        // The next value exists and the current one is at least 1, so it must exist
+                        let c = grp.get_variable(var, val).unwrap();
+                        return Ok(Expr::ATOM(n).or(&Expr::NATOM(c)));
+                    }
+                }
+                (Some(val + 1), None)
+            }
+            Comparator::GEQ => (Some(val), None),
+            Comparator::LEQ => (None, Some(val + 1)),
+            Comparator::GT => (Some(val + 1), None),
+            Comparator::LT => (None, Some(val)),
+        };
+
+        let emin = min.map(|v| grp.get_variable(var, v).map(|u| Expr::ATOM(u)));
+        let emax = max.map(|v| grp.get_variable(var, v).map(|u| Expr::NATOM(u)));
+
+        match (emin, emax) {
+            (Some(Some(mn)), Some(Some(mx))) => Ok(mn.and(&mx)),
+            (Some(Some(e)), _) => Ok(e),
+            (_, Some(Some(e))) => Ok(e),
+            _ => Err(GenericError::new(
+                "Could not construct a constraint!".to_owned(),
+            ))?,
+        }
+    }
 }
 
 #[derive(Clone, PartialEq)]

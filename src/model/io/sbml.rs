@@ -1,5 +1,5 @@
 use crate::func::expr;
-use crate::func::expr::{Expr, Operator};
+use crate::func::expr::{Comparator, Expr, Operator};
 use crate::func::Formula;
 use crate::model::{io, GroupedVariables, QModel};
 use std::io::Write;
@@ -429,12 +429,12 @@ impl SBMLParser {
         let name = children.get(0).unwrap().tag_name().name();
         let params = &children[1..];
         match name {
-            "eq" => SBMLParser::parse_comparison(model, Comparison::EQ, params),
-            "neq" => SBMLParser::parse_comparison(model, Comparison::NEQ, params),
-            "gt" => SBMLParser::parse_comparison(model, Comparison::GT, params),
-            "geq" => SBMLParser::parse_comparison(model, Comparison::GEQ, params),
-            "lt" => SBMLParser::parse_comparison(model, Comparison::LT, params),
-            "leq" => SBMLParser::parse_comparison(model, Comparison::LEQ, params),
+            "eq" => SBMLParser::parse_comparison(model, Comparator::EQ, params),
+            "neq" => SBMLParser::parse_comparison(model, Comparator::NEQ, params),
+            "gt" => SBMLParser::parse_comparison(model, Comparator::GT, params),
+            "geq" => SBMLParser::parse_comparison(model, Comparator::GEQ, params),
+            "lt" => SBMLParser::parse_comparison(model, Comparator::LT, params),
+            "leq" => SBMLParser::parse_comparison(model, Comparator::LEQ, params),
             "and" => SBMLParser::parse_operation(model, Operator::AND, params),
             "or" => SBMLParser::parse_operation(model, Operator::OR, params),
             "not" => SBMLParser::parse_not(model, params),
@@ -454,7 +454,7 @@ impl SBMLParser {
 
     fn parse_comparison(
         model: &QModel,
-        cmp: Comparison,
+        cmp: Comparator,
         params: &[Node],
     ) -> Result<Expr, ParseError> {
         let mut variable = None;
@@ -464,65 +464,35 @@ impl SBMLParser {
             match n.tag_name().name() {
                 "ci" => variable = n.text(),
                 "cn" => value = n.text(),
-                _ => {
-                    return Err(GenericError::new(format!(
-                        "Unsupported element in comparison: {}",
-                        n.tag_name().name()
-                    )))?
-                }
+                _ => Err(GenericError::new(format!(
+                    "Unsupported element in comparison: {}",
+                    n.tag_name().name()
+                )))?,
             }
         }
 
         let var = match variable.map(|v| model.get_handle(v.trim())) {
             Some(Some(u)) => Ok(u),
-            _ => Err(GenericError::new("Missing or unknown variable".to_owned())),
+            _ => Err(GenericError::new(format!(
+                "Missing or unknown variable in {:?}",
+                cmp
+            ))),
         }?;
 
         let val = match value.map(|s| s.trim().parse::<usize>()) {
             Some(r) => r?,
-            None => Err(GenericError::new("Missing associated value".to_owned()))?,
+            None => Err(GenericError::new(format!(
+                "Missing associated value in {:?}",
+                cmp
+            )))?,
         };
 
-        let (min, max) = match cmp {
-            Comparison::EQ => {
-                if val == 0 {
-                    (None, Some(1))
-                } else {
-                    (Some(val), Some(val + 1))
-                }
-            }
-            Comparison::NEQ => {
-                if val > 0 {
-                    if let Some(n) = model.get_variable(var, val + 1) {
-                        // The next value exists and the current one is at least 1, so it must exist
-                        let c = model.get_variable(var, val).unwrap();
-                        return Ok(Expr::ATOM(n).or(&Expr::NATOM(c)));
-                    }
-                }
-                (Some(val + 1), None)
-            }
-            Comparison::GEQ => (Some(val), None),
-            Comparison::LEQ => (None, Some(val + 1)),
-            Comparison::GT => (Some(val + 1), None),
-            Comparison::LT => (None, Some(val)),
-        };
-
-        let emin = min.map(|v| model.get_variable(var, v).map(|u| Expr::ATOM(u)));
-        let emax = max.map(|v| model.get_variable(var, v).map(|u| Expr::NATOM(u)));
-
-        match (emin, emax) {
-            (Some(Some(mn)), Some(Some(mx))) => Ok(mn.and(&mx)),
-            (Some(Some(e)), _) => Ok(e),
-            (_, Some(Some(e))) => Ok(e),
-            _ => Err(GenericError::new(
-                "Could not construct a constraint!".to_owned(),
-            ))?,
-        }
+        cmp.get_expr(model, var, val)
     }
 
     fn parse_not(model: &QModel, params: &[Node]) -> Result<Expr, ParseError> {
         if params.len() != 1 {
-            return Err(GenericError::new(format!(
+            Err(GenericError::new(format!(
                 "Not operand should have a single child, found {}",
                 params.len()
             )))?;
@@ -559,14 +529,4 @@ impl SBMLParser {
         // > listOfAdditionalGraphicalObjects > generalGlyph (id, reference)
         // >> boundingBox > position (x,y) ; dimensions (width,height)
     }
-}
-
-#[derive(Debug)]
-enum Comparison {
-    EQ,
-    NEQ,
-    GT,
-    GEQ,
-    LT,
-    LEQ,
 }
