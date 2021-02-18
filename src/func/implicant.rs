@@ -4,7 +4,7 @@ use std::vec::Vec;
 use bit_set::BitSet;
 
 use crate::func::expr::Expr;
-use crate::func::pattern::Pattern;
+use crate::func::pattern::{Pattern, PatternRelation};
 use crate::func::state::State;
 use crate::func::VariableNamer;
 use crate::func::*;
@@ -59,67 +59,99 @@ impl Implicants {
         lits
     }
 
+    /// Add a new candidate pattern.
+    /// If this candidate is included in at least one existing pattern then do nothing.
+    /// If it includes one or several existing patterns, then replace them.
+    /// Also handle merged patterns which could arise
+    pub fn add_candidate(&mut self, c: Pattern) {
+        let mut subsumed = BitSet::new();
+        let mut is_subsumed = false;
+        let mut candidates = Implicants::default();
+        for (i, p) in self.patterns.iter().enumerate() {
+            match p.relate(&c) {
+                PatternRelation::Disjoint => {}
+                PatternRelation::Overlap => {}
+                PatternRelation::Contains => {
+                    return;
+                }
+                PatternRelation::Contained => {
+                    subsumed.insert(i);
+                }
+                PatternRelation::JoinBoth(m) => {
+                    subsumed.insert(i);
+                    is_subsumed = true;
+                    candidates.add_candidate(m);
+                    break;
+                }
+                PatternRelation::JoinFirst(m) => {
+                    subsumed.insert(i);
+                    candidates.add_candidate(m);
+                }
+                PatternRelation::JoinSecond(m) => {
+                    is_subsumed = true;
+                    candidates.add_candidate(m);
+                    break;
+                }
+                PatternRelation::JoinOverlap(m) => {
+                    candidates.add_candidate(m);
+                }
+            }
+        }
+
+        for idx in subsumed.iter() {
+            self.patterns.remove(idx);
+        }
+
+        if candidates.patterns.len() > 0 {
+            self.merge_raw(&candidates);
+        }
+
+        if !is_subsumed {
+            self.patterns.push(c);
+        }
+    }
+
     pub fn merge_raw(&mut self, next: &Implicants) {
         // Tag the subsumed paths
         let mut s_subsumed = BitSet::new();
         let mut n_subsumed = BitSet::new();
+
+        // Store new candidate patterns
+        let mut candidates = Implicants::default();
 
         'outer: for (i, b) in self.patterns.iter().enumerate() {
             for (j, t) in next.patterns.iter().enumerate() {
                 if n_subsumed.contains(j) {
                     continue;
                 }
-                if b.contains(&t) {
-                    n_subsumed.insert(j);
-                } else if t.contains(&b) {
-                    s_subsumed.insert(i);
-                    continue 'outer;
-                }
-            }
-        }
 
-        //        let paths = self.paths.into_iter().enumerate().filter(|(i,x)|!s_subsumed.contains(*i)).map(|(i,x)|x).collect();
-        //        self.paths = paths;
-
-        // Look for potential conflicts
-        let s_lits = self.get_literals();
-        let n_lits = next.get_literals();
-        let conflicts = s_lits.conflicts(&n_lits);
-        let mut c_subsumed = BitSet::new();
-        let mut cpaths: Vec<Pattern> = Vec::new();
-        if !conflicts.is_unrestricted() {
-            // Another round to search for conflict-solving patterns
-            for (i, b) in self.patterns.iter().enumerate() {
-                if s_subsumed.contains(i) {
-                    continue;
-                }
-                'inner: for (j, t) in next.patterns.iter().enumerate() {
-                    if n_subsumed.contains(j) {
-                        continue;
+                match b.relate(&t) {
+                    PatternRelation::Disjoint => {}
+                    PatternRelation::Overlap => {}
+                    PatternRelation::Contains => {
+                        n_subsumed.insert(j);
                     }
-                    if b.conflicts(&t).len() == 1 {
-                        // Generate a new pattern solving the conflict, and check if it subsumes it's parents
-                        let mut new_path = b.clone();
-                        new_path.merge_with(t);
-                        /*
-                                                if new_path.len() == b.len() - 1 {
-                                                    s_subsumed.insert(i);
-                                                }
-                                                if new_path.len() == t.len() - 1 {
-                                                    n_subsumed.insert(j);
-                                                }
-                        */
-                        // Found a new candidate, check that it is new and if it subsumes an existing one
-                        for (k, x) in cpaths.iter().enumerate() {
-                            if x.contains(&new_path) {
-                                // continue without adding this useless item
-                                continue 'inner;
-                            }
-                            if new_path.contains(x) {
-                                c_subsumed.insert(k);
-                            }
-                        }
-                        cpaths.push(new_path);
+                    PatternRelation::Contained => {
+                        s_subsumed.insert(i);
+                        continue 'outer;
+                    }
+                    PatternRelation::JoinBoth(m) => {
+                        candidates.add_candidate(m);
+                        s_subsumed.insert(i);
+                        n_subsumed.insert(j);
+                        continue 'outer;
+                    }
+                    PatternRelation::JoinFirst(m) => {
+                        candidates.add_candidate(m);
+                        s_subsumed.insert(i);
+                        continue 'outer;
+                    }
+                    PatternRelation::JoinSecond(m) => {
+                        candidates.add_candidate(m);
+                        n_subsumed.insert(j);
+                    }
+                    PatternRelation::JoinOverlap(m) => {
+                        candidates.add_candidate(m);
                     }
                 }
             }
@@ -144,17 +176,7 @@ impl Implicants {
         self.patterns = npaths;
 
         // Integrate the new conflict-solving patterns in the result
-        if !cpaths.is_empty() {
-            let cpaths = cpaths
-                .into_iter()
-                .enumerate()
-                .filter(|(i, _x)| !c_subsumed.contains(*i))
-                .map(|(_i, x)| x)
-                .collect();
-            let cnext = Implicants { patterns: cpaths };
-            //            println!("####### {} new paths", cnext.len());
-            self.merge_raw(&cnext);
-        }
+        self.merge_raw(&candidates);
     }
 
     /// Remove all paths contained in another list of implicants
