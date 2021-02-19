@@ -4,17 +4,10 @@ use crate::func::Formula;
 use crate::model::{io, GroupedVariables, QModel};
 use std::io::Write;
 
-use crate::func::Repr::EXPR;
-use crate::helper::error::LomakError::Generic;
-use crate::helper::error::ParseError::ParseXML;
-use crate::helper::error::{
-    CanFail, EmptyLomakResult, GenericError, LomakError, LomakResult, ParseError,
-};
+use crate::helper::error::{CanFail, EmptyLomakResult, GenericError, LomakError, ParseError};
 use crate::model::io::Format;
 use regex::Regex;
 use roxmltree::{Children, Document, Node};
-use std::any::Any;
-use std::num::ParseIntError;
 use std::rc::Rc;
 use std::str::FromStr;
 use xmlwriter;
@@ -440,15 +433,12 @@ impl SBMLParser {
             "not" => SBMLParser::parse_not(model, params),
             "true" => Ok(Expr::TRUE),
             "false" => Ok(Expr::FALSE),
-            _ => {
-                let range = math.range();
-                Err(GenericError::new(format!(
-                    "Unsupported mathml tag: {} ({:?})",
-                    name,
-                    math.document()
-                        .text_pos_at(children.get(0).unwrap().range().start)
-                )))?
-            }
+            _ => Err(GenericError::new(format!(
+                "Unsupported mathml tag: {} ({:?})",
+                name,
+                math.document()
+                    .text_pos_at(children.get(0).unwrap().range().start)
+            )))?,
         }
     }
 

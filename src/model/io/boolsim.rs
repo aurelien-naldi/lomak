@@ -6,7 +6,7 @@ use pest::Parser;
 use crate::func::expr::{Expr, Operator};
 use crate::func::implicant::Implicants;
 use crate::func::Formula;
-use crate::helper::error::{EmptyLomakResult, LomakResult};
+use crate::helper::error::EmptyLomakResult;
 use crate::model::io::Format;
 use crate::model::QModel;
 use crate::model::{io, GroupedVariables};
@@ -53,13 +53,6 @@ impl BoolSimFormat {
                 }
             }
         }
-    }
-
-    fn parse_formula(&self, model: &mut QModel, formula: &str) -> LomakResult<Expr> {
-        let mut ptree = BoolSimParser::parse(Rule::sxpr, formula)?;
-        let expr = ptree.next().unwrap().into_inner().next().unwrap();
-        let expr = self.load_expr(model, expr);
-        Ok(expr)
     }
 }
 

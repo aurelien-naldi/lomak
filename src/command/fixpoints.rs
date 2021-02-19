@@ -50,7 +50,7 @@ impl CLICommand for CLI {
         if let Some(enforce) = config.enforce {
             for r in enforce {
                 // enforce a constraint by restricting the opposite
-                builder.restrict_by_name(&r, false);
+                builder.restrict_by_name(&r, false)?;
             }
         }
 

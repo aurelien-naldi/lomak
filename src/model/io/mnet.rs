@@ -43,14 +43,14 @@ impl Format for MNETFormat {
 }
 
 impl MNETFormat {
-    fn load_expr(&self, model: &mut QModel, expr: Pair<Rule>) -> Expr {
+    fn load_expr(model: &mut QModel, expr: Pair<Rule>) -> Expr {
         let rule = expr.as_rule();
         match rule {
             Rule::bt => Expr::TRUE,
             Rule::bf => Expr::FALSE,
-            Rule::lit => Expr::ATOM(self.load_lit(model, expr)),
+            Rule::lit => Expr::ATOM(Self::load_lit(model, expr)),
             _ => {
-                let mut content = expr.into_inner().map(|e| self.load_expr(model, e));
+                let mut content = expr.into_inner().map(|e| Self::load_expr(model, e));
                 match rule {
                     Rule::conj => Operator::AND.join(&mut content),
                     Rule::disj => Operator::OR.join(&mut content),
@@ -63,7 +63,7 @@ impl MNETFormat {
         }
     }
 
-    fn load_lit(&self, model: &mut QModel, expr: Pair<Rule>) -> usize {
+    fn load_lit(model: &mut QModel, expr: Pair<Rule>) -> usize {
         let mut expr = expr.into_inner();
         let cid = model.ensure(expr.next().unwrap().as_str());
         if let Some(e) = expr.next() {
@@ -72,10 +72,10 @@ impl MNETFormat {
         cid
     }
 
-    fn parse_formula(&self, model: &mut QModel, formula: &str) -> LomakResult<Expr> {
+    fn parse_formula(model: &mut QModel, formula: &str) -> LomakResult<Expr> {
         let mut ptree = MNETParser::parse(Rule::sxpr, formula)?;
         let expr = ptree.next().unwrap().into_inner().next().unwrap();
-        let expr = self.load_expr(model, expr);
+        let expr = Self::load_expr(model, expr);
         Ok(expr)
     }
 }
@@ -92,7 +92,7 @@ impl io::ParsingFormat for MNETFormat {
                 Rule::rule => {
                     let mut inner = record.into_inner();
                     let target = inner.next().unwrap();
-                    let var = self.load_lit(model, target);
+                    let var = Self::load_lit(model, target);
                     expressions.push((var, inner.next().unwrap()));
                 }
                 Rule::EOI => (),
@@ -102,7 +102,7 @@ impl io::ParsingFormat for MNETFormat {
 
         // Parse all expressions
         for (vid, e) in expressions {
-            let expr = self.load_expr(model, e);
+            let expr = Self::load_expr(model, e);
             model.push_var_rule(vid, Formula::from(expr));
         }
 

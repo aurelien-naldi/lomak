@@ -9,7 +9,7 @@ use crate::func;
 use crate::func::pattern::Pattern;
 use crate::func::state::State;
 use crate::func::*;
-use crate::helper::error::{GenericError, LomakResult, ParseError};
+use crate::helper::error::{GenericError, ParseError};
 use crate::variables::GroupedVariables;
 
 /* ************************************************************************************* */

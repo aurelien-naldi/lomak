@@ -8,7 +8,6 @@ use crate::func::pattern::{Pattern, PatternRelation};
 use crate::func::state::State;
 use crate::func::VariableNamer;
 use crate::func::*;
-use itertools::enumerate;
 use std::ops::Deref;
 
 #[derive(Clone, Default)]
@@ -66,7 +65,6 @@ impl Implicants {
     /// Also handle merged patterns which could arise
     fn add_candidate(&mut self, c: Pattern) {
         let mut subsumed = BitSet::new();
-        let mut is_subsumed = false;
         let mut candidates = Vec::new();
 
         for (i, p) in self.patterns.iter().enumerate() {
