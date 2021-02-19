@@ -28,6 +28,8 @@ pub enum PatternState {
 /// Describe the relation between two patterns and identify merged patterns when they exist
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum PatternRelation {
+    /// The patterns are identical
+    Identical,
     /// The patterns are fully separated (at least two conflicts)
     Disjoint,
     /// The patterns overlap but do not include each other (no conflict)
@@ -199,15 +201,12 @@ impl Pattern {
     /// Evaluate the relation between two patterns
     pub fn relate(&self, p: &Pattern) -> PatternRelation {
         match self.conflicts(p).len() {
-            0 => {
-                if self.contains(p) {
-                    return PatternRelation::Contains;
-                }
-                if p.contains(self) {
-                    return PatternRelation::Contained;
-                }
-                PatternRelation::Overlap
-            }
+            0 => match (self.contains(p), p.contains(self)) {
+                (true, true) => PatternRelation::Contains,
+                (true, false) => PatternRelation::Contains,
+                (false, true) => PatternRelation::Contained,
+                (false, false) => PatternRelation::Overlap,
+            },
             1 => {
                 // Check if the merged pattern contains the original ones
                 let mut merged = self.clone();

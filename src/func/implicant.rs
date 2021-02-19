@@ -8,6 +8,7 @@ use crate::func::pattern::{Pattern, PatternRelation};
 use crate::func::state::State;
 use crate::func::VariableNamer;
 use crate::func::*;
+use itertools::enumerate;
 use std::ops::Deref;
 
 #[derive(Clone, Default)]
@@ -63,10 +64,11 @@ impl Implicants {
     /// If this candidate is included in at least one existing pattern then do nothing.
     /// If it includes one or several existing patterns, then replace them.
     /// Also handle merged patterns which could arise
-    pub fn add_candidate(&mut self, c: Pattern) {
+    fn add_candidate(&mut self, c: Pattern) {
         let mut subsumed = BitSet::new();
         let mut is_subsumed = false;
-        let mut candidates = Implicants::default();
+        let mut candidates = Vec::new();
+
         for (i, p) in self.patterns.iter().enumerate() {
             match p.relate(&c) {
                 PatternRelation::Disjoint => {}
@@ -74,41 +76,45 @@ impl Implicants {
                 PatternRelation::Contains => {
                     return;
                 }
+                PatternRelation::Identical => {
+                    return;
+                }
                 PatternRelation::Contained => {
                     subsumed.insert(i);
                 }
                 PatternRelation::JoinBoth(m) => {
-                    subsumed.insert(i);
-                    is_subsumed = true;
-                    candidates.add_candidate(m);
-                    break;
+                    return self.add_candidate(m);
                 }
                 PatternRelation::JoinFirst(m) => {
                     subsumed.insert(i);
-                    candidates.add_candidate(m);
+                    candidates.push(m);
                 }
                 PatternRelation::JoinSecond(m) => {
-                    is_subsumed = true;
-                    candidates.add_candidate(m);
-                    break;
+                    return self.add_candidate(m);
                 }
                 PatternRelation::JoinOverlap(m) => {
-                    candidates.add_candidate(m);
+                    candidates.push(m);
                 }
             }
         }
 
-        for idx in subsumed.iter() {
-            self.patterns.remove(idx);
-        }
+        // eliminate subsumed patterns
+        let mut idx = 0;
+        self.patterns
+            .retain(|_| (subsumed.contains(idx), idx += 1).0);
 
-        if candidates.patterns.len() > 0 {
-            self.merge_raw(&candidates);
-        }
+        // Add the new pattern
+        self.patterns.push(c);
 
-        if !is_subsumed {
-            self.patterns.push(c);
+        // Add potential new candidates
+        for p in candidates {
+            self.add_candidate(p)
         }
+    }
+
+    /// Check if a new pattern is already covered by this list
+    fn covers(&self, p: &Pattern) -> bool {
+        self.patterns.iter().find(|c| c.contains(p)).is_some()
     }
 
     pub fn merge_raw(&mut self, next: &Implicants) {
@@ -131,6 +137,9 @@ impl Implicants {
                     PatternRelation::Contains => {
                         n_subsumed.insert(j);
                     }
+                    PatternRelation::Identical => {
+                        n_subsumed.insert(j);
+                    }
                     PatternRelation::Contained => {
                         s_subsumed.insert(i);
                         continue 'outer;
@@ -142,38 +151,68 @@ impl Implicants {
                         continue 'outer;
                     }
                     PatternRelation::JoinFirst(m) => {
-                        candidates.add_candidate(m);
                         s_subsumed.insert(i);
+                        if !next.covers(&m) {
+                            candidates.add_candidate(m);
+                        }
                         continue 'outer;
                     }
                     PatternRelation::JoinSecond(m) => {
-                        candidates.add_candidate(m);
                         n_subsumed.insert(j);
+                        if !self.covers(&m) {
+                            candidates.add_candidate(m);
+                        }
                     }
                     PatternRelation::JoinOverlap(m) => {
-                        candidates.add_candidate(m);
+                        if !self.covers(&m) && !next.covers(&m) {
+                            candidates.add_candidate(m);
+                        }
                     }
                 }
             }
         }
 
-        // TODO: initialize directly with the right capacity
-        let mut npaths = Vec::with_capacity(self.len() + next.len());
-        for i in 0..self.len() {
-            if !s_subsumed.contains(i) {
-                // TODO: could we avoid cloning here?
-                npaths.push(self.patterns[i].clone());
+        // TODO: remove the debug bloc after more testing
+        if false && candidates.patterns.len() > 0 {
+            println!("DEBUG MERGE...");
+            for (s, p) in self
+                .patterns
+                .iter()
+                .enumerate()
+                .map(|(i, p)| (s_subsumed.contains(i), p))
+            {
+                let s = if s { "*" } else { " " };
+                println!("[{}] {}", s, p);
             }
-        }
-        for i in 0..next.len() {
-            if !n_subsumed.contains(i) {
-                // TODO: could we avoid cloning here?
-                npaths.push(next.patterns[i].clone());
+            println!("------------");
+            for (s, p) in next
+                .patterns
+                .iter()
+                .enumerate()
+                .map(|(i, p)| (n_subsumed.contains(i), p))
+            {
+                let s = if s { "*" } else { " " };
+                println!("[{}] {}", s, p);
             }
+            println!("------------");
+            println!("CANDIDATES:");
+            print!("{}", candidates);
         }
 
-        //        println!("MERGE kept {} path out of {}+{}", npaths.len(), self.len(), next.len());
-        self.patterns = npaths;
+        // eliminate subsumed patterns
+        let mut idx = 0;
+        self.patterns
+            .retain(|_| (!s_subsumed.contains(idx), idx += 1).0);
+
+        // Add new patterns from the other list
+        for (_, p) in next
+            .patterns
+            .iter()
+            .enumerate()
+            .filter(|(i, _)| !n_subsumed.contains(*i))
+        {
+            self.patterns.push(p.clone());
+        }
 
         // Integrate the new conflict-solving patterns in the result
         if candidates.patterns.len() > 0 {
@@ -333,5 +372,21 @@ mod tests {
 
         assert_eq!(implicants.eval_in_pattern(&a), true);
         assert_eq!(implicants.covers_pattern(&a), true);
+    }
+
+    #[test]
+    fn test_eliminated_candidates() {
+        let v1 = Expr::ATOM(1);
+        let v2 = Expr::ATOM(2);
+        let v3 = Expr::ATOM(3);
+
+        let expr = v1
+            .and(&v2)
+            .and(&v3)
+            .or(&v1.not().and(&v2.not()).and(&v3.not()));
+        let pi = expr.prime_implicants();
+
+        let nexpr = expr.not();
+        let npi = nexpr.prime_implicants();
     }
 }
