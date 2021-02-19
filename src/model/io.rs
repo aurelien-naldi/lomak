@@ -121,7 +121,8 @@ pub fn save_model(model: &QModel, filename: &str, fmt: Option<&str>) -> EmptyLom
 }
 
 pub fn print_formats() {
-    println!("Available formats (< read, > write):");
+    println!("Available formats (< read, > write)");
+    println!("===================================");
     for name in &FORMATS {
         if let Ok(fmt) = get_format(name) {
             let parser = if fmt.as_parser().is_ok() { "<" } else { " " };

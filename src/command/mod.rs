@@ -63,6 +63,11 @@ lazy_static! {
         ;
 }
 
+pub fn help_cmd(context: &mut CommandContext) {
+    let cmd = COMMANDS.get_command("help").unwrap();
+    cmd.run(context, &[]);
+}
+
 /// Split the list of CLI parameters into separate slices for each successive command.
 ///
 /// Scan the list of parameters to search for known commands and will consider that
@@ -111,7 +116,8 @@ impl CommandManager {
     }
 
     pub fn print_commands(&self) {
-        println!("Available commands:");
+        println!("Available commands");
+        println!("==================");
         for srv in self.services.iter() {
             println!("  {:20} {}", srv.0, srv.1.about());
         }

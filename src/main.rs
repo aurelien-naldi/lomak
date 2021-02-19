@@ -4,7 +4,7 @@ extern crate clap;
 use clap::AppSettings;
 
 use command::SelectedArgs;
-use lomak::command::CommandContext;
+use lomak::command::{CommandContext, CommandManager};
 use lomak::*;
 
 fn main() {
@@ -20,6 +20,11 @@ fn main() {
 
     // Apply all commands: loader, modifiers and actions
     let mut context = CommandContext::default();
+    if !args_wrapper.has_next() {
+        command::help_cmd(&mut context);
+        return;
+    }
+
     while args_wrapper.has_next() {
         match args_wrapper.parse_next(&mut context) {
             Ok(_) => (),
