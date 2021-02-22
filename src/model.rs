@@ -16,7 +16,7 @@ use crate::func::expr::*;
 use crate::func::*;
 use crate::helper::error::EmptyLomakResult;
 use crate::helper::version::{Version, Versionned};
-use crate::model::layout::Layout;
+use crate::model::layout::{Layout, NodeLayoutInfo};
 use crate::variables::{check_val, GroupedVariables, ModelVariables, MAXVAL};
 
 pub mod actions;
@@ -179,6 +179,10 @@ impl QModel {
         self.rules.push(cid, value, rule);
     }
 
+    pub fn get_layout(&self) -> Option<&Layout> {
+        self.layout.as_ref()
+    }
+
     /// Assign a Boolean condition for a specific threshold
     pub fn push_var_rule(&mut self, vid: usize, rule: Formula) {
         let var = self.variables.variable(vid);
@@ -247,6 +251,26 @@ impl QModel {
     /// Enforce the activity of a specific variable
     pub fn lock_component(&mut self, cid: usize, value: usize) {
         self.rules.lock_component(cid, value);
+    }
+}
+
+impl QModel {
+    fn layout_mut(&mut self) -> &mut Layout {
+        if self.layout.is_none() {
+            self.layout = Some(Layout::default());
+        }
+        self.layout.as_mut().unwrap()
+    }
+
+    pub fn set_bounding_box(&mut self, uid: usize, bb: NodeLayoutInfo) {
+        self.layout_mut().set_bounding_box(uid, bb);
+    }
+
+    pub fn get_bounding_box(&self, uid: usize) -> Option<&NodeLayoutInfo> {
+        match &self.layout {
+            None => None,
+            Some(l) => l.get_bounding_box(uid),
+        }
     }
 }
 

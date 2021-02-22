@@ -6,6 +6,7 @@ use std::io::Write;
 
 use crate::helper::error::{CanFail, EmptyLomakResult, GenericError, LomakError, ParseError};
 use crate::model::io::Format;
+use crate::model::layout::{Layout, NodeLayoutInfo};
 use regex::Regex;
 use roxmltree::{Children, Document, Node};
 use std::rc::Rc;
@@ -49,9 +50,7 @@ impl io::SavingFormat for SBMLFormat {
         w.write_attribute("xmlns:qual", qual_ns);
         w.write_attribute("qual:required", "true");
 
-        // TODO: detect if a layout is available
-        let has_layout = false;
-        if has_layout {
+        if model.layout.is_some() {
             // Layout information is available but not required
             w.write_attribute("xmlns:layout", layout_ns);
             w.write_attribute("layout:required", "false");
@@ -69,8 +68,35 @@ impl io::SavingFormat for SBMLFormat {
         w.end_element();
 
         // Layout information if available
-        if has_layout {
-            // TODO: add layout information
+        if let Some(lyt) = model.get_layout() {
+            w.start_element("layout:listOfLayouts");
+            w.start_element("layout:layout");
+            w.start_element("layout:dimensions");
+            // TODO: add global dimensions
+            w.end_element();
+            w.start_element("layout:listOfAdditionalGraphicalObjects");
+            for uid in model.components() {
+                if let Some(bb) = model.get_bounding_box(*uid) {
+                    w.start_element("layout:generalGlyph");
+                    w.write_attribute("layout:reference", model.get_name(*uid));
+                    w.start_element("layout:boundingBox");
+
+                    w.start_element("layout:position");
+                    w.write_attribute("layout:x", &bb.x);
+                    w.write_attribute("layout:y", &bb.y);
+                    w.end_element();
+                    w.start_element("layout:dimensions");
+                    w.write_attribute("layout:width", &bb.width);
+                    w.write_attribute("layout:height", &bb.height);
+                    w.end_element();
+
+                    w.end_element();
+                    w.end_element();
+                }
+            }
+            w.end_element();
+            w.end_element();
+            w.end_element();
         }
 
         // List of qualitative species
@@ -295,7 +321,7 @@ impl SBMLParser {
                 if let Some(Some(layout)) = root_model
                     .children()
                     .find(|n| n.has_tag_name((ns, "listOfLayouts")))
-                    .map(|n| n.children().find(|n| n.has_tag_name("layout")))
+                    .map(|n| n.children().find(|n| n.has_tag_name((ns, "layout"))))
                 {
                     SBMLParser::parse_layout(ns, model, &layout);
                 };
@@ -511,12 +537,41 @@ impl SBMLParser {
         }
     }
 
-    fn parse_layout(ns: &str, model: &mut QModel, species: &Node) {
-        // TODO: use layout information
-
-        // listOfLayouts > layout
-        // > dimension
-        // > listOfAdditionalGraphicalObjects > generalGlyph (id, reference)
-        // >> boundingBox > position (x,y) ; dimensions (width,height)
+    fn parse_layout(ns: &str, model: &mut QModel, layout: &Node) {
+        // Do we need the dimension?
+        if let Some(objects) = layout
+            .children()
+            .find(|n| n.has_tag_name((ns, "listOfAdditionalGraphicalObjects")))
+        {
+            for glyph in objects
+                .children()
+                .filter(|n| n.has_tag_name((ns, "generalGlyph")))
+            {
+                let uid = match glyph
+                    .attribute((ns, "reference"))
+                    .map(|r| model.get_handle(r))
+                {
+                    Some(Some(uid)) => uid,
+                    _ => continue,
+                };
+                if let Some(bb) = glyph
+                    .children()
+                    .find(|n| n.has_tag_name((ns, "boundingBox")))
+                {
+                    let mut info = NodeLayoutInfo::default();
+                    if let Some(pos) = bb.children().find(|n| n.has_tag_name((ns, "position"))) {
+                        info.x = Self::collect(pos.attribute((ns, "x"))).unwrap_or(0.0) as usize;
+                        info.y = Self::collect(pos.attribute((ns, "y"))).unwrap_or(0.0) as usize;
+                    }
+                    if let Some(pos) = bb.children().find(|n| n.has_tag_name((ns, "dimensions"))) {
+                        info.width =
+                            Self::collect(pos.attribute((ns, "width"))).unwrap_or(0.0) as u8;
+                        info.height =
+                            Self::collect(pos.attribute((ns, "height"))).unwrap_or(0.0) as u8;
+                    }
+                    model.set_bounding_box(uid, info);
+                }
+            }
+        }
     }
 }

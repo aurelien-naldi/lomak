@@ -14,6 +14,8 @@ static ABOUT: &str = "Display the current model";
 struct Config {
     #[structopt(short, long)]
     booleanized: bool,
+    #[structopt(short, long)]
+    layout: bool,
 }
 
 pub struct CLI;
@@ -45,6 +47,13 @@ impl CLICommand for CLI {
         }
         println!();
 
+        if config.layout {
+            for uid in model.components() {
+                if let Some(bb) = model.get_bounding_box(*uid) {
+                    println!("{}:: {}", model.get_name(*uid), bb);
+                }
+            }
+        }
         Ok(())
     }
 }

@@ -10,12 +10,12 @@ pub trait Versionned {
 
 /// Store and update the current version number.
 /// Use this struct as a field to implement the ```Versionned``` trait.
-#[derive(Default, Clone)]
+#[derive(Default, Debug, Clone)]
 pub struct Version {
     inner: Cell<InnerVersion>,
 }
 
-#[derive(Default, Copy, Clone)]
+#[derive(Default, Debug, Copy, Clone)]
 struct InnerVersion {
     changed: bool,
     version: usize,

@@ -4,7 +4,7 @@ extern crate clap;
 use clap::AppSettings;
 
 use command::SelectedArgs;
-use lomak::command::{CommandContext, CommandManager};
+use lomak::command::CommandContext;
 use lomak::*;
 
 fn main() {
