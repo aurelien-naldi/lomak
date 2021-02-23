@@ -5,7 +5,7 @@ use pest::Parser;
 
 use crate::func::expr::{Expr, NamedExpr, Operator};
 use crate::func::Formula;
-use crate::helper::error::{EmptyLomakResult, LomakResult};
+use crate::helper::error::EmptyLomakResult;
 use crate::model::io::Format;
 use crate::model::QModel;
 use crate::model::{io, GroupedVariables};
@@ -70,13 +70,6 @@ impl MNETFormat {
             return model.ensure_threshold(cid, e.as_str().parse().unwrap());
         }
         cid
-    }
-
-    fn parse_formula(model: &mut QModel, formula: &str) -> LomakResult<Expr> {
-        let mut ptree = MNETParser::parse(Rule::sxpr, formula)?;
-        let expr = ptree.next().unwrap().into_inner().next().unwrap();
-        let expr = Self::load_expr(model, expr);
-        Ok(expr)
     }
 }
 

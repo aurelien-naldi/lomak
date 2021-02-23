@@ -93,8 +93,13 @@ pub struct Children {
     pub data: Rc<Vec<Expr>>,
 }
 
+/// Helper trait to provide replacement expressions for atoms in logical expressions.
+///
+/// This trait is used through [`Expr::replace_variables`] to eliminate a variable from an expression.
 pub trait AtomReplacer {
-    fn ask_buffer(&mut self, var: usize, value: bool) -> Option<Expr>;
+    /// Provide a replacement expression if available.
+    /// Returns None if no change are needed.
+    fn replace(&mut self, var: usize, value: bool) -> Option<Expr>;
 }
 
 impl Expr {
@@ -293,8 +298,8 @@ impl Expr {
         match self {
             Expr::TRUE => None,
             Expr::FALSE => None,
-            Expr::ATOM(u) => replacer.ask_buffer(*u, true),
-            Expr::NATOM(u) => replacer.ask_buffer(*u, false),
+            Expr::ATOM(u) => replacer.replace(*u, true),
+            Expr::NATOM(u) => replacer.replace(*u, false),
             Expr::OPER(o, c) => {
                 let mut has_changed = false;
                 let mut new_children: Vec<Expr> = Vec::new();

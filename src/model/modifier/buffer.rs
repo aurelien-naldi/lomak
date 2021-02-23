@@ -155,7 +155,7 @@ impl<'a> BufferConfig<'a> {
 }
 
 impl<'a> AtomReplacer for BufferConfig<'a> {
-    fn ask_buffer(&mut self, varid: usize, value: bool) -> Option<Expr> {
+    fn replace(&mut self, varid: usize, value: bool) -> Option<Expr> {
         if self.target.is_none() {
             return None;
         }
