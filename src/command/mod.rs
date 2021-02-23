@@ -63,9 +63,9 @@ lazy_static! {
         ;
 }
 
-pub fn help_cmd(context: &mut CommandContext) {
+pub fn help_cmd(context: &mut CommandContext) -> EmptyLomakResult {
     let cmd = COMMANDS.get_command("help").unwrap();
-    cmd.run(context, &[]);
+    cmd.run(context, &[])
 }
 
 /// Split the list of CLI parameters into separate slices for each successive command.

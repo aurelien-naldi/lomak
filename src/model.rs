@@ -17,7 +17,7 @@ use crate::func::*;
 use crate::helper::error::EmptyLomakResult;
 use crate::helper::version::{Version, Versionned};
 use crate::model::layout::{Layout, NodeLayoutInfo};
-use crate::variables::{check_val, GroupedVariables, ModelVariables, MAXVAL};
+use crate::variables::{check_val, GroupedVariables, ModelVariables, Variable, MAXVAL};
 
 pub mod actions;
 pub mod io;
@@ -117,6 +117,10 @@ impl Rules {
 impl GroupedVariables for QModel {
     fn get_handle(&self, name: &str) -> Option<usize> {
         self.variables.get_handle(name)
+    }
+
+    fn get_component_value(&self, vid: usize) -> Option<&Variable> {
+        self.variables.get_component_value(vid)
     }
 
     fn get_name(&self, uid: usize) -> &str {

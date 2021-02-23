@@ -6,7 +6,7 @@ use std::io::Write;
 
 use crate::helper::error::{CanFail, EmptyLomakResult, GenericError, LomakError, ParseError};
 use crate::model::io::Format;
-use crate::model::layout::{Layout, NodeLayoutInfo};
+use crate::model::layout::NodeLayoutInfo;
 use regex::Regex;
 use roxmltree::{Children, Document, Node};
 use std::rc::Rc;
@@ -68,7 +68,7 @@ impl io::SavingFormat for SBMLFormat {
         w.end_element();
 
         // Layout information if available
-        if let Some(lyt) = model.get_layout() {
+        if model.get_layout().is_some() {
             w.start_element("layout:listOfLayouts");
             w.start_element("layout:layout");
             w.start_element("layout:dimensions");

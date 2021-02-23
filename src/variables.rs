@@ -5,7 +5,7 @@ use std::fmt;
 use regex::Regex;
 
 use crate::func::*;
-use crate::helper::error::{GenericError, LomakError, LomakResult};
+use crate::helper::error::GenericError;
 use crate::helper::version::{Version, Versionned};
 use std::slice::Iter;
 
@@ -15,7 +15,7 @@ pub static MAXVAL: usize = 9;
 lazy_static! {
     static ref RE_UID: Regex = Regex::new(r"^[a-zA-Z][a-zA-Z01-9_]*$").unwrap();
     static ref RE_VAR_ID: Regex =
-        Regex::new(r"^(?P<cpt>[a-zA-Z][a-zA-Z01-9_]*)(:(?P<th>[1-9]))?$").unwrap();
+        Regex::new(r"^(?P<cpt>[a-zA-Z_][a-zA-Z01-9_]*)(:(?P<th>[1-9]))?$").unwrap();
     static ref EMPTY_USIZE_VEC: Vec<usize> = vec![];
     static ref EMPTY_NAME: String = String::from("");
     static ref DEFAULT_NAME_PATTERN: String = String::from("cpt");
@@ -61,13 +61,12 @@ pub trait GroupedVariables {
     /// Find a variable by name if it exists.
     fn get_handle(&self, name: &str) -> Option<usize>;
 
+    fn get_component_value(&self, vid: usize) -> Option<&Variable>;
+
     /// Find a variable by name if it exists.
-    fn get_handle_res(&self, name: &str) -> LomakResult<usize> {
+    fn get_handle_res(&self, name: &str) -> Result<usize, GenericError> {
         match self.get_handle(name) {
-            None => Err(LomakError::Generic(GenericError::new(format!(
-                "Unknown variable {}",
-                name
-            )))),
+            None => Err(GenericError::new(format!("Unknown variable {}", name)))?,
             Some(u) => Ok(u),
         }
     }
@@ -212,6 +211,10 @@ impl GroupedVariables for ModelVariables {
             return Some(*h);
         }
         None
+    }
+
+    fn get_component_value(&self, vid: usize) -> Option<&Variable> {
+        self.var_to_cpt_value.get(&vid)
     }
 
     fn get_name(&self, handle: usize) -> &str {

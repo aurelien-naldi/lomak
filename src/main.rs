@@ -21,7 +21,10 @@ fn main() {
     // Apply all commands: loader, modifiers and actions
     let mut context = CommandContext::default();
     if !args_wrapper.has_next() {
-        command::help_cmd(&mut context);
+        match command::help_cmd(&mut context) {
+            Ok(_) => (),
+            Err(e) => eprintln!("{}", e),
+        };
         return;
     }
 
