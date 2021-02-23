@@ -8,16 +8,17 @@
 use std::cell::{Ref, RefCell, RefMut};
 use std::collections::HashMap;
 use std::fmt;
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
 use std::slice::Iter;
 
 use crate::func::expr::*;
 use crate::func::*;
-use crate::helper::error::EmptyLomakResult;
+use crate::helper::error::{CanFail, EmptyLomakResult, GenericError};
 use crate::helper::version::{Version, Versionned};
 use crate::model::layout::{Layout, NodeLayoutInfo};
-use crate::variables::{check_val, GroupedVariables, ModelVariables, Variable, MAXVAL};
+use crate::model::modifier::perturbation::RegulatorLocks;
+use crate::variables::{check_tval, check_val, GroupedVariables, ModelVariables, Variable, MAXVAL};
 
 pub mod actions;
 pub mod io;
@@ -247,6 +248,11 @@ impl QModel {
         }
     }
 
+    pub fn lock_regulator(&mut self, vid: usize, target: usize, value: bool) {
+        // FIXME: implement locking of interactions
+        unimplemented!()
+    }
+
     /// Restrict the activity of a component
     pub fn restrict_component(&mut self, cid: usize, min: usize, max: usize) {
         self.rules.restrict_component(cid, min, max);
@@ -298,15 +304,18 @@ impl SharedModel {
         io::save_model(model.deref(), filename, fmt)
     }
 
-    pub fn lock<'a, I: IntoIterator<Item = (&'a str, bool)>>(&self, pairs: I) {
+    pub fn lock<'a, I: IntoIterator<Item = (&'a str, bool)>>(&self, pairs: I) -> EmptyLomakResult {
         let mut model = self.borrow_mut();
+        let mut locker = RegulatorLocks::new(model.deref_mut());
         for (name, value) in pairs {
-            let uid = model.get_handle(&name);
-            match uid {
-                None => eprintln!("No such variable: {}", name),
-                Some(uid) => model.lock_variable(uid, value),
+            if let Some(idx) = name.find("%") {
+                locker.lock_regulator(&name[..idx], &name[idx + 1..], value)?;
+            } else {
+                locker.lock_component(&name, value)?;
             }
         }
+        locker.apply();
+        Ok(())
     }
 }
 
@@ -322,7 +331,7 @@ impl ComponentRules {
     }
 
     fn lock(&mut self, value: usize) {
-        let value = check_val(value);
+        let value = check_tval(value);
         self.clear();
         if value > 0 {
             self.push(value, Formula::from_bool(true));
@@ -330,17 +339,20 @@ impl ComponentRules {
     }
 
     fn restrict(&mut self, min: usize, max: usize) {
-        let min = check_val(min);
-        let max = check_val(max);
+        let min = check_tval(min);
+        let max = check_tval(max);
         if max <= min {
             self.lock(min);
             return;
         }
 
+        if min > 0 {
+            // Replace all assignments lower or equal to the new min with a basal rule
+            self.assignments.retain(|a| a.target > min);
+            self.insert(min, Formula::from_bool(true));
+        }
         for assign in self.assignments.iter_mut() {
-            if assign.target < min {
-                assign.target = min;
-            } else if assign.target > max {
+            if assign.target > max {
                 assign.target = max;
             }
         }
@@ -364,6 +376,16 @@ impl ComponentRules {
             target: value,
             formula: condition,
         })
+    }
+
+    pub fn insert(&mut self, value: usize, condition: Formula) {
+        self.assignments.insert(
+            0,
+            Assign {
+                target: value,
+                formula: condition,
+            },
+        )
     }
 
     pub fn set_formula(&mut self, f: Formula, v: usize) {

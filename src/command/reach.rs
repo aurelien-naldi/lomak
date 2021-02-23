@@ -35,10 +35,6 @@ impl CLICommand for CLI {
         ABOUT
     }
 
-    fn aliases(&self) -> &[&'static str] {
-        &[]
-    }
-
     fn run(&self, context: &mut CommandContext, args: &[OsString]) -> EmptyLomakResult {
         let config: Config = Config::from_iter(args);
         let smodel = context.get_model()?;

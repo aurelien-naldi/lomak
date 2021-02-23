@@ -358,3 +358,11 @@ pub fn check_val(value: usize) -> usize {
     }
     value
 }
+
+pub fn check_tval(value: usize) -> usize {
+    if value > MAXVAL {
+        eprintln!("Tried to access a large value: {}", value);
+        return MAXVAL;
+    }
+    value
+}

@@ -40,8 +40,7 @@ impl CLICommand for CLI {
         let kos = config.ko.iter().map(|n| (&**n, false));
         let kis = config.ki.iter().map(|n| (&**n, true));
         // apply all perturbations
-        smodel.lock(kos.merge(kis));
-
+        smodel.lock(kos.merge(kis))?;
         Ok(())
     }
 }
