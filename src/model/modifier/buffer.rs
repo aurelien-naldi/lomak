@@ -1,51 +1,78 @@
-use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::Rc;
 
 use crate::func::expr::{AtomReplacer, Expr};
 use crate::func::Formula;
+use crate::helper::error::{CanFail, GenericError};
 use crate::model::{GroupedVariables, QModel};
+use crate::variables::Variable;
+use std::rc::Rc;
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Clone, Copy, Debug)]
 pub enum BufferingStrategy {
-    ALLBUFFERS,
-    SEPARATING,
-    DELAY,
-    CUSTOM,
+    AllBuffers,
+    Separating,
+    Delay,
+    Custom,
 }
 
 /// Describe buffers between a source component and its targets.
+#[derive(Debug)]
 enum BufferRef {
-    SKIP,
-    DELAY(BufferSelection),
-    SEPARATED(HashMap<usize, BufferSelection>),
-    SELECT(HashMap<usize, Rc<Option<usize>>>),
+    /// No buffering
+    Direct,
+
+    /// All targets share the same buffer
+    Delayed(BufferSelection),
+
+    /// Each target has its own buffer
+    Split(HashMap<usize, usize>),
+
+    /// Custom selection of buffering
+    Selected(HashMap<usize, BufferSelection>),
 }
 
+#[derive(Default, Debug)]
 struct BufferSelection {
-    data: Rc<RefCell<Option<usize>>>,
+    data: Option<usize>,
 }
 
+#[derive(Debug)]
 pub struct BufferConfig<'a> {
     strategy: BufferingStrategy,
     map: HashMap<usize, BufferRef>,
     model: &'a mut QModel,
+    target: Option<usize>,
 }
 
 impl BufferSelection {
-    fn new() -> Self {
-        BufferSelection {
-            data: Rc::new(RefCell::new(None)),
+    fn get_buffer(&mut self, model: &mut QModel, src: usize) -> usize {
+        if self.data.is_none() {
+            self.data = Some(create_buffer(model, src));
+        }
+        self.data.unwrap()
+    }
+}
+
+impl BufferRef {
+    fn get_buffer(&mut self, model: &mut QModel, regulator: usize, target: usize) -> Option<usize> {
+        match self {
+            BufferRef::Direct => None,
+            BufferRef::Delayed(bs) => Some(bs.get_buffer(model, regulator)),
+            BufferRef::Split(m) => {
+                if !m.contains_key(&target) {
+                    m.insert(target, create_buffer(model, regulator));
+                }
+                return m.get(&target).map(|b| *b);
+            }
+            BufferRef::Selected(m) => m.get_mut(&target).map(|bs| bs.get_buffer(model, regulator)),
         }
     }
 
-    fn get_buffer(&self, model: &mut QModel, src: usize) -> usize {
-        let cell = self.data.as_ref();
-        if cell.borrow().is_none() {
-            let v = create_buffer(model, src);
-            self.data.as_ref().replace(Some(v));
-        }
-        return cell.borrow().unwrap();
+    fn split() -> Self {
+        Self::Split(HashMap::new())
+    }
+    fn delay() -> Self {
+        Self::Delayed(BufferSelection::default())
     }
 }
 
@@ -55,62 +82,65 @@ impl<'a> BufferConfig<'a> {
             model: model,
             strategy: strategy,
             map: HashMap::new(),
+            target: None,
         }
     }
 
-    pub fn add_single_buffer_by_name(&mut self, source: &str, target: &str) {
-        let usrc = self.model.get_handle(source);
-        if usrc.is_none() {
-            println!("unknown buffering source: {}", source);
-            return;
+    fn get_buffer(&mut self, regulator: &Variable) -> Option<usize> {
+        if let Some(b) = self.get_buffer_component(regulator.component) {
+            Some(self.model.ensure_threshold(b, regulator.value))
+        } else {
+            None
         }
-        let utgt = self.model.get_handle(target);
-        if utgt.is_none() {
-            println!("unknown buffering target: {}", target);
-            return;
-        }
-
-        self.add_single_buffer(usrc.unwrap(), utgt.unwrap());
     }
 
-    pub fn add_single_buffer(&mut self, source: usize, target: usize) {
-        if self.strategy != BufferingStrategy::CUSTOM {
-            panic!("Only custom bufferings allow to add buffers manually")
+    fn get_buffer_component(&mut self, regulator: usize) -> Option<usize> {
+        if self.target.is_none() {
+            return None;
         }
-        unimplemented!()
+        let target = self.target.unwrap();
+        if !self.map.contains_key(&regulator) {
+            let bf = match self.strategy {
+                BufferingStrategy::AllBuffers => BufferRef::split(),
+                BufferingStrategy::Delay => BufferRef::delay(),
+                // FIXME: implement (proper) separating
+                BufferingStrategy::Separating => BufferRef::split(),
+                BufferingStrategy::Custom => BufferRef::Direct,
+            };
+            self.map.insert(regulator, bf);
+        }
+        self.map
+            .get_mut(&regulator)
+            .unwrap()
+            .get_buffer(self.model, regulator, target)
     }
 
-    pub fn add_multiple_buffers(&mut self, source: usize, targets: &[usize]) {
-        if self.strategy != BufferingStrategy::CUSTOM {
-            panic!("Only custom bufferings allow to add buffers manually")
-        }
-        unimplemented!()
+    fn set(&mut self, source: &str, mode: BufferRef) -> CanFail<GenericError> {
+        let uid = self.model.get_handle_res(source)?;
+        self.map.insert(uid, mode);
+        Ok(())
     }
 
-    pub fn add_delay_by_name(&mut self, source: &str) {
-        let usrc = self.model.get_handle(source);
-        if usrc.is_none() {
-            println!("unknown buffering source: {}", source);
-            return;
-        }
-        self.add_delay(usrc.unwrap());
+    pub fn split(&mut self, source: &str) -> CanFail<GenericError> {
+        self.set(source, BufferRef::split())
     }
 
-    pub fn add_delay(&mut self, source: usize) {
-        if self.strategy != BufferingStrategy::CUSTOM {
-            panic!("Only custom bufferings allow to add buffers manually")
-        }
-        unimplemented!()
+    pub fn delay(&mut self, source: &str) -> CanFail<GenericError> {
+        self.set(source, BufferRef::delay())
+    }
+
+    pub fn direct(&mut self, source: &str) -> CanFail<GenericError> {
+        self.set(source, BufferRef::Direct)
     }
 
     pub fn apply(&mut self) {
         let components: Vec<usize> = self.model.components().copied().collect();
         for cid in components {
+            self.set_target(cid);
             let mut rule = self.model.rules.get(cid).unwrap().clone();
             for assign in rule.assignments.iter_mut() {
                 let expr: Rc<Expr> = assign.formula.convert_as();
-                let new_expr = expr.replace_variables(self);
-                if let Some(e) = new_expr {
+                if let Some(e) = expr.replace_variables(self) {
                     assign.formula.set(e);
                 }
             }
@@ -119,37 +149,32 @@ impl<'a> BufferConfig<'a> {
         }
     }
 
-    fn get_buffer_ref(&mut self, src: usize) -> &BufferRef {
-        // ensure that the map has a matching entry
-        if !self.map.contains_key(&src) {
-            self.map.insert(
-                src,
-                match self.strategy {
-                    BufferingStrategy::CUSTOM => BufferRef::SKIP,
-                    BufferingStrategy::DELAY => BufferRef::DELAY(BufferSelection::new()),
-                    BufferingStrategy::ALLBUFFERS => BufferRef::SEPARATED(HashMap::new()),
-                    BufferingStrategy::SEPARATING => BufferRef::SEPARATED(HashMap::new()),
-                },
-            );
-        }
-
-        return self.map.get(&src).unwrap();
+    fn set_target(&mut self, target: usize) {
+        self.target = Some(target);
     }
 }
 
 impl<'a> AtomReplacer for BufferConfig<'a> {
     fn ask_buffer(&mut self, varid: usize, value: bool) -> Option<Expr> {
-        //        let var = self.model.get_variable(varid);
+        if self.target.is_none() {
+            return None;
+        }
 
-        // FIXME: grab the buffer for the source component and replace if needed
+        let var = match self.model.get_component_value(varid) {
+            None => return None,
+            Some(v) => *v,
+        };
 
-        None
+        match self.get_buffer(&var) {
+            None => None,
+            Some(b) => Some(if value { Expr::ATOM(b) } else { Expr::NATOM(b) }),
+        }
     }
 }
 
 fn create_buffer(model: &mut QModel, src: usize) -> usize {
     // Create the buffer and add his mirror function
-    let buf_id = model.add_component("buffer");
+    let buf_id = model.add_component(&format!("_b_{}", model.get_name(src)));
 
     let variables = model.get_variables(src).clone();
     let mut value = 1;
@@ -160,8 +185,4 @@ fn create_buffer(model: &mut QModel, src: usize) -> usize {
     }
 
     buf_id
-}
-
-fn replaced_variable(var: usize) -> usize {
-    var
 }
