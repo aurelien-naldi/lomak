@@ -35,10 +35,12 @@ mod perturbation;
 mod rename;
 
 mod fixpoints;
+mod reach;
+mod trapspaces;
+
 mod primes;
 mod save;
 mod show;
-mod trapspaces;
 
 lazy_static! {
     /// Single-instance CommandManager created and filled at runtime
@@ -60,6 +62,7 @@ lazy_static! {
         .register( Arc::new( primes::CLI{} ))
         .register( Arc::new( fixpoints::CLI{} ))
         .register( Arc::new( trapspaces::CLI{} ))
+        .register( Arc::new( reach::CLI{} ))
         ;
 }
 

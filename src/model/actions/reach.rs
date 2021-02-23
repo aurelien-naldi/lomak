@@ -59,9 +59,9 @@ pub fn most_permissive_reach(model: &QModel, initial: State, target: State) -> b
 
 fn pick_rule(expr: &Expr, pos: bool) -> Implicants {
     if pos {
-        expr.prime_implicants()
-    } else {
         expr.not().prime_implicants()
+    } else {
+        expr.prime_implicants()
     }
 }
 
