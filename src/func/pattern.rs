@@ -6,6 +6,7 @@ use bit_set::BitSet;
 use crate::func::expr::Expr;
 use crate::func::state::State;
 use crate::func::VariableNamer;
+use std::slice::Iter;
 
 /// Patterns are subspaces in which a subset of variables are fixed (true or false).
 /// They are represented as a pair of bitsets to store positive and negative variables.
@@ -81,18 +82,13 @@ impl Pattern {
 
     /// Create a pattern restricted to a single state
     /// To properly set all variables fixed at 0, this requires
-    /// an extra parameter giving the total number of variables.
-    pub fn from_state(state: &State, len: usize) -> Pattern {
-        let mut neg = BitSet::with_capacity(len);
-        for idx in 0..len {
-            if !state.contains(idx) {
-                neg.insert(idx);
-            }
+    /// an extra parameter giving the list of variables.
+    pub fn from_state(state: &State, variables: Iter<usize>) -> Pattern {
+        let mut p = Pattern::new();
+        for idx in variables {
+            p.set(*idx, state.contains(*idx));
         }
-        Pattern {
-            positive: state.clone(),
-            negative: neg,
-        }
+        p
     }
 
     /// Test if a given variable is fixed to a specific value
