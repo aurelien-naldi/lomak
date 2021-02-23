@@ -4,10 +4,11 @@ use structopt::StructOpt;
 
 use crate::command::{CLICommand, CommandContext};
 use crate::helper::error::EmptyLomakResult;
-use itertools::Itertools;
+use crate::model::modifier::perturbation::Perturbator;
+use std::ops::DerefMut;
 
 static NAME: &str = "perturbation";
-static ABOUT: &str = "Apply a perturbation to one or several components";
+static ABOUT: &str = "Apply a perturbation to one or several components or interactions (source@target)";
 
 #[derive(Debug, StructOpt)]
 #[structopt(name=NAME, about=ABOUT)]
@@ -34,13 +35,22 @@ impl CLICommand for CLI {
     fn run(&self, context: &mut CommandContext, args: &[OsString]) -> EmptyLomakResult {
         // Start by parsing arguments to handle help without any context
         let config: Config = Config::from_iter(args);
-        let smodel = context.get_model()?;
 
-        // assemble all parameters into a single pairing iterator
-        let kos = config.ko.iter().map(|n| (&**n, false));
-        let kis = config.ki.iter().map(|n| (&**n, true));
-        // apply all perturbations
-        smodel.lock(kos.merge(kis))?;
+        // Prepare the perturbator
+        let smodel = context.get_model()?;
+        let mut model = smodel.borrow_mut();
+        let mut perturbator = Perturbator::new(model.deref_mut());
+
+        // Prepare the list of all perturbations
+        for s in &config.ko {
+            perturbator.guess_lock(s, false)?;
+        }
+        for s in &config.ki {
+            perturbator.guess_lock(s, true)?;
+        }
+
+        // Apply all perturbations
+        perturbator.apply();
         Ok(())
     }
 }

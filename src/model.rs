@@ -8,17 +8,16 @@
 use std::cell::{Ref, RefCell, RefMut};
 use std::collections::HashMap;
 use std::fmt;
-use std::ops::{Deref, DerefMut};
+use std::ops::Deref;
 use std::rc::Rc;
 use std::slice::Iter;
 
 use crate::func::expr::*;
 use crate::func::*;
-use crate::helper::error::{CanFail, EmptyLomakResult, GenericError};
+use crate::helper::error::EmptyLomakResult;
 use crate::helper::version::{Version, Versionned};
 use crate::model::layout::{Layout, NodeLayoutInfo};
-use crate::model::modifier::perturbation::RegulatorLocks;
-use crate::variables::{check_tval, check_val, GroupedVariables, ModelVariables, Variable, MAXVAL};
+use crate::variables::{check_tval, GroupedVariables, ModelVariables, Variable, MAXVAL};
 
 pub mod actions;
 pub mod io;
@@ -302,20 +301,6 @@ impl SharedModel {
     pub fn save(&self, filename: &str, fmt: Option<&str>) -> EmptyLomakResult {
         let model = self.borrow();
         io::save_model(model.deref(), filename, fmt)
-    }
-
-    pub fn lock<'a, I: IntoIterator<Item = (&'a str, bool)>>(&self, pairs: I) -> EmptyLomakResult {
-        let mut model = self.borrow_mut();
-        let mut locker = RegulatorLocks::new(model.deref_mut());
-        for (name, value) in pairs {
-            if let Some(idx) = name.find("%") {
-                locker.lock_regulator(&name[..idx], &name[idx + 1..], value)?;
-            } else {
-                locker.lock_component(&name, value)?;
-            }
-        }
-        locker.apply();
-        Ok(())
     }
 }
 

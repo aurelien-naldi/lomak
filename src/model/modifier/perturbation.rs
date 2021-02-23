@@ -1,22 +1,30 @@
 use crate::helper::error::{CanFail, GenericError};
 use crate::model::QModel;
 use crate::variables::GroupedVariables;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
-pub struct RegulatorLocks<'a> {
+pub struct Perturbator<'a> {
     model: &'a mut QModel,
     regulators: HashMap<(usize, usize), bool>,
     components: HashMap<usize, bool>,
     target: Option<usize>,
 }
 
-impl<'a> RegulatorLocks<'a> {
+impl<'a> Perturbator<'a> {
     pub fn new(model: &'a mut QModel) -> Self {
-        RegulatorLocks {
+        Perturbator {
             model,
             regulators: Default::default(),
             components: Default::default(),
             target: None,
+        }
+    }
+
+    pub fn guess_lock(&mut self, s: &str, value: bool) -> CanFail<GenericError> {
+        if let Some(idx) = s.find("@") {
+            self.lock_regulator(&s[..idx], &s[idx + 1..], value)
+        } else {
+            self.lock_component(&s, value)
         }
     }
 
@@ -37,13 +45,16 @@ impl<'a> RegulatorLocks<'a> {
     }
 
     pub fn apply(&mut self) {
+        // Classical perturbations
         for (uid, value) in &self.components {
             self.model.lock_variable(*uid, *value);
         }
 
-        for ((src, tgt), value) in &self.regulators {
-            // TODO: lock regulators
-            unimplemented!()
+        // Perturbed interactions
+        // Collect the modified targets and update their rules
+        for t in self.regulators.iter().map(|((_,t),_)| *t).collect::<HashSet<usize>>() {
+            self.target = Some(t);
+            unimplemented!("TODO: Use the replacer API to rewrite the rules for {}", t);
         }
     }
 }
