@@ -19,6 +19,7 @@
 //! * **perturbation** ```--ko Cmp3```
 //! * **fixpoints**
 
+use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::env;
 use std::ffi::OsString;
@@ -31,11 +32,11 @@ use crate::model::SharedModel;
 macro_rules! cmdmods {
     ( $( $x:ident ),* ) => {
         $( mod $x; )*
-        lazy_static! {
-            /// Single-instance CommandManager created and filled at runtime
-            static ref COMMANDS: CommandManager = CommandManager::new()
-            $(  .register( Arc::new( $x::CLI{}))  )*;
-        }
+        /// Single-instance CommandManager created and filled at runtime
+        static COMMANDS: Lazy<CommandManager> = Lazy::new(|| {
+            CommandManager::new()
+            $(  .register( Arc::new( $x::CLI{}))  )*
+        });
     };
 }
 
@@ -53,7 +54,6 @@ cmdmods!(
     save,
     show
 );
-
 
 pub fn help_cmd(context: &mut CommandContext) -> EmptyLomakResult {
     let cmd = COMMANDS.get_command("help").unwrap();

@@ -7,6 +7,7 @@ use std::io::Write;
 use crate::helper::error::{CanFail, EmptyLomakResult, GenericError, LomakError, ParseError};
 use crate::model::io::Format;
 use crate::model::layout::NodeLayoutInfo;
+use once_cell::sync::Lazy;
 use regex::Regex;
 use roxmltree::{Children, Document, Node};
 use std::rc::Rc;
@@ -16,12 +17,11 @@ use xmlwriter::XmlWriter;
 
 const BASE_NS: &'static str = r"http://www.sbml.org/sbml/level3/version(\d)";
 
-lazy_static! {
-    static ref SBML_NS: Regex = Regex::new(&(format!(r"{}/core", BASE_NS))).unwrap();
-    static ref QUAL_NS: Regex = Regex::new(&(format!(r"{}/qual/version(\d)", BASE_NS))).unwrap();
-    static ref LAYOUT_NS: Regex =
-        Regex::new(&(format!(r"{}/layout/version(\d)", BASE_NS))).unwrap();
-}
+static SBML_NS: Lazy<Regex> = Lazy::new(|| Regex::new(&(format!(r"{}/core", BASE_NS))).unwrap());
+static QUAL_NS: Lazy<Regex> =
+    Lazy::new(|| Regex::new(&(format!(r"{}/qual/version(\d)", BASE_NS))).unwrap());
+static LAYOUT_NS: Lazy<Regex> =
+    Lazy::new(|| Regex::new(&(format!(r"{}/layout/version(\d)", BASE_NS))).unwrap());
 
 #[derive(Default)]
 pub struct SBMLFormat;

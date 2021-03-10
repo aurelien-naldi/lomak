@@ -6,10 +6,9 @@ use regex::Regex;
 
 use crate::func::pattern::Pattern;
 use crate::helper::solver::{Solver, SolverMode, SolverResults, SolverSolution};
+use once_cell::sync::Lazy;
 
-lazy_static! {
-    static ref RE_VAR: Regex = Regex::new(r"v[0-9]+").unwrap();
-}
+static RE_VAR: Lazy<Regex> = Lazy::new(|| Regex::new(r"v[0-9]+").unwrap());
 
 pub struct ClingoProblem {
     ctl: Control,

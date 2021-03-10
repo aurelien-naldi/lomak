@@ -52,7 +52,12 @@ impl<'a> Perturbator<'a> {
 
         // Perturbed interactions
         // Collect the modified targets and update their rules
-        for t in self.regulators.iter().map(|((_,t),_)| *t).collect::<HashSet<usize>>() {
+        for t in self
+            .regulators
+            .iter()
+            .map(|((_, t), _)| *t)
+            .collect::<HashSet<usize>>()
+        {
             self.target = Some(t);
             unimplemented!("TODO: Use the replacer API to rewrite the rules for {}", t);
         }

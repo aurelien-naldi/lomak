@@ -7,19 +7,18 @@ use regex::Regex;
 use crate::func::*;
 use crate::helper::error::GenericError;
 use crate::helper::version::{Version, Versionned};
+use once_cell::sync::Lazy;
 use std::slice::Iter;
 
 /// Maximal number of variables associated to each component
 pub static MAXVAL: usize = 9;
 
-lazy_static! {
-    static ref RE_UID: Regex = Regex::new(r"^[a-zA-Z][a-zA-Z01-9_]*$").unwrap();
-    static ref RE_VAR_ID: Regex =
-        Regex::new(r"^(?P<cpt>[a-zA-Z_][a-zA-Z01-9_]*)(:(?P<th>[1-9]))?$").unwrap();
-    static ref EMPTY_USIZE_VEC: Vec<usize> = vec![];
-    static ref EMPTY_NAME: String = String::from("");
-    static ref DEFAULT_NAME_PATTERN: String = String::from("cpt");
-}
+static RE_UID: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[a-zA-Z][a-zA-Z01-9_]*$").unwrap());
+static RE_VAR_ID: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^(?P<cpt>[a-zA-Z_][a-zA-Z01-9_]*)(:(?P<th>[1-9]))?$").unwrap());
+static EMPTY_USIZE_VEC: Vec<usize> = vec![];
+static EMPTY_NAME: Lazy<String> = Lazy::new(|| String::from(""));
+static DEFAULT_NAME_PATTERN: Lazy<String> = Lazy::new(|| String::from("cpt"));
 
 /// Maintain a list of components and associated variables.
 ///
