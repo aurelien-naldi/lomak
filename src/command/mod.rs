@@ -27,44 +27,33 @@ use std::sync::Arc;
 use crate::helper::error::{EmptyLomakResult, LomakError, LomakResult};
 use crate::model::SharedModel;
 
-mod help;
-mod load;
-
-mod buffer;
-mod perturbation;
-mod rename;
-
-mod fixpoints;
-mod reach;
-mod trapspaces;
-
-mod primes;
-mod save;
-mod show;
-
-lazy_static! {
-    /// Single-instance CommandManager created and filled at runtime
-    static ref COMMANDS: CommandManager = CommandManager::new()
-        // Help: show commands
-        .register( Arc::new( help::CLI{} ))
-
-        // Load a new model
-        .register( Arc::new( load::CLI{} ))
-
-        // Model modifiers
-        .register( Arc::new( perturbation::CLI{} ))
-        .register( Arc::new( rename::CLI{} ))
-        .register( Arc::new( buffer::CLI{} ))
-
-        // Actions
-        .register( Arc::new( show::CLI{} ))
-        .register( Arc::new( save::CLI{} ))
-        .register( Arc::new( primes::CLI{} ))
-        .register( Arc::new( fixpoints::CLI{} ))
-        .register( Arc::new( trapspaces::CLI{} ))
-        .register( Arc::new( reach::CLI{} ))
-        ;
+// Use a macro to load all command modules and add them to the list of available commands
+macro_rules! cmdmods {
+    ( $( $x:ident ),* ) => {
+        $( mod $x; )*
+        lazy_static! {
+            /// Single-instance CommandManager created and filled at runtime
+            static ref COMMANDS: CommandManager = CommandManager::new()
+            $(  .register( Arc::new( $x::CLI{}))  )*;
+        }
+    };
 }
+
+// Define all available commands
+cmdmods!(
+    help,
+    load,
+    buffer,
+    perturbation,
+    rename,
+    fixpoints,
+    reach,
+    trapspaces,
+    primes,
+    save,
+    show
+);
+
 
 pub fn help_cmd(context: &mut CommandContext) -> EmptyLomakResult {
     let cmd = COMMANDS.get_command("help").unwrap();
