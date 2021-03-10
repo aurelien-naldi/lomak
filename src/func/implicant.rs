@@ -10,6 +10,8 @@ use crate::func::VariableNamer;
 use crate::func::*;
 use std::ops::Deref;
 
+const DEBUG: bool = false;
+
 #[derive(Clone, Default)]
 pub struct Implicants {
     patterns: Vec<Pattern>,
@@ -98,8 +100,10 @@ impl Implicants {
 
         // eliminate subsumed patterns
         let mut idx = 0;
-        self.patterns
-            .retain(|_| (subsumed.contains(idx), idx += 1).0);
+        self.patterns.retain(|_| {
+            idx += 1;
+            !subsumed.contains(idx - 1)
+        });
 
         // Add the new pattern
         self.patterns.push(c);
@@ -112,7 +116,7 @@ impl Implicants {
 
     /// Check if a new pattern is already covered by this list
     fn covers(&self, p: &Pattern) -> bool {
-        self.patterns.iter().find(|c| c.contains(p)).is_some()
+        self.patterns.iter().any(|c| c.contains(p))
     }
 
     pub fn merge_raw(&mut self, next: &Implicants) {
@@ -171,7 +175,7 @@ impl Implicants {
         }
 
         // TODO: remove the debug bloc after more testing
-        if false && candidates.patterns.len() > 0 {
+        if DEBUG && !candidates.patterns.is_empty() {
             println!("DEBUG MERGE...");
             for (s, p) in self
                 .patterns
@@ -199,8 +203,10 @@ impl Implicants {
 
         // eliminate subsumed patterns
         let mut idx = 0;
-        self.patterns
-            .retain(|_| (!s_subsumed.contains(idx), idx += 1).0);
+        self.patterns.retain(|_| {
+            idx += 1;
+            !s_subsumed.contains(idx - 1)
+        });
 
         // Add new patterns from the other list
         for (_, p) in next
@@ -213,7 +219,7 @@ impl Implicants {
         }
 
         // Integrate the new conflict-solving patterns in the result
-        if candidates.patterns.len() > 0 {
+        if !candidates.patterns.is_empty() {
             self.merge_raw(&candidates);
         }
     }
@@ -345,10 +351,7 @@ impl FromBoolRepr for Implicants {
     }
 
     fn is_converted(repr: &Repr) -> bool {
-        match repr {
-            Repr::PRIMES(_) => true,
-            _ => false,
-        }
+        matches!(repr, Repr::PRIMES(_))
     }
 
     fn rc_to_repr(rc: Rc<Self>) -> Repr {
@@ -359,14 +362,15 @@ impl FromBoolRepr for Implicants {
 #[cfg(test)]
 mod tests {
     use crate::func::implicant::*;
+    use std::str::FromStr;
 
     #[test]
     fn test_implicants() {
-        let mut a = Pattern::from_str("--0-1--00-");
-        let mut b = Pattern::from_str("0-0-11-00-");
-        let mut c = Pattern::from_str("0-1-11-00-");
+        let a = Pattern::from_str("--0-1--00-").unwrap();
+        let b = Pattern::from_str("0-0-11-00-").unwrap();
+        let c = Pattern::from_str("0-1-11-00-").unwrap();
 
-        let mut implicants = Implicants::new();
+        let implicants = Implicants::new();
 
         assert_eq!(implicants.eval_in_pattern(&a), true);
         assert_eq!(implicants.covers_pattern(&a), true);

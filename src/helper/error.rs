@@ -1,8 +1,6 @@
 //! Simple error types and helpers for consistent error handling.
 //!
 //! It uses the thiserror crate to reduce boilerplate.
-use clingo;
-use roxmltree;
 use std::error::Error;
 use std::fmt;
 use std::io;
@@ -62,7 +60,7 @@ pub struct ParseTxtError {
 
 impl GenericError {
     pub fn new(s: String) -> Self {
-        GenericError { s: s }
+        GenericError { s }
     }
 }
 

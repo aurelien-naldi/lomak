@@ -34,7 +34,7 @@ macro_rules! cmdmods {
         $( mod $x; )*
         /// Single-instance CommandManager created and filled at runtime
         static COMMANDS: Lazy<CommandManager> = Lazy::new(|| {
-            CommandManager::new()
+            CommandManager::default()
             $(  .register( Arc::new( $x::CLI{}))  )*
         });
     };
@@ -70,20 +70,13 @@ pub struct SelectedArgs {
 }
 
 /// Register and retrieve commands
+#[derive(Default)]
 pub struct CommandManager {
     services: HashMap<&'static str, Arc<dyn CLICommand>>,
     aliases: HashMap<&'static str, &'static str>,
 }
 
 impl CommandManager {
-    /// Init function to load all available actions
-    pub fn new() -> CommandManager {
-        CommandManager {
-            services: HashMap::new(),
-            aliases: HashMap::new(),
-        }
-    }
-
     pub fn register(mut self, action: Arc<dyn CLICommand>) -> Self {
         let name = action.name();
         for alias in action.aliases().iter() {
@@ -154,9 +147,9 @@ pub trait CLICommand: Sync + Send {
 
 impl SelectedArgs {
     pub fn new() -> Self {
-        let argsos = env::args_os();
+        let argsos = env::args_os().collect();
         SelectedArgs {
-            all_args: argsos.collect(),
+            all_args: argsos,
             next_slice: 0,
         }
     }
@@ -200,5 +193,11 @@ impl SelectedArgs {
 
         self.next_slice = end;
         &self.all_args[start..end]
+    }
+}
+
+impl Default for SelectedArgs {
+    fn default() -> Self {
+        Self::new()
     }
 }

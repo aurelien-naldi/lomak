@@ -65,7 +65,7 @@ pub trait GroupedVariables {
     /// Find a variable by name if it exists.
     fn get_handle_res(&self, name: &str) -> Result<usize, GenericError> {
         match self.get_handle(name) {
-            None => Err(GenericError::new(format!("Unknown variable {}", name)))?,
+            None => Err(GenericError::new(format!("Unknown variable {}", name))),
             Some(u) => Ok(u),
         }
     }
@@ -135,9 +135,7 @@ pub trait GroupedVariables {
     }
 
     fn find_free_name(&self, pattern: &str) -> Option<String> {
-        if self.get_handle(pattern).is_none() {
-            return None;
-        };
+        self.get_handle(pattern)?;
         let mut inc = 1;
         loop {
             let name = format!("{}_{}", pattern, inc);

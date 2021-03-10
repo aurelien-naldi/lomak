@@ -6,7 +6,9 @@ use bit_set::BitSet;
 use crate::func::expr::Expr;
 use crate::func::state::State;
 use crate::func::VariableNamer;
+use crate::helper::error::ParseError;
 use std::slice::Iter;
+use std::str::FromStr;
 
 /// Patterns are subspaces in which a subset of variables are fixed (true or false).
 /// They are represented as a pair of bitsets to store positive and negative variables.
@@ -64,19 +66,6 @@ impl Pattern {
     pub fn with(uid: usize, value: bool) -> Pattern {
         let mut l = Pattern::new();
         l.set(uid, value);
-        l
-    }
-
-    /// Create a new pattern and fix variables according to a string
-    pub fn from_str(descr: &str) -> Pattern {
-        let mut l = Pattern::new();
-        for (idx, c) in descr.chars().enumerate() {
-            match c {
-                '0' => l.set(idx, false),
-                '1' => l.set(idx, true),
-                _ => (),
-            }
-        }
         l
     }
 
@@ -165,6 +154,11 @@ impl Pattern {
         self.positive.len() + self.negative.len()
     }
 
+    /// Check if any constraint is set on this pattern
+    pub fn is_empty(&self) -> bool {
+        self.positive.is_empty() && self.negative.is_empty()
+    }
+
     /// Test if this pattern lacks any restriction.
     /// Equivalent (but faster) than testing is self.len() == 0,
     pub fn is_unrestricted(&self) -> bool {
@@ -216,6 +210,22 @@ impl Pattern {
             }
             _ => PatternRelation::Disjoint,
         }
+    }
+}
+
+impl FromStr for Pattern {
+    type Err = ParseError;
+
+    fn from_str(descr: &str) -> Result<Pattern, ParseError> {
+        let mut l = Pattern::new();
+        for (idx, c) in descr.chars().enumerate() {
+            match c {
+                '0' => l.set(idx, false),
+                '1' => l.set(idx, true),
+                _ => (), // TODO: return error
+            }
+        }
+        Ok(l)
     }
 }
 
@@ -351,17 +361,13 @@ impl fmt::Display for Pattern {
         let mut result = vec![];
         for v in &self.positive {
             if result.len() <= v {
-                for _ in result.len()..=v {
-                    result.push('-');
-                }
+                result.resize(v + 1, '-');
             }
             result[v] = '1';
         }
         for v in &self.negative {
             if result.len() <= v {
-                for _ in result.len()..=v {
-                    result.push('-');
-                }
+                result.resize(v + 1, '-');
             }
             result[v] = '0';
         }
@@ -371,7 +377,7 @@ impl fmt::Display for Pattern {
 }
 
 impl Pattern {
-    pub fn filter_fmt(&self, f: &mut fmt::Formatter, uids: &Vec<usize>) -> fmt::Result {
+    pub fn filter_fmt(&self, f: &mut fmt::Formatter, uids: &[usize]) -> fmt::Result {
         for u in uids.iter() {
             if self.positive.contains(*u) {
                 if self.negative.contains(*u) {
@@ -393,16 +399,17 @@ impl Pattern {
 mod tests {
     use crate::func::pattern::Pattern;
     use crate::func::pattern::PatternRelation::{Disjoint, JoinBoth, JoinFirst};
+    use std::str::FromStr;
 
     #[test]
     fn test_patterns() {
-        let p = Pattern::from_str("1-0-1--10-");
-        let a = Pattern::from_str("--0-1--00-");
-        let mpa = Pattern::from_str("1-0-1---0-");
+        let p = Pattern::from_str("1-0-1--10-").unwrap();
+        let a = Pattern::from_str("--0-1--00-").unwrap();
+        let mpa = Pattern::from_str("1-0-1---0-").unwrap();
 
-        let b = Pattern::from_str("0-0-11-00-");
-        let c = Pattern::from_str("0-1-11-00-");
-        let mbc = Pattern::from_str("0---11-00-");
+        let b = Pattern::from_str("0-0-11-00-").unwrap();
+        let c = Pattern::from_str("0-1-11-00-").unwrap();
+        let mbc = Pattern::from_str("0---11-00-").unwrap();
 
         assert_eq!(a.len(), 4);
         assert_eq!(a.positive().len(), 1);

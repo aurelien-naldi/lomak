@@ -74,16 +74,14 @@ impl Comparator {
             Comparator::LT => (None, Some(val)),
         };
 
-        let emin = min.map(|v| grp.get_variable(var, v).map(|u| Expr::ATOM(u)));
-        let emax = max.map(|v| grp.get_variable(var, v).map(|u| Expr::NATOM(u)));
+        let emin = min.map(|v| grp.get_variable(var, v).map(Expr::ATOM));
+        let emax = max.map(|v| grp.get_variable(var, v).map(Expr::NATOM));
 
         match (emin, emax) {
             (Some(Some(mn)), Some(Some(mx))) => Ok(mn.and(&mx)),
             (Some(Some(e)), _) => Ok(e),
             (_, Some(Some(e))) => Ok(e),
-            _ => Err(GenericError::new(
-                "Could not construct a constraint!".to_owned(),
-            ))?,
+            _ => Err(GenericError::new("Could not construct a constraint!".to_owned()).into()),
         }
     }
 }
@@ -156,10 +154,7 @@ impl FromBoolRepr for Expr {
     }
 
     fn is_converted(repr: &Repr) -> bool {
-        match repr {
-            Repr::EXPR(_) => true,
-            _ => false,
-        }
+        matches!(repr, Repr::EXPR(_))
     }
 
     fn rc_to_repr(rc: Rc<Self>) -> Repr {
@@ -315,7 +310,7 @@ impl Expr {
 
                 if has_changed {
                     return Some(Expr::OPER(
-                        o.clone(),
+                        *o,
                         Children {
                             data: Rc::new(new_children),
                         },

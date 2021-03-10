@@ -21,7 +21,7 @@ impl<'a> Perturbator<'a> {
     }
 
     pub fn guess_lock(&mut self, s: &str, value: bool) -> CanFail<GenericError> {
-        if let Some(idx) = s.find("@") {
+        if let Some(idx) = s.find('@') {
             self.lock_regulator(&s[..idx], &s[idx + 1..], value)
         } else {
             self.lock_component(&s, value)

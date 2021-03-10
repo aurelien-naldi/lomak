@@ -12,10 +12,9 @@ use regex::Regex;
 use roxmltree::{Children, Document, Node};
 use std::rc::Rc;
 use std::str::FromStr;
-use xmlwriter;
 use xmlwriter::XmlWriter;
 
-const BASE_NS: &'static str = r"http://www.sbml.org/sbml/level3/version(\d)";
+const BASE_NS: &str = r"http://www.sbml.org/sbml/level3/version(\d)";
 
 static SBML_NS: Lazy<Regex> = Lazy::new(|| Regex::new(&(format!(r"{}/core", BASE_NS))).unwrap());
 static QUAL_NS: Lazy<Regex> =
@@ -275,7 +274,7 @@ impl SBMLParser {
             .map(|ns| ns.uri())
         {
             None => {
-                let e = GenericError::new(format!("Not a qualitative SBML model"));
+                let e = GenericError::new("Not a qualitative SBML model".to_string());
                 return Err(LomakError::from(e));
             }
             Some(n) => n,
@@ -283,7 +282,7 @@ impl SBMLParser {
 
         let root_model = match root.children().find(|n| n.has_tag_name("model")) {
             None => {
-                let e = GenericError::new(format!("This SBML file contains no model"));
+                let e = GenericError::new("This SBML file contains no model".to_string());
                 return Err(LomakError::from(e));
             }
             Some(model) => model,
@@ -353,7 +352,7 @@ impl SBMLParser {
                 .parse()
                 .unwrap_or(false)
             {
-                let variables: Vec<usize> = model.get_variables(uid).iter().map(|c| *c).collect();
+                let variables: Vec<usize> = model.get_variables(uid).iter().copied().collect();
                 for curid in variables {
                     model.push_var_rule(curid, Formula::from(Expr::ATOM(curid)));
                 }
@@ -426,9 +425,11 @@ impl SBMLParser {
                     .map(|t| model.get_handle(t))
                 {
                     Some(Some(t)) => t,
-                    _ => Err(GenericError::new(
-                        "Could not identify the output".to_owned(),
-                    ))?,
+                    _ => {
+                        return Err(
+                            GenericError::new("Could not identify the output".to_owned()).into(),
+                        )
+                    }
                 };
 
                 for (v, e) in rules.iter() {
@@ -441,8 +442,8 @@ impl SBMLParser {
 
     fn parse_math(model: &QModel, math: &Node) -> Result<Expr, ParseError> {
         let children: Vec<Node> = math.children().filter(|n| n.is_element()).collect();
-        if children.len() < 1 {
-            Err(GenericError::new("Missing content in mathml?".to_owned()))?;
+        if children.is_empty() {
+            return Err(GenericError::new("Missing content in mathml?".to_owned()).into());
         }
 
         let name = children.get(0).unwrap().tag_name().name();
@@ -459,12 +460,15 @@ impl SBMLParser {
             "not" => SBMLParser::parse_not(model, params),
             "true" => Ok(Expr::TRUE),
             "false" => Ok(Expr::FALSE),
-            _ => Err(GenericError::new(format!(
-                "Unsupported mathml tag: {} ({:?})",
-                name,
-                math.document()
-                    .text_pos_at(children.get(0).unwrap().range().start)
-            )))?,
+            _ => {
+                return Err(GenericError::new(format!(
+                    "Unsupported mathml tag: {} ({:?})",
+                    name,
+                    math.document()
+                        .text_pos_at(children.get(0).unwrap().range().start)
+                ))
+                .into())
+            }
         }
     }
 
@@ -480,27 +484,32 @@ impl SBMLParser {
             match n.tag_name().name() {
                 "ci" => variable = n.text(),
                 "cn" => value = n.text(),
-                _ => Err(GenericError::new(format!(
-                    "Unsupported element in comparison: {}",
-                    n.tag_name().name()
-                )))?,
+                _ => {
+                    return Err(GenericError::new(format!(
+                        "Unsupported element in comparison: {}",
+                        n.tag_name().name()
+                    ))
+                    .into())
+                }
             }
         }
 
         let var = match variable.map(|v| model.get_handle(v.trim())) {
-            Some(Some(u)) => Ok(u),
-            _ => Err(GenericError::new(format!(
-                "Missing or unknown variable in {:?}",
-                cmp
-            ))),
-        }?;
+            Some(Some(u)) => u,
+            _ => {
+                return Err(
+                    GenericError::new(format!("Missing or unknown variable in {:?}", cmp)).into(),
+                )
+            }
+        };
 
         let val = match value.map(|s| s.trim().parse::<usize>()) {
             Some(r) => r?,
-            None => Err(GenericError::new(format!(
-                "Missing associated value in {:?}",
-                cmp
-            )))?,
+            None => {
+                return Err(
+                    GenericError::new(format!("Missing associated value in {:?}", cmp)).into(),
+                )
+            }
         };
 
         cmp.get_expr(model, var, val)
@@ -508,10 +517,11 @@ impl SBMLParser {
 
     fn parse_not(model: &QModel, params: &[Node]) -> Result<Expr, ParseError> {
         if params.len() != 1 {
-            Err(GenericError::new(format!(
+            return Err(GenericError::new(format!(
                 "Not operand should have a single child, found {}",
                 params.len()
-            )))?;
+            ))
+            .into());
         }
 
         let child = SBMLParser::parse_math(model, &params[0])?;

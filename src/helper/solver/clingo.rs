@@ -2,13 +2,9 @@ use std::num::ParseIntError;
 
 use clingo::*;
 use itertools::Itertools;
-use regex::Regex;
 
 use crate::func::pattern::Pattern;
 use crate::helper::solver::{Solver, SolverMode, SolverResults, SolverSolution};
-use once_cell::sync::Lazy;
-
-static RE_VAR: Lazy<Regex> = Lazy::new(|| Regex::new(r"v[0-9]+").unwrap());
 
 pub struct ClingoProblem {
     ctl: Control,
@@ -181,10 +177,5 @@ fn model_as_half_pattern(model: &Model) -> Pattern {
 
 fn atom_to_uid(atom: Symbol) -> Result<usize, ParseIntError> {
     let name = atom.to_string().unwrap();
-    if name.starts_with('v') {
-        let s = &name[1..].to_string();
-        return s.parse::<usize>();
-    }
-
-    name.parse::<usize>()
+    name.strip_prefix('v').unwrap_or(&name).parse::<usize>()
 }

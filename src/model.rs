@@ -78,9 +78,7 @@ impl Rules {
     /// Private helper to retrieve and modify the set of rules associated to a component.
     /// This call registers a change since the last version
     fn _ensure(&mut self, cid: usize) -> &mut ComponentRules {
-        if !self.rules.contains_key(&cid) {
-            self.rules.insert(cid, ComponentRules::new());
-        }
+        self.rules.entry(cid).or_insert_with(ComponentRules::new);
         self.version.change();
         self.rules.get_mut(&cid).unwrap()
     }
@@ -247,7 +245,7 @@ impl QModel {
         }
     }
 
-    pub fn lock_regulator(&mut self, vid: usize, target: usize, value: bool) {
+    pub fn lock_regulator(&mut self, _vid: usize, _target: usize, _value: bool) {
         // FIXME: implement locking of interactions
         unimplemented!()
     }

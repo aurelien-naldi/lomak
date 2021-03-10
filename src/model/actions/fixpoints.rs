@@ -100,8 +100,8 @@ impl FixedBuilder {
 impl FixedPoints {
     pub fn new(variables: Rc<ModelVariables>, patterns: Vec<Pattern>) -> Self {
         FixedPoints {
-            variables: variables,
-            patterns: patterns,
+            variables,
+            patterns,
             displayed: None,
         }
     }

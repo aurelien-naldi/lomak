@@ -14,7 +14,7 @@ use std::collections::HashMap;
 /// in the buffered and most-permissive semantics.
 pub fn enclosing_trapspace(model: &QModel, initial: State) -> Pattern {
     let rules = pick_rules(model, |v| initial.contains(v));
-    let variables = model.variables().map(|u| *u).collect::<Vec<usize>>();
+    let variables = model.variables().copied().collect::<Vec<_>>();
     extend(&variables, &rules, &initial, &BitSet::new())
 }
 
@@ -26,7 +26,7 @@ pub fn enclosing_trapspace(model: &QModel, initial: State) -> Pattern {
 pub fn most_permissive_reach(model: &QModel, initial: State, target: State) -> bool {
     let rules = pick_rules(model, |v| initial.contains(v));
     let rev_rules = pick_rules(model, |v| !initial.contains(v));
-    let variables = model.variables().map(|u| *u).collect::<Vec<usize>>();
+    let variables = model.variables().copied().collect::<Vec<usize>>();
 
     // Compute the enclosing trapspace
     let mut frozen = BitSet::new();
@@ -41,11 +41,12 @@ pub fn most_permissive_reach(model: &QModel, initial: State, target: State) -> b
         let mut failed = false;
         for v in &variables {
             let v = *v;
-            if !enclosing.is_fixed(v) && initial.contains(v) == target.contains(v) {
-                if !rev_rules.get(&v).unwrap().eval_in_pattern(&enclosing) {
-                    failed = true;
-                    frozen.insert(v);
-                }
+            if !enclosing.is_fixed(v)
+                && initial.contains(v) == target.contains(v)
+                && !rev_rules.get(&v).unwrap().eval_in_pattern(&enclosing)
+            {
+                failed = true;
+                frozen.insert(v);
             }
         }
 
@@ -73,7 +74,7 @@ fn pick_rules<F: Fn(usize) -> bool>(model: &QModel, pos: F) -> HashMap<usize, Im
 }
 
 fn extend(
-    variables: &Vec<usize>,
+    variables: &[usize],
     rules: &HashMap<usize, Implicants>,
     initial: &State,
     frozen: &BitSet,
@@ -88,7 +89,7 @@ fn extend(
                 continue;
             }
             // Test if this variable can be extended
-            if rules.get(uid).unwrap().eval_in_pattern(&mut enclosing) {
+            if rules.get(uid).unwrap().eval_in_pattern(&enclosing) {
                 enclosing.release(*uid);
                 changed = true;
             }

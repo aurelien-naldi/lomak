@@ -59,10 +59,9 @@ impl BufferRef {
             BufferRef::Direct => None,
             BufferRef::Delayed(bs) => Some(bs.get_buffer(model, regulator)),
             BufferRef::Split(m) => {
-                if !m.contains_key(&target) {
-                    m.insert(target, create_buffer(model, regulator));
-                }
-                return m.get(&target).map(|b| *b);
+                m.entry(target)
+                    .or_insert_with(|| create_buffer(model, regulator));
+                return m.get(&target).copied();
             }
             BufferRef::Selected(m) => m.get_mut(&target).map(|bs| bs.get_buffer(model, regulator)),
         }
@@ -79,8 +78,8 @@ impl BufferRef {
 impl<'a> BufferConfig<'a> {
     pub fn new(model: &'a mut QModel, strategy: BufferingStrategy) -> Self {
         BufferConfig {
-            model: model,
-            strategy: strategy,
+            model,
+            strategy,
             map: HashMap::new(),
             target: None,
         }
@@ -95,23 +94,17 @@ impl<'a> BufferConfig<'a> {
     }
 
     fn get_buffer_component(&mut self, regulator: usize) -> Option<usize> {
-        if self.target.is_none() {
-            return None;
-        }
-        let target = self.target.unwrap();
-        if !self.map.contains_key(&regulator) {
-            let bf = match self.strategy {
+        let target = self.target?;
+        let strategy = self.strategy;
+        self.map
+            .entry(regulator)
+            .or_insert_with(|| match strategy {
                 BufferingStrategy::AllBuffers => BufferRef::split(),
                 BufferingStrategy::Delay => BufferRef::delay(),
                 // FIXME: implement (proper) separating
                 BufferingStrategy::Separating => BufferRef::split(),
                 BufferingStrategy::Custom => BufferRef::Direct,
-            };
-            self.map.insert(regulator, bf);
-        }
-        self.map
-            .get_mut(&regulator)
-            .unwrap()
+            })
             .get_buffer(self.model, regulator, target)
     }
 
@@ -156,9 +149,7 @@ impl<'a> BufferConfig<'a> {
 
 impl<'a> AtomReplacer for BufferConfig<'a> {
     fn replace(&mut self, varid: usize, value: bool) -> Option<Expr> {
-        if self.target.is_none() {
-            return None;
-        }
+        self.target?;
 
         let var = match self.model.get_component_value(varid) {
             None => return None,
