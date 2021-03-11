@@ -2,7 +2,7 @@ use crate::helper::version::{Version, Versionned};
 use std::collections::HashMap;
 use std::fmt;
 
-#[derive(Default, Debug)]
+#[derive(Clone, Default, Debug)]
 pub struct Layout {
     data: HashMap<usize, NodeLayoutInfo>,
     version: Version,

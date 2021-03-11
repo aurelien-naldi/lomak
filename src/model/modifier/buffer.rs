@@ -138,7 +138,7 @@ impl<'a> BufferConfig<'a> {
                 }
             }
             // Apply the new rule
-            self.model.rules._replace(cid, rule);
+            Rc::make_mut(&mut self.model.rules)._replace(cid, rule);
         }
     }
 

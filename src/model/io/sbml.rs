@@ -433,7 +433,7 @@ impl SBMLParser {
                 };
 
                 for (v, e) in rules.iter() {
-                    model.rules.push(target, *v, Formula::from(e.clone()));
+                    Rc::make_mut(&mut model.rules).push(target, *v, Formula::from(e.clone()));
                 }
             }
         }

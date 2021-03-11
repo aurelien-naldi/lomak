@@ -42,7 +42,7 @@ impl SolverSolution {
         self
     }
 
-    pub fn as_pattern(self) -> Pattern {
+    pub fn into_pattern(self) -> Pattern {
         self.pattern
     }
 }

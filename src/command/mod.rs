@@ -158,7 +158,7 @@ impl SelectedArgs {
         self.next_slice < self.all_args.len()
     }
 
-    pub fn parse_next<'a>(&mut self, context: &mut CommandContext) -> EmptyLomakResult {
+    pub fn parse_next(&mut self, context: &mut CommandContext) -> EmptyLomakResult {
         self.run_next_command(context, &COMMANDS)
     }
 

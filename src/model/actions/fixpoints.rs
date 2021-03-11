@@ -89,7 +89,7 @@ impl FixedBuilder {
         let patterns = solver
             .solve()
             .into_iter()
-            .map(|r| r.as_pattern())
+            .map(|r| r.into_pattern())
             .take(max.unwrap_or(10000))
             .collect_vec();
 

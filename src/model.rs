@@ -15,7 +15,7 @@ use std::slice::Iter;
 use crate::func::expr::*;
 use crate::func::*;
 use crate::helper::error::EmptyLomakResult;
-use crate::helper::version::{Version, Versionned};
+use crate::helper::version::Version;
 use crate::model::layout::{Layout, NodeLayoutInfo};
 use crate::variables::{check_tval, GroupedVariables, ModelVariables, Variable, MAXVAL};
 
@@ -43,13 +43,13 @@ struct ComponentRules {
 /// the conditions required for the activation of each threshold.
 #[derive(Default)]
 pub struct QModel {
-    variables: ModelVariables,
-    rules: Rules,
-    layout: Option<Layout>,
+    variables: Rc<ModelVariables>,
+    rules: Rc<Rules>,
+    layout: Option<Rc<Layout>>,
     cache: RefCell<ModelCache>,
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Rules {
     rules: HashMap<usize, ComponentRules>,
     version: Version,
@@ -57,15 +57,8 @@ pub struct Rules {
 
 #[derive(Default)]
 struct ModelCache {
-    variables: Option<Rc<ModelVariables>>,
     target_rules: Option<Rc<HashMap<usize, Formula>>>,
     local_rules: Option<Rc<HashMap<usize, Formula>>>,
-}
-
-#[derive(Clone)]
-pub struct FrozenModel {
-    variables: Rc<ModelVariables>,
-    rules: Rc<HashMap<usize, Formula>>,
 }
 
 /// Sharable model reference
@@ -138,33 +131,25 @@ impl GroupedVariables for QModel {
     }
 
     fn ensure(&mut self, name: &str) -> usize {
-        let handle = self.variables.ensure(name);
-        self.rules
-            ._ensure(self.variables.component(handle).unwrap());
+        let handle = Rc::make_mut(&mut self.variables).ensure(name);
+        Rc::make_mut(&mut self.rules)._ensure(self.variables.component(handle).unwrap());
         handle
     }
 
     /// Find or create a variable for an existing component and a specific threshold value
     fn ensure_threshold(&mut self, cid: usize, value: usize) -> usize {
-        self.variables.ensure_threshold(cid, value)
+        Rc::make_mut(&mut self.variables).ensure_threshold(cid, value)
     }
 
     fn set_name(&mut self, uid: usize, name: &str) -> Result<bool, &'static str> {
-        self.variables.set_name(uid, name)
+        Rc::make_mut(&mut self.variables).set_name(uid, name)
     }
 }
 
 /// Handling of Dynamical rules
 impl QModel {
-    pub fn frozen(&self) -> FrozenModel {
-        FrozenModel {
-            variables: self.frozen_variables(),
-            rules: self.frozen_rules(),
-        }
-    }
-
     pub fn frozen_variables(&self) -> Rc<ModelVariables> {
-        self.cache.borrow_mut().get_variables(&self.variables)
+        self.variables.clone()
     }
 
     pub fn frozen_rules(&self) -> Rc<HashMap<usize, Formula>> {
@@ -178,11 +163,11 @@ impl QModel {
 
     /// Assign a Boolean condition for a specific threshold
     pub fn push_cpt_rule(&mut self, cid: usize, value: usize, rule: Formula) {
-        self.rules.push(cid, value, rule);
+        Rc::make_mut(&mut self.rules).push(cid, value, rule);
     }
 
-    pub fn get_layout(&self) -> Option<&Layout> {
-        self.layout.as_ref()
+    pub fn get_layout(&self) -> Option<Rc<Layout>> {
+        self.layout.clone()
     }
 
     /// Assign a Boolean condition for a specific threshold
@@ -252,21 +237,21 @@ impl QModel {
 
     /// Restrict the activity of a component
     pub fn restrict_component(&mut self, cid: usize, min: usize, max: usize) {
-        self.rules.restrict_component(cid, min, max);
+        Rc::make_mut(&mut self.rules).restrict_component(cid, min, max);
     }
 
     /// Enforce the activity of a specific variable
     pub fn lock_component(&mut self, cid: usize, value: usize) {
-        self.rules.lock_component(cid, value);
+        Rc::make_mut(&mut self.rules).lock_component(cid, value);
     }
 }
 
 impl QModel {
     fn layout_mut(&mut self) -> &mut Layout {
         if self.layout.is_none() {
-            self.layout = Some(Layout::default());
+            self.layout = Some(Rc::new(Layout::default()));
         }
-        self.layout.as_mut().unwrap()
+        Rc::make_mut(self.layout.as_mut().unwrap())
     }
 
     pub fn set_bounding_box(&mut self, uid: usize, bb: NodeLayoutInfo) {
@@ -439,27 +424,8 @@ impl fmt::Debug for QModel {
 
 impl ModelCache {
     fn clear(&mut self) {
-        self.variables = None;
-        self.clear_rules();
-    }
-
-    fn clear_rules(&mut self) {
         self.target_rules = None;
         self.local_rules = None;
-    }
-
-    fn get_variables(&mut self, vars: &ModelVariables) -> Rc<ModelVariables> {
-        // Update cache if needed
-        if self
-            .variables
-            .as_ref()
-            .map(|v| v.version() != vars.version())
-            .unwrap_or(true)
-        {
-            self.variables = Some(Rc::new(vars.clone()));
-        }
-
-        Rc::clone(self.variables.as_ref().unwrap())
     }
 }
 
