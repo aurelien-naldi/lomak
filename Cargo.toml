@@ -9,7 +9,7 @@ edition = "2018"
 bit-set     = "0.5"
 clap        = { version = "2", default-features = false, features = [ "color", "wrap_help" ] }
 clingo      = { version = "0.6", features = ["derive"] }
-itertools   = "0.9"
+itertools   = "0.10"
 once_cell   = "1.7"
 pest        = "2.1"
 pest_derive = "2.1"
