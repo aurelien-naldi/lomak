@@ -141,7 +141,7 @@ impl io::SavingFormat for SBMLFormat {
             w.start_element("qual:defaultTerm");
             w.write_attribute("qual:resultLevel", "0");
             w.end_element();
-            for assign in rule.assignments.iter() {
+            for assign in rule.assignments() {
                 w.start_element("qual:functionTerm");
                 w.write_attribute("qual:resultLevel", &assign.target);
                 w.start_element("math");

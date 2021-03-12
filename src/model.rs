@@ -15,27 +15,15 @@ use std::slice::Iter;
 use crate::func::expr::*;
 use crate::func::*;
 use crate::helper::error::EmptyLomakResult;
-use crate::helper::version::Version;
 use crate::model::layout::{Layout, NodeLayoutInfo};
-use crate::variables::{check_tval, GroupedVariables, ModelVariables, Variable, MAXVAL};
+use crate::model::rule::Rules;
+use crate::variables::{GroupedVariables, ModelVariables, Variable, MAXVAL};
 
 pub mod actions;
 pub mod io;
 pub mod layout;
 pub mod modifier;
-
-/// A formula associated with a target value
-#[derive(Clone)]
-struct Assign {
-    pub target: usize,
-    pub formula: Formula,
-}
-
-/// The list of assignments define the dynamical rules for all variables associated to the same component.
-#[derive(Clone)]
-struct ComponentRules {
-    assignments: Vec<Assign>,
-}
+pub mod rule;
 
 /// A model contains a list of named components and an associated Boolean variable for each qualitative threshold.
 ///
@@ -46,62 +34,12 @@ pub struct QModel {
     variables: Rc<ModelVariables>,
     rules: Rc<Rules>,
     layout: Option<Rc<Layout>>,
-    cache: RefCell<ModelCache>,
-}
-
-#[derive(Default, Clone)]
-pub struct Rules {
-    rules: HashMap<usize, ComponentRules>,
-    version: Version,
-}
-
-#[derive(Default)]
-struct ModelCache {
-    target_rules: Option<Rc<HashMap<usize, Formula>>>,
-    local_rules: Option<Rc<HashMap<usize, Formula>>>,
 }
 
 /// Sharable model reference
 #[derive(Clone, Default)]
 pub struct SharedModel {
     rc: Rc<RefCell<QModel>>,
-}
-
-impl Rules {
-    /// Private helper to retrieve and modify the set of rules associated to a component.
-    /// This call registers a change since the last version
-    fn _ensure(&mut self, cid: usize) -> &mut ComponentRules {
-        self.rules.entry(cid).or_insert_with(ComponentRules::new);
-        self.version.change();
-        self.rules.get_mut(&cid).unwrap()
-    }
-
-    /// Replace all rules for the specified component, and return the previous rules if available
-    /// This call registers a change since the last version
-    fn _replace(&mut self, cid: usize, rule: ComponentRules) -> Option<ComponentRules> {
-        self.version.change();
-        self.rules.insert(cid, rule)
-    }
-
-    /// Retrieve the set of rules for a component if it exists
-    fn get(&self, cid: usize) -> Option<&ComponentRules> {
-        self.rules.get(&cid)
-    }
-
-    /// Assign a Boolean condition for a specific threshold
-    fn push(&mut self, cid: usize, value: usize, rule: Formula) {
-        self._ensure(cid).push(value, rule);
-    }
-
-    /// Restrict the activity of a component
-    pub fn restrict_component(&mut self, cid: usize, min: usize, max: usize) {
-        self._ensure(cid).restrict(min, max);
-    }
-
-    /// Enforce the activity of a specific variable
-    pub fn lock_component(&mut self, cid: usize, value: usize) {
-        self._ensure(cid).lock(value);
-    }
 }
 
 /// Delegate variable handling in models to the dedicated field
@@ -132,7 +70,7 @@ impl GroupedVariables for QModel {
 
     fn ensure(&mut self, name: &str) -> usize {
         let handle = Rc::make_mut(&mut self.variables).ensure(name);
-        Rc::make_mut(&mut self.rules)._ensure(self.variables.component(handle).unwrap());
+        Rc::make_mut(&mut self.rules).ensure(self.variables.component(handle).unwrap());
         handle
     }
 
@@ -287,93 +225,6 @@ impl SharedModel {
     }
 }
 
-impl ComponentRules {
-    fn new() -> Self {
-        ComponentRules {
-            assignments: vec![],
-        }
-    }
-
-    fn clear(&mut self) {
-        self.assignments.clear();
-    }
-
-    fn lock(&mut self, value: usize) {
-        let value = check_tval(value);
-        self.clear();
-        if value > 0 {
-            self.push(value, Formula::from_bool(true));
-        }
-    }
-
-    fn restrict(&mut self, min: usize, max: usize) {
-        let min = check_tval(min);
-        let max = check_tval(max);
-        if max <= min {
-            self.lock(min);
-            return;
-        }
-
-        if min > 0 {
-            // Replace all assignments lower or equal to the new min with a basal rule
-            self.assignments.retain(|a| a.target > min);
-            self.insert(min, Formula::from_bool(true));
-        }
-        for assign in self.assignments.iter_mut() {
-            if assign.target > max {
-                assign.target = max;
-            }
-        }
-    }
-
-    fn raw_variable_formula(&self, value: usize) -> Expr {
-        let mut expr = Expr::FALSE;
-        for asg in self.assignments.iter() {
-            let cur: Rc<Expr> = asg.formula.convert_as();
-            if asg.target < value {
-                expr = expr.and(&cur.not());
-            } else {
-                expr = expr.or(&cur);
-            }
-        }
-        expr.simplify().unwrap_or(expr)
-    }
-
-    pub fn push(&mut self, value: usize, condition: Formula) {
-        self.assignments.push(Assign {
-            target: value,
-            formula: condition,
-        })
-    }
-
-    pub fn insert(&mut self, value: usize, condition: Formula) {
-        self.assignments.insert(
-            0,
-            Assign {
-                target: value,
-                formula: condition,
-            },
-        )
-    }
-
-    pub fn set_formula(&mut self, f: Formula, v: usize) {
-        self.clear();
-        self.push(v, f);
-    }
-}
-
-impl Assign {
-    pub fn convert<T: FromBoolRepr>(&self) -> Rc<T> {
-        self.formula.convert_as()
-    }
-}
-
-impl fmt::Display for Assign {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} <- {}", self.target, self.formula)
-    }
-}
-
 impl fmt::Display for QModel {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let namer = self.as_namer();
@@ -386,7 +237,7 @@ impl fmt::Display for QModel {
                 continue;
             }
             let rules = rules.unwrap();
-            for a in rules.assignments.iter() {
+            for a in rules.assignments() {
                 write!(f, "{}", name)?;
                 if a.target != 1 {
                     write!(f, ":{}", a.target)?;
@@ -419,13 +270,6 @@ impl fmt::Debug for QModel {
         writeln!(f)?;
 
         write!(f, "{}", self)
-    }
-}
-
-impl ModelCache {
-    fn clear(&mut self) {
-        self.target_rules = None;
-        self.local_rules = None;
     }
 }
 

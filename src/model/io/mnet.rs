@@ -108,7 +108,7 @@ impl io::SavingFormat for MNETFormat {
         for cid in model.components() {
             let rule = model.rules.get(*cid).unwrap();
             let name = model.get_name(*cid);
-            for assign in rule.assignments.iter() {
+            for assign in rule.assignments() {
                 write!(out, "{}", name)?;
                 if assign.target != 1 {
                     write!(out, ":{}", assign.target)?;

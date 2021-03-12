@@ -131,14 +131,15 @@ impl<'a> BufferConfig<'a> {
         for cid in components {
             self.set_target(cid);
             let mut rule = self.model.rules.get(cid).unwrap().clone();
-            for assign in rule.assignments.iter_mut() {
+
+            rule.map_assignments(|assign| {
                 let expr: Rc<Expr> = assign.formula.convert_as();
                 if let Some(e) = expr.replace_variables(self) {
                     assign.formula.set(e);
                 }
-            }
+            });
             // Apply the new rule
-            Rc::make_mut(&mut self.model.rules)._replace(cid, rule);
+            Rc::make_mut(&mut self.model.rules).replace(cid, rule);
         }
     }
 
