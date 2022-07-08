@@ -1,11 +1,19 @@
-# Logical Model Analysis Kit
+# Logical Model Analysis Kit (Deprecated prototype)
 
 This project aims to provide a set of function to define, manipulate, and analyse
 qualitative dynamical models based on logical functions.
 It is basically a playground for a more efficient implementation of [bioLQM](https://github.com/colomoto/bioLQM)
 using rust instead of java.
 
-Beyond being faster, the use of rust will enable the integration of [clean python bindings](https://github.com/aurelien-naldi/lomak-python), to improve the [CoLoMoTo notebook](http://colomoto.org/notebook/) (bioLQM and GINsim rely on py4j for this).
+---
+
+The core data structures for Boolean expressions have been extracted into the [bokit crate (rust library)](https://github.com/GINsim/bokit/).
+
+The logical-model part will be reconstructed based on this new foundation, the [new version will be publishedon the GINsim organization](https://github.com/GINsim/lomak/).
+
+---
+
+Beyond being faster, the use of rust will enable the integration of clean python bindings, to improve the [CoLoMoTo notebook](http://colomoto.org/notebook/) (bioLQM and GINsim rely on py4j for this).
 
 
 Here are the main underlying objects.
